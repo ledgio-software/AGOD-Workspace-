@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [integration, main]
+  push:
+    branches: [integration, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Detects what exists so CI stays green on a repo that has no app yet.
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      has_app: ${{ steps.d.outputs.has_app }}
+      has_migrations: ${{ steps.d.outputs.has_migrations }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: d
+        run: |
+          [ -f frontend/package.json ] && echo "has_app=true" >> "$GITHUB_OUTPUT" || echo "has_app=false" >> "$GITHUB_OUTPUT"
+          ls backend/supabase/migrations/*.sql >/dev/null 2>&1 && echo "has_migrations=true" >> "$GITHUB_OUTPUT" || echo "has_migrations=false" >> "$GITHUB_OUTPUT"
+
+  # Job names below are the required status checks for branch protection.
+  quality:
+    name: lint-typecheck-test-build
+    needs: detect
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      # Public values only. Never put service-role keys here.
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.has_app == 'true'
+      - name: Detect package manager
+        if: needs.detect.outputs.has_app == 'true'
+        id: pm
+        run: |
+          if [ -f pnpm-lock.yaml ]; then echo "pm=pnpm" >> "$GITHUB_OUTPUT"
+          elif [ -f yarn.lock ]; then echo "pm=yarn" >> "$GITHUB_OUTPUT"
+          else echo "pm=npm" >> "$GITHUB_OUTPUT"; fi
+      - uses: pnpm/action-setup@v4
+        if: needs.detect.outputs.has_app == 'true' && steps.pm.outputs.pm == 'pnpm'
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        if: needs.detect.outputs.has_app == 'true'
+        with:
+          node-version: 20
+          cache: ${{ steps.pm.outputs.pm }}
+          cache-dependency-path: |
+            frontend/package-lock.json
+            frontend/pnpm-lock.yaml
+            frontend/yarn.lock
+      - name: Install (locked)
+        if: needs.detect.outputs.has_app == 'true'
+        run: |
+          case "${{ steps.pm.outputs.pm }}" in
+            pnpm) pnpm install --frozen-lockfile ;;
+            yarn) yarn install --frozen-lockfile ;;
+            *) npm ci ;;
+          esac
+      - name: Lint
+        if: needs.detect.outputs.has_app == 'true'
+        run: ${{ steps.pm.outputs.pm }} run lint
+      - name: Typecheck
+        if: needs.detect.outputs.has_app == 'true'
+        run: ${{ steps.pm.outputs.pm }} run type-check
+      - name: Unit tests
+        if: needs.detect.outputs.has_app == 'true'
+        run: ${{ steps.pm.outputs.pm }} run test
+      - name: Build
+        if: needs.detect.outputs.has_app == 'true'
+        run: ${{ steps.pm.outputs.pm }} run build
+      - name: Security audit
+        if: needs.detect.outputs.has_app == 'true'
+        run: ${{ steps.pm.outputs.pm }} audit --audit-level=high
+      - name: Skipped (no app yet)
+        if: needs.detect.outputs.has_app != 'true'
+        run: echo "frontend/package.json not found; skipping app checks."
+
+  migration-check:
+    name: migration-check
+    needs: detect
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply migrations to a throwaway database
+        if: needs.detect.outputs.has_migrations == 'true'
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # Throwaway CI database only; never a real environment.
+          # Supabase-specific schemas/roles are stubbed so plain Postgres can run the SQL.
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "create role anon; create role authenticated; create role service_role; create schema if not exists auth; create schema if not exists storage; create table if not exists auth.users(id uuid primary key); create function auth.uid() returns uuid language sql as 'select null::uuid';"
+          for f in $(ls backend/supabase/migrations/*.sql | sort); do
+            echo "Applying $f"
+            psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Skipped (no migrations yet)
+        if: needs.detect.outputs.has_migrations != 'true'
+        run: echo "No migrations found; nothing to validate."
