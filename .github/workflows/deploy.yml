@@ -1,0 +1,42 @@
+# Deployment skeleton. NOT active until the hosting provider (Vercel is
+# recommended in frontend/README.md) and secrets are configured.
+# See docs/GIT_WORKFLOW.md for required secrets and manual steps.
+name: Deploy
+
+on:
+  push:
+    branches: [integration]   # staging
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy target"
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    if: github.event_name == 'push' || inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to staging
+        run: |
+          echo "TODO: configure provider deploy (e.g. vercel deploy --prebuilt using VERCEL_TOKEN)."
+          echo "No deployment was performed."
+
+  production:
+    # Explicit approval gate: configure required reviewers on the
+    # 'production' GitHub Environment. Only runs manually, from main.
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to production
+        run: |
+          echo "TODO: configure provider deploy. No deployment was performed."
