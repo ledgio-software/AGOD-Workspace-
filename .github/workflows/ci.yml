@@ -87,6 +87,7 @@ jobs:
         run: ${{ steps.pm.outputs.pm }} audit --audit-level=high
       - name: Skipped (no app yet)
         if: needs.detect.outputs.has_app != 'true'
+        working-directory: .
         run: echo "frontend/package.json not found; skipping app checks."
 
   migration-check:
