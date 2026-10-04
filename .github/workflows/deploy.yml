@@ -1,0 +1,67 @@
+# Deployment skeleton for Vercel (app) + Neon (database).
+# NOT active until the secrets in docs/SETUP.md exist. Nothing is deployed today.
+#
+# Recommended: connect the repo with the Vercel GitHub integration, which gives
+# preview deployments per PR and staging from `integration`. This workflow only
+# applies database migrations, which must run before the matching app deploy.
+name: Deploy
+
+on:
+  push:
+    branches: [integration]   # staging
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy target"
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  migrate-staging:
+    if: github.event_name == 'push' || inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations to the staging Neon branch
+        env:
+          # Use the *direct* (non-pooled) Neon connection string for migrations.
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL_DIRECT is not configured for 'staging'; skipping. No migration was applied."
+            exit 0
+          fi
+          npm run db:migrate
+
+  migrate-production:
+    # Explicit approval gate: add required reviewers to the 'production' GitHub Environment.
+    # Manual only, and only from main.
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations to the production Neon branch
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL_DIRECT is not configured for 'production'."
+            exit 1
+          fi
+          npm run db:migrate

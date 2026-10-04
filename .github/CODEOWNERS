@@ -1,0 +1,28 @@
+# PLACEHOLDERS: replace before enabling "Require review from Code Owners".
+#   @FRONTEND_GITHUB_USERNAME  -> frontend developer
+#   @BACKEND_GITHUB_USERNAME   -> backend developer
+# Single Next.js app (modular monolith) at the repository root.
+
+# Frontend ownership
+/src/app/                     @FRONTEND_GITHUB_USERNAME
+/src/components/              @FRONTEND_GITHUB_USERNAME
+/src/app/globals.css          @FRONTEND_GITHUB_USERNAME
+/public/                      @FRONTEND_GITHUB_USERNAME
+
+# Backend ownership
+/src/modules/                 @BACKEND_GITHUB_USERNAME
+/src/lib/db/                  @BACKEND_GITHUB_USERNAME
+/src/app/api/                 @BACKEND_GITHUB_USERNAME
+/db/migrations/               @BACKEND_GITHUB_USERNAME
+/scripts/                     @BACKEND_GITHUB_USERNAME
+
+# Shared and sensitive areas (both developers)
+/package.json                 @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/package-lock.json            @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/src/lib/types/               @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/src/lib/auth.ts              @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/src/lib/auth-client.ts       @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/src/lib/session.ts           @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/src/proxy.ts                 @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/.env.example                 @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
+/.github/                     @BACKEND_GITHUB_USERNAME @FRONTEND_GITHUB_USERNAME
