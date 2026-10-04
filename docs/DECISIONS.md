@@ -26,7 +26,7 @@ Changing any of these later needs a PR that updates this file.
 
 ## Consequences for the design document
 
-- Row Level Security: the design doc relies on Supabase's `auth.uid()`. With Neon, Phase 1 enforces permissions in the server-side permission service first and adds Postgres RLS policies that read the acting user from a per-transaction setting (`app.user_id`).
+- Row Level Security: the design doc relies on Supabase's `auth.uid()`. With Neon, domain queries run as a restricted `agod_app` role with the acting user's id in a per-transaction setting (`app.user_id`); policies look up that user's role and active flag in `users`. See `docs/PERMISSIONS.md`.
 - Roles are stored on `users.role` (`TEAM_MEMBER`, `PROJECT_MANAGER`, `ADMIN`); clients can never set them through the auth API.
 
 ## Initial team and roles

@@ -4,6 +4,7 @@ import { hashPassword } from "better-auth/crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { Pool } from "pg";
+import { normalizeDatabaseUrl } from "../src/lib/db/url";
 import { accounts, users } from "../src/lib/db/schema";
 
 config({ path: [".env.local", ".env"], quiet: true });
@@ -27,7 +28,7 @@ async function main() {
     throw new Error("Set SEED_PASSWORD (at least 10 characters) for the test accounts.");
   }
 
-  const pool = new Pool({ connectionString: url });
+  const pool = new Pool({ connectionString: normalizeDatabaseUrl(url) });
   const db = drizzle(pool);
   const passwordHash = await hashPassword(password);
 

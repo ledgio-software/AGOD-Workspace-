@@ -36,39 +36,77 @@ The seed refuses to run unless `ALLOW_DEV_SEED=true`, and never with `NODE_ENV=p
 
 Never edit a migration that has been applied to staging or production. Add a corrective migration.
 
-## Neon (needs the Neon account owner)
+## Neon
 
-Not configured yet. Steps:
+Configured on 2026-10-04: project **AGOD Workspace** (AWS `us-east-2`) with branches `production` (default),
+`staging`, `anthony dav-1` and `kingsley dav-2`.
 
-1. Create a Neon project in a region close to Ghana (e.g. AWS `eu-central-1`).
-2. Create branches: `production` (default), `staging`, and one `dev-<name>` per developer.
-3. For each branch, copy two connection strings:
-   - **pooled** (host contains `-pooler`): the app's `DATABASE_URL` on Vercel;
-   - **direct**: used only for migrations (`DATABASE_URL_DIRECT`).
-4. Enable Neon's point-in-time restore/backups for the production branch (Phase 4 adds the restore runbook).
+Each branch has two connection strings (Neon → **Connect**, choose the branch):
 
-## Vercel (needs the Vercel account owner)
+- **pooled** (Connection pooling **on**, host contains `-pooler`): the app's `DATABASE_URL` (Vercel, `.env.local`);
+- **direct** (pooling **off**): migrations only (`DATABASE_URL_DIRECT` in GitHub Environments).
 
-Not configured yet. Steps:
+Copy strings straight from Neon into their destination. Never paste them into chat, issues or docs. If one leaks,
+use **Reset password** for that branch's role and update every place that uses it.
 
-1. Import the GitHub repository into Vercel (framework: Next.js; no build overrides needed).
-2. Set **Production branch** to `main`. Preview deployments then run for every PR, and `integration` gets a stable preview URL used as staging.
-3. Environment variables (per Vercel environment; never commit them):
+Do not enable Neon's own "Better Auth" feature: the app runs Better Auth itself with its own tables.
 
-| Variable | Production | Preview / staging |
-|---|---|---|
-| `DATABASE_URL` | Neon `production` pooled string | Neon `staging` pooled string |
-| `BETTER_AUTH_SECRET` | unique random value | different unique random value |
-| `BETTER_AUTH_URL` | production URL | staging URL |
-| `APP_TIMEZONE` | `Africa/Accra` | `Africa/Accra` |
+## Vercel
+
+Configured on 2026-10-04: project **agod-workspace**, production branch `main`.
+
+| | URL |
+|---|---|
+| Staging (`integration` branch) | https://agod-workspace-git-integration-ko2527600s-projects.vercel.app |
+| Production (`main`) | https://agod-workspace.vercel.app |
+
+Settings that must stay as they are:
+
+- **Settings → Build and Deployment → Framework Preset: Next.js**, with no overrides. ("Other" fails with
+  *No Output Directory named "public"*.)
+- Environment variables are scoped per environment **and** branch. Staging values: **Preview → branch `integration`**.
+
+| Variable | Production | Preview → `integration` | Sensitive |
+|---|---|---|---|
+| `DATABASE_URL` | Neon `production` pooled string | Neon `staging` pooled string | yes |
+| `BETTER_AUTH_SECRET` | unique random value | different unique random value | yes |
+| `APP_TIMEZONE` | `Africa/Accra` | `Africa/Accra` | no |
+| `BETTER_AUTH_URL` | optional (defaults to the production domain) | optional (defaults to the branch URL) | no |
+| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | optional, enables error monitoring | optional | no |
+
+Generate a secret in PowerShell:
+`$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)`
+(macOS/Linux: `openssl rand -base64 32`).
+
+**Variables only apply to builds made after they are saved.** After changing one, open the latest deployment of
+that branch and use **⋯ → Redeploy**. Check the build log: it must not contain *Base URL is not set* or
+*You are using the default secret*. A deployment showing a bare "Internal Server Error" usually means a missing
+variable; the runtime log names it.
+
+Pull-request previews (branches other than `integration`) get no database settings, so they build but do not
+run. Test on staging after merging into `integration`.
 
 Do not set `ALLOW_DEV_SEED` or `SEED_PASSWORD` in Vercel.
 
-## GitHub Environments (needs a repo Admin)
+## GitHub Environments
 
-Create Environments `staging` and `production` (add required reviewers to `production`), each with secret
-`DATABASE_URL_DIRECT` = the direct Neon string for that branch. `.github/workflows/deploy.yml` uses it to apply
-migrations: automatically to staging on every push to `integration`, and to production only by a manual run
-from `main` that a reviewer approves. Run the production migration before promoting the matching app build.
+Configured on 2026-10-04: Environments `staging` and `production` (required reviewer, deployments only from
+`main`), each with secret `DATABASE_URL_DIRECT` = the **direct** Neon string for that branch.
+
+- `.github/workflows/deploy.yml` applies migrations: automatically to staging on every push to `integration`;
+  to production only by a manual run from `main` that a reviewer approves. Run the production migration before
+  promoting the matching app build.
+- `.github/workflows/create-admin.yml` creates the first Admin of an environment (see below).
 
 Branch protection and other repository settings: `docs/GIT_WORKFLOW.md`.
+
+## Creating the first Admin
+
+An environment with no Admin (e.g. production at go-live) needs one created outside the app. After that,
+Admins add and manage everyone on the **Team** page.
+
+- From GitHub: **Actions → Create first Admin → Run workflow**, choose the environment, enter name and email.
+- Locally: `ADMIN_NAME="..." ADMIN_EMAIL=... npm run admin:create` with `DATABASE_URL` pointing at the target.
+
+Both refuse if an active Admin already exists. The temporary password is printed once (in the workflow log,
+which repo collaborators can read), so sign in and change it on the **Account** page immediately.

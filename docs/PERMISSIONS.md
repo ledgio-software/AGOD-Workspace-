@@ -1,0 +1,52 @@
+# How permissions work
+
+Every protected action is checked twice: once in application code, once by PostgreSQL.
+A bug in one layer is caught by the other.
+
+| Layer | Where | What it does |
+|---|---|---|
+| 1. Permission service | `src/lib/permissions` | `can(actor, action, resource)` / `assertCan(...)`: the role rules from the design doc (section 4) and `docs/DECISIONS.md`. Pure function, fully unit-tested. |
+| 2. Row-level security | `db/migrations/*_row_level_security.sql` | Domain queries run as the `agod_app` role. Policies decide which rows each user can read or write, using the user's role and active flag from `users`. |
+| Integrity triggers | same migration | Audit events, compensation snapshots, snapshot lines, payments and adjustments are append-only for everyone. Members may change only progress fields of their own tasks. |
+
+The UI hides what a role can't use, but that is convenience only; the server and database are the gates.
+
+## Rules for new features
+
+1. **Check first:** start every service function with `assertCan(actor, "<action>", context)`.
+   Add new actions to the `Action` type and the matrix test in `permissions.test.ts`.
+2. **Query as the user:** run domain reads and writes inside `withActor(actor, async (tx) => ...)`.
+   Never use the plain `db` connection for domain data; it is reserved for Better Auth, migrations and scripts.
+3. **Audit material changes:** call `recordAudit(tx, ...)` with the same `tx`, so the event commits with the change.
+   Approvals, rejections, payments, adjustments, reopenings and role changes must always be audited.
+4. **Mirror the rule in SQL:** a new table needs `ENABLE ROW LEVEL SECURITY`, grants for `agod_app`
+   (no `DELETE` for financial data) and policies, in a new migration.
+5. **Test both layers:** a unit test for the rule and an integration test in `tests/integration/`
+   showing the database refuses the action on its own.
+
+## Who can do what
+
+| Action | Team Member | Project Manager | Admin |
+|---|:---:|:---:|:---:|
+| View projects | own only | all | all |
+| Create/edit projects, compensation | | ✓ | ✓ |
+| Request approval | own projects | ✓ | ✓ |
+| Approve / reject | | ✓ | ✓ |
+| Reopen approved project | | | ✓ |
+| Update a task | own tasks (progress only) | ✓ | ✓ |
+| View payouts | own only | all | all |
+| Record payments, adjustments | | | ✓ |
+| Export ledger | | ✓ | ✓ |
+| View team | | ✓ | ✓ |
+| Manage team (add, roles, deactivate, reset password) | | | ✓ |
+| Audit log | own actions | projects they can see | all |
+
+## Running the tests
+
+```bash
+npm test                                                        # unit tests incl. the full role matrix
+DATABASE_URL=postgresql://postgres@localhost:5432/agod_test \
+  npm run db:migrate && npm run test:integration                # needs a local, migrated PostgreSQL
+```
+
+Integration tests refuse to run unless `DATABASE_URL` points at `localhost`. CI runs both on every pull request.
