@@ -1,0 +1,28 @@
+# Loads the three "[Pilot]" projects into STAGING through the real services (see docs/PILOT.md).
+# Runs only when started by hand. There is deliberately no production option: the script also
+# refuses unless PILOT_TARGET is staging or local. Safe to re-run; it does nothing if pilot
+# projects already exist.
+name: Seed pilot data (staging)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-pilot:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Seed pilot projects
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+          PILOT_TARGET: staging
+        run: npm run pilot:seed

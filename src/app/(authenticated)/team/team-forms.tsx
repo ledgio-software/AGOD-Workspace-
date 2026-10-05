@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { FormMessage, SubmitButton, TemporaryPassword, inputClass } from "@/components/form";
+import { ActionForm, SubmitButton, TemporaryPassword, inputClass } from "@/components/form";
 import { roleLabel } from "@/lib/labels";
 import type { Role } from "@/lib/permissions";
 import { changeRoleAction, createMemberAction, resetPasswordAction, setActiveAction } from "./actions";
@@ -21,12 +20,21 @@ function RoleSelect({ defaultValue }: { defaultValue: Role }) {
 }
 
 export function CreateMemberForm() {
-  const [state, action] = useActionState(createMemberAction, null);
-
   return (
     <section className="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
       <h2 className="font-medium">Add a member</h2>
-      <form action={action} className="grid gap-3 sm:grid-cols-4 sm:items-end">
+      <ActionForm
+        action={createMemberAction}
+        resetOnSuccess
+        className="grid gap-3 sm:grid-cols-4 sm:items-end"
+        renderResult={(state) =>
+          state.ok && (
+            <div className="sm:col-span-4">
+              <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+            </div>
+          )
+        }
+      >
         <label className="space-y-1 text-sm">
           <span>Name</span>
           <input name="name" required className={inputClass} />
@@ -40,9 +48,7 @@ export function CreateMemberForm() {
           <RoleSelect defaultValue="TEAM_MEMBER" />
         </label>
         <SubmitButton pendingText="Adding…">Add member</SubmitButton>
-      </form>
-      <FormMessage state={state} />
-      {state?.ok && <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />}
+      </ActionForm>
     </section>
   );
 }
@@ -50,23 +56,18 @@ export function CreateMemberForm() {
 type Member = { id: string; email: string; role: Role; active: boolean };
 
 export function MemberActions({ member }: { member: Member }) {
-  const [roleState, roleAction] = useActionState(changeRoleAction, null);
-  const [activeState, activeAction] = useActionState(setActiveAction, null);
-  const [resetState, resetAction] = useActionState(resetPasswordAction, null);
-
   return (
     <details className="text-sm">
       <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">Manage</summary>
       <div className="mt-3 w-72 space-y-4">
-        <form action={roleAction} className="space-y-2">
+        <ActionForm action={changeRoleAction} resetOnSuccess className="space-y-2">
           <input type="hidden" name="userId" value={member.id} />
           <RoleSelect defaultValue={member.role} />
           <input name="reason" required placeholder="Reason for the change" className={inputClass} />
           <SubmitButton>Change role</SubmitButton>
-          <FormMessage state={roleState} />
-        </form>
+        </ActionForm>
 
-        <form action={activeAction} className="space-y-2">
+        <ActionForm action={setActiveAction} resetOnSuccess className="space-y-2">
           <input type="hidden" name="userId" value={member.id} />
           <input type="hidden" name="active" value={String(!member.active)} />
           <input
@@ -76,24 +77,20 @@ export function MemberActions({ member }: { member: Member }) {
             className={inputClass}
           />
           <SubmitButton>{member.active ? "Deactivate" : "Reactivate"}</SubmitButton>
-          <FormMessage state={activeState} />
-        </form>
+        </ActionForm>
 
-        <form
-          action={resetAction}
-          onSubmit={(event) => {
-            if (!confirm(`Reset the password for ${member.email}? They will be signed out.`)) event.preventDefault();
-          }}
+        <ActionForm
+          action={resetPasswordAction}
+          confirmMessage={`Reset the password for ${member.email}? They will be signed out.`}
           className="space-y-2"
+          renderResult={(state) =>
+            state.ok && <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+          }
         >
           <input type="hidden" name="userId" value={member.id} />
           <input type="hidden" name="email" value={member.email} />
           <SubmitButton pendingText="Resetting…">Reset password</SubmitButton>
-          <FormMessage state={resetState} />
-          {resetState?.ok && (
-            <TemporaryPassword email={resetState.data.email} password={resetState.data.temporaryPassword} />
-          )}
-        </form>
+        </ActionForm>
       </div>
     </details>
   );

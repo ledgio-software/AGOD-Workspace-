@@ -14,7 +14,8 @@
     "db:check": "drizzle-kit check",
     "db:seed": "tsx scripts/seed-dev.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "admin:create": "tsx scripts/create-admin.ts"
+    "admin:create": "tsx scripts/create-admin.ts",
+    "pilot:seed": "tsx scripts/seed-pilot.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^11.4.0",

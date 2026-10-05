@@ -28,6 +28,7 @@ export type LedgerRow = {
   completedAt: Date | null;
   memberId: string;
   memberName: string;
+  memberEmail: string;
   roleOnProject: string;
   status: PayoutStatus;
   currency: string;
@@ -70,6 +71,7 @@ export async function ledgerRowsTx(tx: Tx, raw: z.input<typeof ledgerFilters> = 
       entry: payoutLedgerEntries,
       project: projects,
       memberName: users.name,
+      memberEmail: users.email,
       approvedByName: approver.name,
       roleOnProject: compensationSnapshotLines.roleOnProject,
     })
@@ -89,7 +91,7 @@ export async function ledgerRowsTx(tx: Tx, raw: z.input<typeof ledgerFilters> = 
         .where(inArray(paymentTransactions.ledgerEntryId, rows.map((r) => r.entry.id)))
     : [];
 
-  return rows.map(({ entry, project, memberName, approvedByName, roleOnProject }) => {
+  return rows.map(({ entry, project, memberName, memberEmail, approvedByName, roleOnProject }) => {
     const b = balances.get(entry.id)!;
     return {
       id: entry.id,
@@ -101,6 +103,7 @@ export async function ledgerRowsTx(tx: Tx, raw: z.input<typeof ledgerFilters> = 
       completedAt: project.completedAt,
       memberId: entry.memberId,
       memberName,
+      memberEmail,
       roleOnProject,
       status: entry.status,
       currency: entry.currency,

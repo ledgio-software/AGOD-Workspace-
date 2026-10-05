@@ -68,3 +68,13 @@ Not yet provided. Development uses seeded test accounts only (`npm run db:seed`)
 | Payment evidence | A link (e.g. to a receipt) for now. File upload waits for a storage provider decision. |
 | CSV export | All ledger fields from design doc section 10, amounts in GHS with 2 decimals, formula-safe for spreadsheets. |
 | Backups | Neon point-in-time restore plus a monthly encrypted `pg_dump` kept off-Neon; restore exercise before real payouts. |
+
+## Phase 5 decisions (2026-10-05)
+
+| Decision | Choice |
+|---|---|
+| Pilot environment | Staging only. Pilot data is created through the real services (`npm run pilot:seed`, or the staging-only workflow); the script refuses any target but staging or local. |
+| Comparing with the spreadsheet | **Reconcile** page: paste `project_code, recipient_email, expected_owed[, expected_paid]`; matched by project code and recipient email against non-voided ledger lines. Nothing is stored. |
+| Explaining amounts | Per-project **Statement** with automatic checks (ledger equals approved line, stored status equals derived status, allocations vs project value). Members see only their own lines. |
+| Audit log viewer | PMs see events for projects they can view; Admins see everything (row-level security). 100 events per page with before/after differences. |
+| Source of truth | The spreadsheet remains authoritative until the sign-off in `docs/PILOT.md` is complete. |

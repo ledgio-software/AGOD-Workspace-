@@ -82,7 +82,10 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
           <HealthBadge health={ws.health} />
         </div>
         <p className="text-sm text-zinc-500">
-          {project.code} · {project.clientType === "INTERNAL" ? "Internal" : project.clientName} · Owner {ws.ownerName}
+          {project.code} · {project.clientType === "INTERNAL" ? "Internal" : project.clientName} · Owner {ws.ownerName} ·{" "}
+          <Link href={`/projects/${project.id}/statement`} className="underline">
+            Statement
+          </Link>
         </p>
         {!editable && (
           <p className="mt-2 rounded-md bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">

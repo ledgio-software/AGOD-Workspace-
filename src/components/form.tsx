@@ -56,12 +56,15 @@ export function ActionForm<S extends State>({
   className,
   resetOnSuccess = false,
   confirmMessage,
+  renderResult,
 }: {
   action: (prev: S | null, form: FormData) => Promise<S>;
   children: React.ReactNode;
   className?: string;
   resetOnSuccess?: boolean;
   confirmMessage?: string;
+  /** Extra output shown under the message once the action has returned. */
+  renderResult?: (state: S) => React.ReactNode;
 }) {
   const [state, dispatch, actionPending] = useActionState(action, null);
   const [transitionPending, startTransition] = useTransition();
@@ -85,6 +88,7 @@ export function ActionForm<S extends State>({
       >
         {children}
         <FormMessage state={state} />
+        {state && renderResult?.(state)}
       </form>
     </PendingContext.Provider>
   );
