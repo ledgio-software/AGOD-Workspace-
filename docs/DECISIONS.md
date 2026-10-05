@@ -56,3 +56,15 @@ Not yet provided. Development uses seeded test accounts only (`npm run db:seed`)
 | Zero-amount lines | Kept in the snapshot, no ledger entry. |
 | Reopening (decision 5) | Admin only, with a reason. Current payouts are **voided** (never deleted or edited), the snapshot stays as history, and re-approval creates snapshot 2, 3, ... Refused once any payment is recorded; corrections after payment are adjustments (Phase 4). |
 | Database guarantees | A project can be marked completed only by the approval transaction; ledger amounts, recipients and approval facts can never change after creation; snapshots and lines are append-only. |
+
+## Phase 4 decisions (2026-10-05)
+
+| Decision | Choice |
+|---|---|
+| Who records payments and adjustments | Admin only (decision 4). |
+| Payout status | Derived from payments and adjustments by the database (Owed → Partially paid → Paid); cannot be set by hand. A fully written-off remainder counts as Paid (settled). |
+| Overpayment | Refused. Pay more only after an Increase adjustment with a reason. |
+| Adjustments | Increase, Decrease, Write-off (never below what was already paid), Void (only before any payment). The approved amount never changes. |
+| Payment evidence | A link (e.g. to a receipt) for now. File upload waits for a storage provider decision. |
+| CSV export | All ledger fields from design doc section 10, amounts in GHS with 2 decimals, formula-safe for spreadsheets. |
+| Backups | Neon point-in-time restore plus a monthly encrypted `pg_dump` kept off-Neon; restore exercise before real payouts. |
