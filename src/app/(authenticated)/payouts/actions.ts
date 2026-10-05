@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
+import { uploadAttachment } from "@/modules/attachments";
+import { ServiceError } from "@/modules/errors";
 import { createAdjustment, recordPayment } from "@/modules/payments";
 import { raiseQuestion, resolveQuestion, reviewQuestion } from "@/modules/questions";
 
@@ -91,6 +93,18 @@ export async function resolveQuestionAction(questionId: string, entryId: string,
     );
     return undefined;
   }, type ? "Adjustment recorded and question resolved." : "Question resolved without a change.");
+  if (result.ok) refresh(entryId);
+  return result;
+}
+
+export async function uploadReceiptAction(entryId: string, paymentId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    const file = form.get("file");
+    if (!(file instanceof File) || file.size === 0) throw new ServiceError("Choose a file to upload.");
+    await uploadAttachment(actor, { kind: "PAYMENT", paymentId }, { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }, await getRequestMeta());
+    return undefined;
+  }, "Receipt attached.");
   if (result.ok) refresh(entryId);
   return result;
 }

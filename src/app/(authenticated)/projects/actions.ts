@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
+import { ServiceError } from "@/modules/errors";
 import { approveProject, rejectProject, reopenProject, requestApproval } from "@/modules/approvals";
 import { changeProjectStatus, createProject, setHealthOverride, updateProject } from "@/modules/projects";
 import {
@@ -14,6 +15,7 @@ import {
   setMilestoneStatus,
   updateAssignment,
 } from "@/modules/projects/team";
+import { removeAttachment, uploadAttachment } from "@/modules/attachments";
 import { addComment } from "@/modules/comments";
 import { createIssueForTask, linkTaskUrl, setProjectRepo, unlinkTask } from "@/modules/github";
 import { createTask, updateTaskDetails, updateTaskProgress, waiveTask } from "@/modules/tasks";
@@ -351,6 +353,42 @@ export async function createIssueAction(projectId: string, taskId: string): Prom
     await createIssueForTask(actor, taskId, await getRequestMeta());
     return undefined;
   }, "GitHub issue created and linked.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+async function fileFrom(form: FormData) {
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) throw new ServiceError("Choose a file to upload.");
+  return { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
+}
+
+export async function uploadProjectFileAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await uploadAttachment(actor, { kind: "PROJECT", projectId }, await fileFrom(form), await getRequestMeta());
+    return undefined;
+  }, "File uploaded.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function uploadTaskFileAction(projectId: string, taskId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await uploadAttachment(actor, { kind: "TASK", taskId }, await fileFrom(form), await getRequestMeta());
+    return undefined;
+  }, "File attached.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function removeFileAction(projectId: string, attachmentId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await removeAttachment(actor, attachmentId, await getRequestMeta());
+    return undefined;
+  }, "File removed.");
   if (result.ok) refresh(projectId);
   return result;
 }

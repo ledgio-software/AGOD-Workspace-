@@ -92,6 +92,20 @@
       "when": 1791167148087,
       "tag": "20261005022548_github_integration_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791200437235,
+      "tag": "20261005114037_attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791200438177,
+      "tag": "20261005114038_attachments_rules",
+      "breakpoints": true
     }
   ]
 }

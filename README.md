@@ -179,6 +179,9 @@ src/
 - Task keys, automatic linking of pull requests and issues, In review / Ready for QA statuses
 - Reviews, deployments and releases on the project page; create a GitHub issue from a task
 
+### Phase 9 — File attachments ✓
+- Project documents, task files and payment receipts in private Vercel Blob storage, served with access checks
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

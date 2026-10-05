@@ -30,7 +30,7 @@ Still to do before Stage 1 is "in production": the pilot sign-off (`docs/PILOT.m
 
 | Stage | Contents | Notes |
 |---|---|---|
-| 2. Team operations | **In progress.** Phase 7 done: comments and mentions, templates, workload and capacity, approval reminders, weekly summary (overdue alerts and contribution history came in Phase 6). Phase 8 done: GitHub issues/PRs, deployments and release history. Next: Phase 9 attachments (Vercel Blob). | |
+| 2. Team operations | **Done (Phases 6–9):** comments and mentions, templates, workload and capacity, approval reminders, overdue alerts, weekly summary, contribution history, GitHub issues/PRs/reviews, deployment and release history, file attachments (incl. payment receipts, also section 14). Notifications are in-app only; email, Slack or WhatsApp would need a scheduled job and a provider. | |
 | 3. Profitability | Project costs, margins, revenue by client/type, utilisation, payout forecasting and aging | Needs "other project costs" to be recorded somewhere first. |
 | 4. Ledgio integration | Export approved payouts, import payment confirmations, accounting period locking | The month close and CSV exports are the starting point. |
 | 5. Automated payments | MoMo/bank APIs, batches, multi-level authorisation, reconciliation | Separate project with its own security and reconciliation design. |

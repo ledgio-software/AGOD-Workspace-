@@ -571,3 +571,43 @@ export const githubReleases = pgTable(
   },
   (t) => [index("github_releases_repo_idx").on(t.repo)],
 );
+
+// File attachments (roadmap Stage 2): project documents, task deliverables and payment receipts.
+// The file itself lives in private storage (Vercel Blob); this row records who may see it.
+// Payment receipts are never removed; other files are soft-removed (the row and file stay).
+export const attachmentKind = pgEnum("attachment_kind", ["PROJECT", "TASK", "PAYMENT"]);
+
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: attachmentKind("kind").notNull(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "restrict" }),
+    paymentId: uuid("payment_id").references(() => paymentTransactions.id, { onDelete: "restrict" }),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    /** Storage pathname; never sent to browsers (downloads go through the app). */
+    storageKey: text("storage_key").notNull(),
+    uploadedBy: userRef("uploaded_by").notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: userRef("removed_by"),
+    createdAt,
+  },
+  (t) => [
+    check(
+      "attachments_target_matches_kind",
+      sql`(${t.kind} = 'PROJECT' AND ${t.taskId} IS NULL AND ${t.paymentId} IS NULL)
+       OR (${t.kind} = 'TASK' AND ${t.taskId} IS NOT NULL AND ${t.paymentId} IS NULL)
+       OR (${t.kind} = 'PAYMENT' AND ${t.paymentId} IS NOT NULL AND ${t.taskId} IS NULL)`,
+    ),
+    check("attachments_size", sql`${t.sizeBytes} > 0 AND ${t.sizeBytes} <= 4194304`),
+    check("attachments_removed_pair", sql`(${t.removedAt} IS NULL) = (${t.removedBy} IS NULL)`),
+    index("attachments_project_idx").on(t.projectId),
+    index("attachments_task_idx").on(t.taskId),
+    index("attachments_payment_idx").on(t.paymentId),
+  ],
+);

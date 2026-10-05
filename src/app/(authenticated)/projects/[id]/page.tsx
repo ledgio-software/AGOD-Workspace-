@@ -7,6 +7,8 @@ import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getProjectPayouts } from "@/modules/approvals";
+import { FileList, type FileItem, FileUploadForm } from "@/components/files";
+import { type AttachmentView, attachmentsAvailable, listProjectAttachments } from "@/modules/attachments";
 import { listComments } from "@/modules/comments";
 import { getProjectGithub, isGithubConfigured } from "@/modules/github";
 import { listTemplates } from "@/modules/templates";
@@ -25,7 +27,10 @@ import {
   milestoneStatusAction,
   rejectAction,
   removeAssignmentAction,
+  removeFileAction,
   setRepoAction,
+  uploadProjectFileAction,
+  uploadTaskFileAction,
   reopenAction,
   requestApprovalAction,
   taskProgressAction,
@@ -82,6 +87,17 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
   const discussion = await listComments(actor, project.id);
   const github = await getProjectGithub(actor, project.id);
   const githubReady = isGithubConfigured();
+  const files = await listProjectAttachments(actor, project.id);
+  const uploadsReady = attachmentsAvailable();
+  const toItems = (list: AttachmentView[]): FileItem[] =>
+    list.map((f) => ({
+      id: f.id,
+      fileName: f.fileName,
+      sizeBytes: f.sizeBytes,
+      uploaderName: f.uploaderName,
+      createdAt: formatDateTime(f.createdAt),
+      remove: isManager || f.uploadedBy === actor.id ? removeFileAction.bind(null, project.id, f.id) : undefined,
+    }));
   const templates = canManage && can(actor, "template.manage") ? await listTemplates(actor) : [];
   const lastReturn = ws.activity.find((a) => a.action === "project.changes_requested");
   const canRequest = project.status === "IN_PROGRESS" || project.status === "CHANGES_REQUESTED";
@@ -360,6 +376,15 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
                       canManage={isManager}
                       canCreateIssue={isManager && githubReady && !!project.githubRepo}
                     />
+                    <FileList files={toItems(files.byTask.get(task.id) ?? [])} />
+                    {(isManager || mine) && uploadsReady && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-zinc-500">Attach a file</summary>
+                        <div className="mt-2">
+                          <FileUploadForm action={uploadTaskFileAction.bind(null, project.id, task.id)} label="Attach" />
+                        </div>
+                      </details>
+                    )}
                   </div>
                   <div className="space-y-3">
                     {canUpdate && (
@@ -522,6 +547,20 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
           <DeliveryHistory delivery={github} taskKeys={new Map(ws.tasks.map((t) => [t.id, `${project.code}-T${t.number}`]))} />
         </Section>
       )}
+
+      <Section title={`Project files (${files.project.length})`}>
+        {files.project.length === 0 ? (
+          <p className="text-sm text-zinc-500">No project documents yet. Files attached to tasks appear under each task.</p>
+        ) : (
+          <FileList files={toItems(files.project)} />
+        )}
+        {isManager &&
+          (uploadsReady ? (
+            <FileUploadForm action={uploadProjectFileAction.bind(null, project.id)} />
+          ) : (
+            <p className="text-xs text-zinc-500">File uploads are not set up in this environment yet (see docs/SETUP.md).</p>
+          ))}
+      </Section>
 
       <Section title={`Discussion (${discussion.length})`}>
         {discussion.length === 0 ? (

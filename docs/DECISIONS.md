@@ -117,3 +117,13 @@ Phase 9 (file attachments in Vercel Blob).
 | System changes | The webhook writes through the owner connection as the system (no signed-in person), with audit events whose actor is empty and whose reason names the pull request. Deliveries are recorded once (`github_deliveries`) and processed in one transaction, so a failure can be redelivered. |
 | Deployments and releases | Recorded from `deployment_status` and `release` events (Vercel reports its deployments to GitHub). A merged pull request shows where its merge commit has been deployed. |
 | Links by people | Managers link any task and remove links; members link their own tasks. PMs can create a GitHub issue for a task in the project's repository. |
+
+## Phase 9 decisions (2026-10-05): file attachments
+
+| Decision | Choice |
+|---|---|
+| Storage | Vercel Blob with **private** access (decision, Stage 2). Files are never linked directly: `/files/<id>` checks access as the signed-in person every time. Locally (not on Vercel) files go to `.data/uploads`. |
+| What can have files | Projects (documents, managers upload), tasks (deliverables/evidence, managers and the assignee upload), payments (receipts, Admins upload). |
+| Who sees them | Project and task files: anyone who can see the project. Receipts: managers and the person who was paid. Enforced by row-level security. |
+| Limits | 4 MB per file (Vercel request limit). PDF, images (PNG, JPEG, GIF, WebP), TXT, CSV, Markdown, Office (DOCX, XLSX, PPTX) and ZIP. The content must match the extension (signatures are checked); SVG and HTML are refused. Only images and PDFs open in the browser; everything else downloads. |
+| Removal | Task and project files: the uploader or a manager can remove them; removal is recorded and the stored file is kept. Payment receipts can never be removed. |
