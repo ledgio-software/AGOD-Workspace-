@@ -9,7 +9,7 @@ type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResul
 
 export function PaymentForm({ action, today, remainingLabel }: { action: Action; today: string; remainingLabel: string }) {
   return (
-    <ActionForm action={action} resetOnSuccess className="grid gap-3 sm:grid-cols-3 sm:items-end">
+    <ActionForm action={action} resetOnSuccess className="grid gap-3 sm:grid-cols-2 sm:items-end">
       <Field label="Amount (GHS)" hint={`Outstanding: ${remainingLabel}`}>
         <input name="amount" required inputMode="decimal" className={inputClass} />
       </Field>
@@ -34,7 +34,7 @@ export function PaymentForm({ action, today, remainingLabel }: { action: Action;
       <Field label="Notes (optional)">
         <input name="notes" className={inputClass} />
       </Field>
-      <div className="sm:col-span-3">
+      <div className="sm:col-span-2">
         <SubmitButton pendingText="Recording…">Record payment</SubmitButton>
       </div>
     </ActionForm>
@@ -48,7 +48,7 @@ export function AdjustmentForm({ action }: { action: Action }) {
       action={action}
       resetOnSuccess
       confirmMessage="Record this adjustment? It cannot be edited or deleted afterwards."
-      className="grid gap-3 sm:grid-cols-3 sm:items-end"
+      className="grid gap-3 sm:grid-cols-2 sm:items-end"
     >
       <Field label="Type">
         <select
@@ -69,12 +69,12 @@ export function AdjustmentForm({ action }: { action: Action }) {
           <input name="amount" required inputMode="decimal" className={inputClass} />
         </Field>
       ) : (
-        <p className="text-sm text-zinc-500">Voids the whole payout. Only possible before any payment.</p>
+        <p className="text-sm text-muted">Voids the whole payout. Only possible before any payment.</p>
       )}
       <Field label="Reason (required)">
         <input name="reason" required className={inputClass} />
       </Field>
-      <div className="sm:col-span-3">
+      <div className="sm:col-span-2">
         <SubmitButton variant={type === "VOID" ? "danger" : "secondary"}>Record adjustment</SubmitButton>
       </div>
     </ActionForm>

@@ -1,4 +1,4 @@
-import { healthLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
+import { healthLabel, payoutQuestionStatusLabel, payoutStatusLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
 import type { Health, Progress, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
 const base = "inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset";
@@ -65,4 +65,14 @@ export function ProgressBar({ progress }: { progress: Progress }) {
       </span>
     </div>
   );
+}
+
+export function PayoutStatusBadge({ status }: { status: keyof typeof payoutStatusLabel }) {
+  const tone = ({ OWED: "amber", PARTIALLY_PAID: "blue", PAID: "green", DISPUTED: "red", VOIDED: "gray" } as const)[status];
+  return <Badge tone={tone}>{payoutStatusLabel[status]}</Badge>;
+}
+
+export function QuestionStatusBadge({ status }: { status: keyof typeof payoutQuestionStatusLabel }) {
+  const tone = ({ OPEN: "amber", AWAITING_ADMIN: "violet", RESOLVED: "green" } as const)[status];
+  return <Badge tone={tone}>{payoutQuestionStatusLabel[status]}</Badge>;
 }

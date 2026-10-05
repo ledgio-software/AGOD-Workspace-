@@ -107,3 +107,14 @@ for managers, the Finance card `#finance`), `discussion`, `files` (project and t
 actions keep the URL, so a form submitted on a tab stays on that tab. Link to finance with
 `/projects/<id>?tab=team#finance`. Occasional forms sit in a collapsible "Disclosure" block.
 
+### Charts (Phase 14)
+
+`src/components/charts.tsx` has two server-rendered chart components with no chart library:
+- `BarList`: horizontal bars for one measure, with negative values and an optional reference line.
+- `StackedColumns`: stacked columns over time, with a legend and axis labels.
+
+Series colours are `bg-series-1/2/3` and `bg-negative`, defined in `globals.css` for light and dark mode. They
+were checked with the dataviz palette validator against both surfaces, so keep that order: the order is what
+keeps them colour-blind safe. Every mark has a hover/focus tooltip, and every chart has a table with the same
+numbers. Other shared pieces: `TabNav`, `compactTable`, `PayoutStatusBadge` and `QuestionStatusBadge`.
+
