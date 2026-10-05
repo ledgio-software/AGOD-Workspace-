@@ -12,7 +12,7 @@ Stage 2 after the pilot sign-off in `docs/PILOT.md`; AGOD chose to start it in p
 | 2.2 Project health | Done: calculated (Phase 2), PM override with reason (Phase 6) | Project page |
 | 2.3 Activity timeline and contribution history | Done: project activity, audit log (Phase 1–5); per-person history (Phase 6) | Project page, Audit, Team → person |
 | 2.4 In-app notifications | Done: assignment, blocked, returned, approved, payout, payment (Phase 2–4); due soon and overdue (Phase 6) | My work → Notifications |
-| 2.5 GitHub integration | Next: Phase 8, through a GitHub App on the AGOD organisation, with new task states (In review, Ready for QA). | |
+| 2.5 GitHub integration | Done (Phase 8): task keys, automatic PR/issue linking, In review / Ready for QA, reviews, deployments and releases, create issue from a task. Needs the GitHub App set up (`docs/GITHUB_APP.md`). | Project page, Team → GitHub integration |
 | 2.6 Workload and capacity | Done: per-person counts (Phase 6); estimates, weekly capacity and team load view (Phase 7) | Workload, Team → person |
 | 2.7 Project and task templates | Done (Phase 7): starter templates, apply to a project, save a project as a template | Projects → Templates, project page |
 | 2.8 Dispute and adjustment workflow | Done (Phase 6): member asks → PM reviews → Admin adjusts; original amount stays visible | Payout page, Questions |
@@ -30,7 +30,7 @@ Still to do before Stage 1 is "in production": the pilot sign-off (`docs/PILOT.m
 
 | Stage | Contents | Notes |
 |---|---|---|
-| 2. Team operations | **In progress.** Phase 7 done: comments and mentions, templates, workload and capacity, approval reminders, weekly summary (overdue alerts and contribution history came in Phase 6). Next: Phase 8 GitHub issues/PRs, deployments and release history (GitHub App); Phase 9 attachments (Vercel Blob). | |
+| 2. Team operations | **In progress.** Phase 7 done: comments and mentions, templates, workload and capacity, approval reminders, weekly summary (overdue alerts and contribution history came in Phase 6). Phase 8 done: GitHub issues/PRs, deployments and release history. Next: Phase 9 attachments (Vercel Blob). | |
 | 3. Profitability | Project costs, margins, revenue by client/type, utilisation, payout forecasting and aging | Needs "other project costs" to be recorded somewhere first. |
 | 4. Ledgio integration | Export approved payouts, import payment confirmations, accounting period locking | The month close and CSV exports are the starting point. |
 | 5. Automated payments | MoMo/bank APIs, batches, multi-level authorisation, reconciliation | Separate project with its own security and reconciliation design. |

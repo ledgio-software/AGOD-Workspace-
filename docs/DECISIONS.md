@@ -104,3 +104,16 @@ Phase 9 (file attachments in Vercel Blob).
 | Workload | Per person: open, in-progress, blocked, overdue and due-this-week tasks, tasks without an estimate, and "planned" hours (estimates of tasks due in the next 7 days or overdue) against capacity. Unassigned open tasks are counted separately. |
 | Approval reminders | In-app, generated like deadline alerts: the project owner after 2 and 7 days in "pending approval", Admins after 7 days. A new approval request restarts the clock. |
 | Weekly summary | Monday to Sunday (Africa/Accra). Completed tasks by person, newly blocked tasks, approvals, payments and adjustments for the week, plus blocked, overdue, at-risk and due-next-7-days items as of today. Also as plain text to paste into WhatsApp, Slack or email. Managers only. |
+
+## Phase 8 decisions (2026-10-05): GitHub integration (roadmap 2.5)
+
+| Decision | Choice |
+|---|---|
+| Connection | A GitHub App per environment on the `ledgio-software` organisation (setup: `docs/GITHUB_APP.md`). Optional: without its three settings the app works as before, and links can still be pasted by hand. |
+| Task keys | Every task gets a per-project number; the key is `<project code>-T<number>` (e.g. `AGOD-2026-005-T3`). A pull request or issue mentioning the key in its branch, title or body links itself to the task. |
+| Repository | Each project is connected to one repository (`owner/name`). The webhook only links and moves tasks in projects connected to the event's repository. |
+| New task statuses | **In review** (pull request open) and **Ready for QA** (merged, waiting for the PM). Both count as open work. Members can also set them by hand. |
+| Automatic moves | Draft PR: Not started → In progress. PR opened: Not started/In progress → In review. Merged: anything except Done/Waived → Ready for QA (the project owner is asked to verify). Closed without merge: In review → In progress. The PM marks Done after verifying on staging. Done and Waived are never changed automatically; projects not accepting task updates are left alone. |
+| System changes | The webhook writes through the owner connection as the system (no signed-in person), with audit events whose actor is empty and whose reason names the pull request. Deliveries are recorded once (`github_deliveries`) and processed in one transaction, so a failure can be redelivered. |
+| Deployments and releases | Recorded from `deployment_status` and `release` events (Vercel reports its deployments to GitHub). A merged pull request shows where its merge commit has been deployed. |
+| Links by people | Managers link any task and remove links; members link their own tasks. PMs can create a GitHub issue for a task in the project's repository. |

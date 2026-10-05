@@ -8,6 +8,7 @@ import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getProjectPayouts } from "@/modules/approvals";
 import { listComments } from "@/modules/comments";
+import { getProjectGithub, isGithubConfigured } from "@/modules/github";
 import { listTemplates } from "@/modules/templates";
 import { getProjectWorkspace, listActiveMembers } from "@/modules/projects";
 import { acceptsTaskUpdates, allowedManualTransitions, isEditable, isTaskOverdue } from "@/modules/projects/rules";
@@ -24,6 +25,7 @@ import {
   milestoneStatusAction,
   rejectAction,
   removeAssignmentAction,
+  setRepoAction,
   reopenAction,
   requestApprovalAction,
   taskProgressAction,
@@ -34,10 +36,12 @@ import {
 } from "../actions";
 import { ProjectForm } from "../project-form";
 import { ApproveForm, RejectForm, ReopenForm, RequestApprovalForm } from "./approval-forms";
+import { DeliveryHistory, TaskGithub } from "./github-panel";
 import {
   AddAssignmentForm,
   AssignmentRowActions,
   CommentForm,
+  RepoForm,
   HealthOverrideForm,
   MilestoneForm,
   MilestoneStatusForm,
@@ -76,6 +80,8 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
   const workOpen = acceptsTaskUpdates(project.status);
   const payouts = await getProjectPayouts(actor, project.id);
   const discussion = await listComments(actor, project.id);
+  const github = await getProjectGithub(actor, project.id);
+  const githubReady = isGithubConfigured();
   const templates = canManage && can(actor, "template.manage") ? await listTemplates(actor) : [];
   const lastReturn = ws.activity.find((a) => a.action === "project.changes_requested");
   const canRequest = project.status === "IN_PROGRESS" || project.status === "CHANGES_REQUESTED";
@@ -130,6 +136,26 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
             {ws.healthOverride.at && <> on {formatDateTime(ws.healthOverride.at)}</>}: “{ws.healthOverride.reason}”.
             {ws.calculatedHealth && <> Calculated health: {healthLabel[ws.calculatedHealth]}.</>}
           </p>
+        )}
+        <p className="text-sm text-zinc-500">
+          GitHub:{" "}
+          {project.githubRepo ? (
+            <a href={`https://github.com/${project.githubRepo}`} target="_blank" rel="noopener noreferrer" className="underline">
+              {project.githubRepo}
+            </a>
+          ) : (
+            "not connected"
+          )}
+        </p>
+        {isManager && (
+          <details>
+            <summary className="cursor-pointer text-sm text-zinc-600 dark:text-zinc-400">
+              {project.githubRepo ? "Change GitHub repository" : "Connect a GitHub repository"}
+            </summary>
+            <div className="mt-2">
+              <RepoForm action={setRepoAction.bind(null, project.id)} current={project.githubRepo} />
+            </div>
+          </details>
         )}
         {can(actor, "project.overrideHealth") && ws.calculatedHealth && (
           <HealthOverrideForm action={healthOverrideAction.bind(null, project.id)} current={ws.healthOverride?.health ?? null} />
@@ -325,6 +351,15 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
                       </p>
                     )}
                     {task.status === "WAIVED" && <p className="text-zinc-500">Waived: {task.waivedReason}</p>}
+                    <TaskGithub
+                      projectId={project.id}
+                      projectCode={project.code}
+                      task={task}
+                      links={github?.byTask.get(task.id) ?? []}
+                      canLink={isManager || mine}
+                      canManage={isManager}
+                      canCreateIssue={isManager && githubReady && !!project.githubRepo}
+                    />
                   </div>
                   <div className="space-y-3">
                     {canUpdate && (
@@ -481,6 +516,12 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
           <ReopenForm action={reopenAction.bind(null, project.id)} />
         )}
       </Section>
+
+      {github && (github.repo || github.mergedPullRequests.length > 0) && (
+        <Section title="Delivery">
+          <DeliveryHistory delivery={github} taskKeys={new Map(ws.tasks.map((t) => [t.id, `${project.code}-T${t.number}`]))} />
+        </Section>
+      )}
 
       <Section title={`Discussion (${discussion.length})`}>
         {discussion.length === 0 ? (

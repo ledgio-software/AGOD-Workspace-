@@ -15,6 +15,7 @@ import {
   updateAssignment,
 } from "@/modules/projects/team";
 import { addComment } from "@/modules/comments";
+import { createIssueForTask, linkTaskUrl, setProjectRepo, unlinkTask } from "@/modules/github";
 import { createTask, updateTaskDetails, updateTaskProgress, waiveTask } from "@/modules/tasks";
 
 type Result = ActionResult<undefined>;
@@ -310,6 +311,46 @@ export async function addCommentAction(projectId: string, _prev: Result | null, 
     await addComment(actor, projectId, { body: text(form, "body"), taskId: text(form, "taskId") });
     return undefined;
   });
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function setRepoAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await setProjectRepo(actor, projectId, text(form, "githubRepo"), await getRequestMeta());
+    return undefined;
+  }, "GitHub repository saved.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function linkGithubAction(projectId: string, taskId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await linkTaskUrl(actor, taskId, text(form, "url"), await getRequestMeta());
+    return undefined;
+  }, "Linked.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function unlinkGithubAction(projectId: string, linkId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await unlinkTask(actor, linkId, await getRequestMeta());
+    return undefined;
+  }, "Link removed.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function createIssueAction(projectId: string, taskId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await createIssueForTask(actor, taskId, await getRequestMeta());
+    return undefined;
+  }, "GitHub issue created and linked.");
   if (result.ok) refresh(projectId);
   return result;
 }

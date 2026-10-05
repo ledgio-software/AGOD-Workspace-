@@ -9,7 +9,10 @@ export type ProjectStatus =
   | "COMPLETED"
   | "CANCELLED";
 
-export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "DONE" | "WAIVED";
+export type TaskStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "IN_REVIEW" | "READY_FOR_QA" | "DONE" | "WAIVED";
+
+/** Statuses of work that is not finished (everything except Done and Waived). */
+export const OPEN_TASK_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "IN_REVIEW", "READY_FOR_QA"] as const satisfies readonly TaskStatus[];
 
 /**
  * Manual status changes a PM/Admin can make in Phase 2. The approval flow (PENDING_APPROVAL,

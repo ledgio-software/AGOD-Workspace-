@@ -5,7 +5,8 @@ import { auditEvents } from "@/lib/db/schema";
 export type RequestMeta = { ip?: string | null; userAgent?: string | null };
 
 export type AuditInput = {
-  actorId: string;
+  /** Null for changes made by the system itself (the GitHub webhook). */
+  actorId: string | null;
   entityType: string;
   entityId: string;
   action: string;

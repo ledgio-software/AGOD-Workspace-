@@ -4,6 +4,7 @@ import { projectAssignments, projects, tasks, users } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { addDays } from "@/modules/notifications/deadlines";
+import { OPEN_TASK_STATUSES } from "@/modules/projects/rules";
 
 // Workload and capacity (roadmap 2.6): how much open work each active person has, and how the
 // estimated hours due in the next 7 days (plus anything overdue) compare with their weekly capacity.
@@ -68,7 +69,7 @@ export async function getWorkload(actor: Actor) {
       .select({ assignedTo: tasks.assignedTo, projectId: tasks.projectId, status: tasks.status, dueDate: tasks.dueDate, estimateHours: tasks.estimateHours })
       .from(tasks)
       .innerJoin(projects, eq(projects.id, tasks.projectId))
-      .where(and(inArray(tasks.status, ["NOT_STARTED", "IN_PROGRESS", "BLOCKED"]), inArray(projects.status, [...OPEN_PROJECT])));
+      .where(and(inArray(tasks.status, [...OPEN_TASK_STATUSES]), inArray(projects.status, [...OPEN_PROJECT])));
     const assignments = await tx
       .select({ memberId: projectAssignments.memberId, projectId: projectAssignments.projectId })
       .from(projectAssignments)
