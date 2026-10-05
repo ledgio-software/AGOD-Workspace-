@@ -7,7 +7,9 @@ import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getPayout } from "@/modules/payments";
 import { questionsForPayout } from "@/modules/questions";
-import { createAdjustmentAction, raiseQuestionAction, recordPaymentAction, resolveQuestionAction, reviewQuestionAction } from "../actions";
+import { FileList, FileUploadForm } from "@/components/files";
+import { attachmentsAvailable, listPaymentReceipts } from "@/modules/attachments";
+import { createAdjustmentAction, raiseQuestionAction, recordPaymentAction, resolveQuestionAction, reviewQuestionAction, uploadReceiptAction } from "../actions";
 import { AdjustmentForm, PaymentForm, QuestionForm, ResolveQuestionForm, ReviewQuestionForm } from "./payout-forms";
 
 export default async function PayoutPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,6 +21,8 @@ export default async function PayoutPage({ params }: { params: Promise<{ id: str
   const { entry, balance } = payout;
   const open = balance.status !== "VOIDED";
   const questions = await questionsForPayout(actor, entry.id);
+  const receipts = await listPaymentReceipts(actor, payout.payments.map((p) => p.id));
+  const canAttachReceipt = can(actor, "payment.record") && attachmentsAvailable();
   const isOwn = entry.memberId === actor.id;
 
   return (
@@ -76,6 +80,23 @@ export default async function PayoutPage({ params }: { params: Promise<{ id: str
                 )}
                 <span className="text-zinc-500"> · recorded by {p.recordedByName}</span>
                 {p.notes && <span className="text-zinc-500"> · {p.notes}</span>}
+                <FileList
+                  files={(receipts.get(p.id) ?? []).map((f) => ({
+                    id: f.id,
+                    fileName: f.fileName,
+                    sizeBytes: f.sizeBytes,
+                    uploaderName: f.uploaderName,
+                    createdAt: formatDateTime(f.createdAt),
+                  }))}
+                />
+                {canAttachReceipt && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-zinc-500">Attach a receipt</summary>
+                    <div className="mt-2">
+                      <FileUploadForm action={uploadReceiptAction.bind(null, entry.id, p.id)} label="Attach receipt" />
+                    </div>
+                  </details>
+                )}
               </li>
             ))}
           </ul>

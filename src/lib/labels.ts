@@ -79,6 +79,8 @@ const auditActionLabel: Record<string, string> = {
   "task.github_linked": "linked a GitHub item to a task",
   "task.github_unlinked": "removed a GitHub link from a task",
   "task.github_issue_created": "created a GitHub issue for a task",
+  "attachment.uploaded": "uploaded a file",
+  "attachment.removed": "removed a file",
 };
 
 export const payoutQuestionStatusLabel = {

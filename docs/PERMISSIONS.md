@@ -56,6 +56,11 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Link a GitHub item to a task | own tasks | ✓ | ✓ |
 | Remove a GitHub link, connect a repository, create a GitHub issue | | ✓ | ✓ |
 | GitHub integration page (status, deliveries) | | | ✓ |
+| Upload project documents | | ✓ | ✓ |
+| Upload task files | own tasks | ✓ | ✓ |
+| Upload payment receipts | | | ✓ |
+| See payment receipts | own payouts | ✓ | ✓ |
+| Remove a file (not receipts) | own uploads | ✓ | ✓ |
 
 The GitHub webhook (`/api/github/webhook`) is the one place that writes domain data without a signed-in
 person: it verifies GitHub's signature, then acts as the system through the owner connection, only on projects
