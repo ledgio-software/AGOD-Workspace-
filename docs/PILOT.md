@@ -19,7 +19,7 @@ member.
 
 | Project | Covers | Expected result |
 |---|---|---|
-| [Pilot] Ledgio Payroll Module: GHS 12,500, percentage 50/30/20 | blocked task, **rejection**, approval, **partial payment**, **increase** | Ama 6,250.00 owed, 3,000.00 paid → *Partially paid*; Kofi 3,750.00 paid → *Paid*; Efua 2,500.00 + 250.00 = 2,750.00 → *Unpaid* |
+| [Pilot] Northwind Payroll Module: GHS 12,500, percentage 50/30/20 | blocked task, **rejection**, approval, **partial payment**, **increase** | Ama 6,250.00 owed, 3,000.00 paid → *Partially paid*; Kofi 3,750.00 paid → *Paid*; Efua 2,500.00 + 250.00 = 2,750.00 → *Unpaid* |
 | [Pilot] AGOD Website Refresh: GHS 4,000, fixed amounts | waived task, **decrease**, unallocated 500.00 | Kofi 2,000.00 → *Paid*; Ama 1,500.00 − 300.00 = 1,200.00 → *Paid* |
 | [Pilot] Mobile Money Integration Spike: GHS 8,000 | **blocked** and overdue tasks, not yet approved | no ledger lines; shows on the dashboard as blocked/overdue |
 
@@ -66,6 +66,6 @@ Follow "Restore exercise" in `docs/RUNBOOK-backup-restore.md` and log it in `doc
 | Dashboard and CSV totals match the ledger | | | | |
 | Backup/restore exercise completed | | | | |
 
-After sign-off, follow `docs/GO-LIVE.md`. Notifications by email, a Ledgio export and automated payments come
+After sign-off, follow `docs/GO-LIVE.md`. Notifications by email, an accounting export and automated payments come
 only after this, each as its own project (automated payments need their own security, retry and
 reconciliation design).

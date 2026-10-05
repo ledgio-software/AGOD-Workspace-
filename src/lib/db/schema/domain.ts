@@ -111,7 +111,7 @@ export const customers = pgTable(
     status: customerStatus("status").notNull().default("ACTIVE"),
     ownerId: userRef("owner_id").notNull(),
     notes: text("notes"),
-    // Optional reference in another system (e.g. Ledgio's customer number).
+    // Optional reference in another system (e.g. the accounting system's customer number).
     externalReference: text("external_reference"),
     createdBy: userRef("created_by").notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),

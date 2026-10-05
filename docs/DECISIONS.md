@@ -7,7 +7,7 @@ Changing any of these later needs a PR that updates this file.
 | # | Decision | Choice |
 |---|---|---|
 | 1 | Currency | **GHS only** for the MVP. Money is stored as integer minor units (pesewas) with an ISO currency code column, so other currencies can be added later without a data migration. No currency conversion. |
-| 2 | Authentication | **Better Auth, separate from Ledgio.** Email + password, users/sessions stored in our own Neon database. Self sign-up is disabled: accounts are created by an Admin. Login is rate limited (5 attempts/minute per client). Inactive members cannot sign in. |
+| 2 | Authentication | **Better Auth, our own login.** Email + password, users/sessions stored in our own Neon database. Self sign-up is disabled: accounts are created by an Admin. Login is rate limited (5 attempts/minute per client). Inactive members cannot sign in. |
 | 3 | Compensation split mode | **One mode per project:** either all percentage splits totalling exactly 100%, or all fixed amounts totalling no more than the project value. No mixed plans. |
 | 4 | Who records manual payments | **Admin only.** PMs can view the ledger but cannot record payments. |
 | 5 | Reopening approved projects | **Allowed, Admin only,** with a required reason and an audit event. |

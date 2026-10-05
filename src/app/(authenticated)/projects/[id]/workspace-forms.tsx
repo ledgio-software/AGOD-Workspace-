@@ -312,7 +312,7 @@ export function RepoForm({ action, current }: { action: Action; current: string 
   return (
     <ActionForm action={action} className="flex flex-wrap items-end gap-2">
       <Field label="GitHub repository" hint="owner/name. Pull requests and issues mentioning a task key link to tasks automatically.">
-        <input name="githubRepo" defaultValue={current ?? ""} placeholder="ledgio-software/payroll" className={`${inputClass} w-full sm:w-72`} />
+        <input name="githubRepo" defaultValue={current ?? ""} placeholder="acme-co/payroll" className={`${inputClass} w-full sm:w-72`} />
       </Field>
       <SubmitButton variant="secondary">Save</SubmitButton>
     </ActionForm>

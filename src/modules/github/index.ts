@@ -18,7 +18,7 @@ export const isGithubConfigured = () => githubConfig() !== null;
 export async function setProjectRepo(actor: Actor, projectId: string, input: string, request?: RequestMeta) {
   assertCan(actor, "project.edit");
   const repo = normaliseRepo(input);
-  if (repo === undefined) throw new ServiceError('Enter the repository as "owner/name", e.g. ledgio-software/payroll.');
+  if (repo === undefined) throw new ServiceError('Enter the repository as "owner/name", e.g. acme-co/payroll.');
   await withActor(actor, async (tx) => {
     const project = await lockProject(tx, projectId);
     if (project.githubRepo === repo) return;

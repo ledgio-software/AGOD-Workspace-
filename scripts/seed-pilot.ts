@@ -60,10 +60,10 @@ async function main() {
 
   // 1. External, percentage split: blocked task, rejection, approval, partial payment, increase.
   const payroll = await createProject(admin, {
-    name: "[Pilot] Ledgio Payroll Module",
-    description: "Payslips and statutory deductions for Ledgio.",
+    name: "[Pilot] Northwind Payroll Module",
+    description: "Payslips and statutory deductions for Northwind Ltd.",
     clientType: "EXTERNAL",
-    clientName: "Ledgio",
+    clientName: "Northwind Ltd",
     totalValue: "12500.00",
     splitMode: "PERCENTAGE",
     projectOwnerId: admin.id,
@@ -116,7 +116,7 @@ async function main() {
   const spike = await createProject(admin, {
     name: "[Pilot] Mobile Money Integration Spike",
     clientType: "EXTERNAL",
-    clientName: "Ledgio",
+    clientName: "Northwind Ltd",
     totalValue: "8000.00",
     splitMode: "PERCENTAGE",
     projectOwnerId: admin.id,
