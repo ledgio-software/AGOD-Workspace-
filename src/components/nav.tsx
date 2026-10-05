@@ -1,31 +1,46 @@
-import Link from "next/link";
 import { type Actor, can } from "@/lib/permissions";
+import type { IconName } from "./shell";
 
-export function Nav({ actor }: { actor: Actor }) {
-  const links = [
-    { href: "/dashboard", label: "Dashboard", show: true },
-    { href: "/my-work", label: "My work", show: true },
-    { href: "/projects", label: "Projects", show: true },
-    { href: "/ledger", label: "Ledger", show: can(actor, "payout.viewAll") },
-    { href: "/questions", label: "Questions", show: can(actor, "payoutQuestion.review") },
-    { href: "/close", label: "Month close", show: can(actor, "period.view") },
-    { href: "/profitability", label: "Profitability", show: can(actor, "finance.view") },
-    { href: "/team", label: "Team", show: can(actor, "team.view") },
-    { href: "/workload", label: "Workload", show: can(actor, "workload.view") },
-    { href: "/summary", label: "Weekly", show: can(actor, "report.weekly") },
-    { href: "/audit", label: "Audit", show: can(actor, "audit.viewProject") },
-    { href: "/account", label: "Account", show: true },
+export type NavItem = { href: string; label: string; icon: IconName };
+export type NavGroup = { label: string; items: NavItem[] };
+
+/** The sidebar sections a person can see. The pages check access again; this only hides links. */
+export function navGroups(actor: Actor): NavGroup[] {
+  const groups: { label: string; items: (NavItem & { show: boolean })[] }[] = [
+    {
+      label: "Overview",
+      items: [
+        { href: "/dashboard", label: "Dashboard", icon: "dashboard", show: true },
+        { href: "/my-work", label: "My work", icon: "myWork", show: true },
+      ],
+    },
+    {
+      label: "Work",
+      items: [
+        { href: "/projects", label: "Projects", icon: "projects", show: true },
+        { href: "/workload", label: "Workload", icon: "workload", show: can(actor, "workload.view") },
+        { href: "/summary", label: "Weekly summary", icon: "weekly", show: can(actor, "report.weekly") },
+      ],
+    },
+    {
+      label: "Money",
+      items: [
+        { href: "/ledger", label: "Ledger", icon: "ledger", show: can(actor, "payout.viewAll") },
+        { href: "/questions", label: "Questions", icon: "questions", show: can(actor, "payoutQuestion.review") },
+        { href: "/close", label: "Month close", icon: "close", show: can(actor, "period.view") },
+        { href: "/profitability", label: "Profitability", icon: "profitability", show: can(actor, "finance.view") },
+      ],
+    },
+    {
+      label: "Team & admin",
+      items: [
+        { href: "/team", label: "Team", icon: "team", show: can(actor, "team.view") },
+        { href: "/audit", label: "Audit log", icon: "audit", show: can(actor, "audit.viewProject") },
+        { href: "/integrations", label: "Integrations", icon: "integrations", show: can(actor, "audit.viewAll") },
+      ],
+    },
   ];
-
-  return (
-    <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-      {links
-        .filter((link) => link.show)
-        .map((link) => (
-          <Link key={link.href} href={link.href} className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
-            {link.label}
-          </Link>
-        ))}
-    </nav>
-  );
+  return groups
+    .map((g) => ({ label: g.label, items: g.items.filter((i) => i.show).map(({ href, label, icon }) => ({ href, label, icon })) }))
+    .filter((g) => g.items.length > 0);
 }
