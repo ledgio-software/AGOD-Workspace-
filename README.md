@@ -154,11 +154,9 @@ src/
 - Projects with automatic codes, team and compensation splits with a live preview
 - Milestones, tasks (done with evidence, blocked with reason, waived), My Work, activity
 
-### Phase 3 — Approval & Ledger
-- Approval workflows
-- Immutable snapshots
-- Ledger generation
-- Personal payout views
+### Phase 3 — Approval & Ledger ✓
+- Request approval, approve (atomic snapshot + payout ledger), return for changes, Admin reopen
+- Payout ledger page and personal payout history in My Work
 
 ### Phase 4 — Payments & Reporting
 - Manual payment recording

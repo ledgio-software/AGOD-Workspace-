@@ -44,3 +44,15 @@ Not yet provided. Development uses seeded test accounts only (`npm run db:seed`)
 | Progress | Done required tasks / required tasks; waived tasks are excluded from both. Never typed in by hand. |
 | Health | Overdue (past target), Blocked (a required task is blocked), At risk (an overdue task, or target within 7 days and under 80% done), else On track. |
 | Split privacy | Members see who is on a project and their own split, not teammates' splits. |
+
+## Phase 3 decisions (2026-10-05)
+
+| Decision | Choice |
+|---|---|
+| Who requests approval | Members on the project, the owner, PMs and Admins. The project then locks. |
+| Incomplete required tasks | Approval allowed only with an override reason, recorded in the audit event with the open tasks. |
+| Invalid compensation plan | Hard blocker: no override. |
+| Stale reviews | The approver approves the version they reviewed; any change in between makes the approval fail. |
+| Zero-amount lines | Kept in the snapshot, no ledger entry. |
+| Reopening (decision 5) | Admin only, with a reason. Current payouts are **voided** (never deleted or edited), the snapshot stays as history, and re-approval creates snapshot 2, 3, ... Refused once any payment is recorded; corrections after payment are adjustments (Phase 4). |
+| Database guarantees | A project can be marked completed only by the approval transaction; ledger amounts, recipients and approval facts can never change after creation; snapshots and lines are append-only. |

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
+import { approveProject, rejectProject, reopenProject, requestApproval } from "@/modules/approvals";
 import { changeProjectStatus, createProject, updateProject } from "@/modules/projects";
 import {
   addAssignment,
@@ -236,5 +237,56 @@ export async function waiveTaskAction(
     return undefined;
   }, "Task waived.");
   if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function requestApprovalAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await requestApproval(actor, projectId, text(form, "note"), await getRequestMeta());
+    return undefined;
+  }, "Approval requested. The project is locked until it is reviewed.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function approveAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await approveProject(
+      actor,
+      projectId,
+      { expectedVersion: Number(text(form, "expectedVersion")), overrideReason: text(form, "overrideReason") },
+      await getRequestMeta(),
+    );
+    return undefined;
+  }, "Approved. Payouts were created.");
+  if (result.ok) {
+    refresh(projectId);
+    revalidatePath("/ledger");
+  }
+  return result;
+}
+
+export async function rejectAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await rejectProject(actor, projectId, text(form, "reason"), await getRequestMeta());
+    return undefined;
+  }, "Returned for changes.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function reopenAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await reopenProject(actor, projectId, text(form, "reason"), await getRequestMeta());
+    return undefined;
+  }, "Reopened. Its payouts were voided.");
+  if (result.ok) {
+    refresh(projectId);
+    revalidatePath("/ledger");
+  }
   return result;
 }

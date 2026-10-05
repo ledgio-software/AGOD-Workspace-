@@ -47,6 +47,10 @@ const auditActionLabel: Record<string, string> = {
   "assignment.removed": "removed a team member",
   "milestone.created": "added a milestone",
   "milestone.status_changed": "changed a milestone status",
+  "project.approval_requested": "requested approval",
+  "project.approved": "approved the project and created payouts",
+  "project.changes_requested": "returned the project for changes",
+  "project.reopened": "reopened the project and voided its payouts",
   "task.created": "added a task",
   "task.updated": "edited a task",
   "task.progress_updated": "updated task progress",
@@ -61,3 +65,11 @@ const auditActionLabel: Record<string, string> = {
 export function describeAuditAction(action: string): string {
   return auditActionLabel[action] ?? action;
 }
+
+export const payoutStatusLabel = {
+  OWED: "Owed",
+  PARTIALLY_PAID: "Partially paid",
+  PAID: "Paid",
+  DISPUTED: "Disputed",
+  VOIDED: "Voided",
+} as const;

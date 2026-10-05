@@ -29,6 +29,20 @@
       "when": 1791159151181,
       "tag": "20261005001231_assignment_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791160093275,
+      "tag": "20261005002813_snapshot_sequence",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791160121759,
+      "tag": "20261005002841_approval_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,7 @@ export function Nav({ actor }: { actor: Actor }) {
     { href: "/dashboard", label: "Dashboard", show: true },
     { href: "/my-work", label: "My work", show: true },
     { href: "/projects", label: "Projects", show: true },
+    { href: "/ledger", label: "Ledger", show: can(actor, "payout.viewAll") },
     { href: "/team", label: "Team", show: can(actor, "team.view") },
     { href: "/account", label: "Account", show: true },
   ];
