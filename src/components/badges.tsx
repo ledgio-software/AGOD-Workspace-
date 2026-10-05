@@ -1,4 +1,4 @@
-import { customerStatusLabel, healthLabel, payoutQuestionStatusLabel, payoutStatusLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
+import { customerStatusLabel, healthLabel, subscriptionStatusLabel, payoutQuestionStatusLabel, payoutStatusLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
 import type { Health, Progress, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
 const base = "inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset";
@@ -81,4 +81,20 @@ const customerStatusTone = { PROSPECT: "violet", ACTIVE: "green", PAUSED: "amber
 
 export function CustomerStatusBadge({ status }: { status: keyof typeof customerStatusLabel }) {
   return <Badge tone={customerStatusTone[status]}>{customerStatusLabel[status]}</Badge>;
+}
+
+const subscriptionStatusTone = { DRAFT: "gray", ACTIVE: "green", PAUSED: "amber", ENDED: "gray", CANCELLED: "red" } as const;
+
+export function SubscriptionStatusBadge({ status }: { status: keyof typeof subscriptionStatusLabel }) {
+  return <Badge tone={subscriptionStatusTone[status]}>{subscriptionStatusLabel[status]}</Badge>;
+}
+
+type Renewal = { kind: "PAST_END" | "OVERDUE" | "DUE"; days: number } | null;
+
+/** Whether a renewal decision is due: shown next to live subscriptions. */
+export function RenewalBadge({ renewal }: { renewal: Renewal }) {
+  if (!renewal) return null;
+  if (renewal.kind === "PAST_END") return <Badge tone="red">Past end date</Badge>;
+  if (renewal.kind === "OVERDUE") return <Badge tone="red">Renewal overdue {-renewal.days}d</Badge>;
+  return <Badge tone="amber">{renewal.days === 0 ? "Renewal due today" : `Renewal in ${renewal.days}d`}</Badge>;
 }

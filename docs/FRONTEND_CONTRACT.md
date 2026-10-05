@@ -33,6 +33,10 @@ rules, audit) lives behind these functions, not in the pages.
 | `/projects/[id]` | anyone who can see the project | `getProjectWorkspace`, `getProjectPayouts`, `listComments`, `listProjectAttachments`, `getProjectGithub`, `getProjectFinance` (`finance.view`), `listTemplates` | `projects/actions`: project edit/status/health, team (`addAssignmentAction`, ...), milestones, tasks, approvals, comments, GitHub, files, finance (`projectFinanceAction`, `recordCostAction`, `voidCostAction`) |
 | `/customers` | `customer.view` | `listCustomers({ q, status })` | |
 | `/customers/new`, `/customers/[id]` | `customer.view` | `getCustomer` | `customers/actions` (`customer.manage`): customer create/edit/archive/restore, contacts add/edit/deactivate |
+| `/subscriptions` | `subscription.view` | `listSubscriptions({ q, status, attention, customerId })`, `recurringTotals` | |
+| `/subscriptions/new` (`?customer=<id>`) | `subscription.manage` | `listCustomerOptions`, `listServiceOptions` | `createSubscriptionAction` |
+| `/subscriptions/[id]` | `subscription.view` | `getSubscription` | `subscriptions/actions`: `changeStatusAction`, `updateDraftAction`, `amendAction`, `updateDetailsAction` |
+| `/services` | `subscription.view` | `listServices` | `createServiceAction`, `updateServiceAction`, `setServiceActiveAction` |
 | `/projects/[id]/statement` | anyone who can see the project | `getProjectStatement` | |
 | `/payouts/[id]` | the payee, managers | `getPayout`, `questionsForPayout`, `listPaymentReceipts` | `payouts/actions`: payments, adjustments, questions, receipts |
 | `/ledger` (+ `/ledger/export`) | `payout.viewAll` | `listLedger` | |

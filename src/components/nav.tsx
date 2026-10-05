@@ -18,9 +18,16 @@ export function navGroups(actor: Actor): NavGroup[] {
       label: "Work",
       items: [
         { href: "/projects", label: "Projects", icon: "projects", show: true },
-        { href: "/customers", label: "Customers", icon: "customers", show: can(actor, "customer.view") },
         { href: "/workload", label: "Workload", icon: "workload", show: can(actor, "workload.view") },
         { href: "/summary", label: "Weekly summary", icon: "weekly", show: can(actor, "report.weekly") },
+      ],
+    },
+    {
+      label: "Customers",
+      items: [
+        { href: "/customers", label: "Customers", icon: "customers", show: can(actor, "customer.view") },
+        { href: "/subscriptions", label: "Subscriptions", icon: "subscriptions", show: can(actor, "subscription.view") },
+        { href: "/services", label: "Services", icon: "services", show: can(actor, "subscription.view") },
       ],
     },
     {
