@@ -195,6 +195,9 @@ src/
 ### Phase 13 — Frontend redesign, part 2 ✓
 - Projects list, project page with tabs (Overview, Tasks, Team & money, Discussion, Files, Activity), new project and statement
 
+### Phase 14 — Frontend redesign, part 3 ✓
+- Money pages: Ledger, payout detail, Questions, Month close, Reconcile, and Profitability with charts (profit by type and client, payout forecast, ageing, utilisation)
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

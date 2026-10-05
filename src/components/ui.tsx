@@ -89,17 +89,17 @@ export function StatCard({
 }) {
   const styles = toneStyles[tone];
   const body = (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 space-y-1">
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-medium text-muted">{label}</div>
-        <div className={cx("text-xl font-semibold tracking-tight tabular-nums xl:text-[1.375rem]", styles.value)}>{value}</div>
-        {hint && <div className="text-xs text-muted">{hint}</div>}
+        {Icon && (
+          <span className={cx("grid size-7 shrink-0 place-items-center rounded-lg", styles.icon)}>
+            <Icon className="size-3.5" aria-hidden />
+          </span>
+        )}
       </div>
-      {Icon && (
-        <span className={cx("grid size-8 shrink-0 place-items-center rounded-lg", styles.icon)}>
-          <Icon className="size-4" aria-hidden />
-        </span>
-      )}
+      <div className={cx("whitespace-nowrap text-xl font-semibold tracking-tight tabular-nums xl:text-[1.375rem]", styles.value)}>{value}</div>
+      {hint && <div className="text-xs text-muted">{hint}</div>}
     </div>
   );
   const cls = "block rounded-xl border border-line bg-surface p-4 shadow-xs";
@@ -227,3 +227,38 @@ export const table = {
   td: "px-5 py-3 align-middle",
   num: "whitespace-nowrap px-5 py-3 text-right tabular-nums",
 };
+
+/** Denser cells for wide money tables. */
+export const compactTable = {
+  th: "px-3 py-2.5 font-medium first:pl-5 last:pr-5",
+  td: "px-3 py-2.5 align-middle first:pl-5 last:pr-5",
+  num: "whitespace-nowrap px-3 py-2.5 text-right tabular-nums first:pl-5 last:pr-5",
+};
+
+export type TabItem = { href: string; label: string; active: boolean; count?: number; icon?: LucideIcon };
+
+/** Underlined tab links (each tab is its own URL, so it can be shared and survives a reload). */
+export function TabNav({ label, items }: { label: string; items: TabItem[] }) {
+  return (
+    <nav aria-label={label} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <ul className="flex min-w-max gap-1 border-b border-line">
+        {items.map(({ href, label: text, active, count, icon: Icon }) => (
+          <li key={href}>
+            <Link
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={cx(
+                "-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition",
+                active ? "border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300" : "border-transparent text-muted hover:border-line-strong hover:text-fg",
+              )}
+            >
+              {Icon && <Icon className="size-4" aria-hidden />}
+              {text}
+              {count !== undefined && count > 0 && <span className="rounded-full bg-surface-muted px-1.5 text-[11px] tabular-nums text-muted">{count}</span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}

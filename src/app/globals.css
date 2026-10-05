@@ -13,6 +13,11 @@
   --fg: #111827;
   --muted: #6b7280;
   --sidebar: #ffffff;
+  /* Chart series (validated with the dataviz palette checks against the light surface). */
+  --series-1: #4f46e5;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --negative: #e34948;
   color-scheme: light;
 }
 
@@ -26,6 +31,10 @@
     --fg: #e6e8ee;
     --muted: #8b93a7;
     --sidebar: #0f1218;
+    --series-1: #6366f1;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --negative: #e66767;
     color-scheme: dark;
   }
 }
@@ -41,6 +50,10 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-sidebar: var(--sidebar);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-negative: var(--negative);
   --color-brand-50: var(--color-indigo-50);
   --color-brand-100: var(--color-indigo-100);
   --color-brand-200: var(--color-indigo-200);

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { FormMessage, inputClass } from "@/components/form";
+import { buttonClass } from "@/components/ui";
 import { formatMoney } from "@/lib/money";
 import { reconcileAction } from "./actions";
 
@@ -23,7 +24,7 @@ export function ReconcileForm() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+          className={buttonClass("primary")}
         >
           {pending ? "Comparing…" : "Compare with the ledger"}
         </button>
@@ -32,13 +33,13 @@ export function ReconcileForm() {
 
       {r && (
         <div className="space-y-4 text-sm">
-          <p className={r.mismatched.length + r.missingInSystem.length + r.missingInSheet.length + r.errors.length === 0 ? "text-green-700" : ""}>
+          <p className={r.mismatched.length + r.missingInSystem.length + r.missingInSheet.length + r.errors.length === 0 ? "font-medium text-emerald-700 dark:text-emerald-400" : ""}>
             <strong>{r.matched.length}</strong> match · <strong>{r.mismatched.length}</strong> differ ·{" "}
             <strong>{r.missingInSystem.length}</strong> only in the spreadsheet · <strong>{r.missingInSheet.length}</strong> only in the
             system{r.errors.length > 0 && <> · <strong>{r.errors.length}</strong> unreadable lines</>}
           </p>
           {r.errors.length > 0 && (
-            <ul className="list-disc pl-5 text-red-600">
+            <ul className="list-disc pl-5 text-red-600 dark:text-red-400">
               {r.errors.map((e) => (
                 <li key={e}>{e}</li>
               ))}
@@ -47,8 +48,8 @@ export function ReconcileForm() {
           {r.mismatched.length > 0 && (
             <div>
               <h3 className="font-semibold">Differences</h3>
-              <table className="w-full text-left">
-                <thead className="text-zinc-500">
+              <table className="w-full text-left tabular-nums">
+                <thead className="text-xs uppercase tracking-wide text-muted">
                   <tr>
                     <th className="py-1 pr-3 font-medium">Project / recipient</th>
                     <th className="py-1 pr-3 font-medium">Owed: sheet → system</th>
@@ -57,15 +58,15 @@ export function ReconcileForm() {
                 </thead>
                 <tbody>
                   {r.mismatched.map((m) => (
-                    <tr key={m.key} className="border-t border-zinc-100 dark:border-zinc-900">
+                    <tr key={m.key} className="border-t border-line">
                       <td className="py-1 pr-3">
                         {m.key} ({m.memberName}) · sheet line {m.line}
                       </td>
-                      <td className={`py-1 pr-3 tabular-nums ${m.expectedOwedMinor !== m.owedMinor ? "text-red-600" : ""}`}>
+                      <td className={`py-1 pr-3 tabular-nums ${m.expectedOwedMinor !== m.owedMinor ? "text-red-600 dark:text-red-400" : ""}`}>
                         {formatMoney(m.expectedOwedMinor)} → {formatMoney(m.owedMinor)}
                       </td>
                       <td
-                        className={`py-1 tabular-nums ${m.expectedPaidMinor !== null && m.expectedPaidMinor !== m.paidMinor ? "text-red-600" : ""}`}
+                        className={`py-1 tabular-nums ${m.expectedPaidMinor !== null && m.expectedPaidMinor !== m.paidMinor ? "text-red-600 dark:text-red-400" : ""}`}
                       >
                         {m.expectedPaidMinor === null ? "—" : formatMoney(m.expectedPaidMinor)} → {formatMoney(m.paidMinor)}
                       </td>
@@ -101,7 +102,7 @@ export function ReconcileForm() {
           )}
           {r.matched.length > 0 && (
             <details>
-              <summary className="cursor-pointer text-zinc-500">{r.matched.length} matching line(s)</summary>
+              <summary className="cursor-pointer text-muted">{r.matched.length} matching line(s)</summary>
               <ul className="list-disc pl-5">
                 {r.matched.map((m) => (
                   <li key={m.key}>
