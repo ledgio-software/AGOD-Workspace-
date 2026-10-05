@@ -53,8 +53,8 @@ export function TaskStatusBadge({ status }: { status: TaskStatus }) {
 export function ProgressBar({ progress }: { progress: Progress }) {
   if (progress.percent === null) return <span className="text-xs text-muted">No tasks yet</span>;
   return (
-    <div className="flex items-center gap-2" title={`${progress.done} of ${progress.total} tasks done`}>
-      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-muted ring-1 ring-inset ring-line">
+    <div className="flex items-center gap-2 whitespace-nowrap" title={`${progress.done} of ${progress.total} tasks done`}>
+      <div className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-surface-muted ring-1 ring-inset ring-line">
         <div
           className={`h-full rounded-full ${progress.percent === 100 ? "bg-emerald-500" : "bg-brand-500"}`}
           style={{ width: `${progress.percent}%` }}

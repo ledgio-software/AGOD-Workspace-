@@ -98,3 +98,12 @@ Dashboard and My Work. Later phases move the remaining pages onto the same piece
 - **Shell** (`src/components/shell.tsx`, `nav.tsx`): the sidebar groups come from `navGroups(actor)`; add a page
   there with its permission. Icons are from `lucide-react`.
 - **Lists that can grow** use `ExpandableList` (`src/components/expandable-list.tsx`).
+
+### Project page tabs (Phase 13)
+
+`/projects/[id]?tab=` selects a section: `overview` (default: approval and payouts, about, delivery, manager
+controls, edit details), `tasks` (milestones, tasks, add task, templates), `team` (team, compensation preview and,
+for managers, the Finance card `#finance`), `discussion`, `files` (project and task files) and `activity`. Server
+actions keep the URL, so a form submitted on a tab stays on that tab. Link to finance with
+`/projects/<id>?tab=team#finance`. Occasional forms sit in a collapsible "Disclosure" block.
+

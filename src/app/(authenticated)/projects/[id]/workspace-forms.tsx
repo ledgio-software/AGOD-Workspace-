@@ -39,7 +39,7 @@ export function StatusControls({ action, allowed }: { action: Action; allowed: P
 export function HealthOverrideForm({ action, current }: { action: Action; current: Health | null }) {
   return (
     <details>
-      <summary className="cursor-pointer text-sm text-zinc-600 dark:text-zinc-400">
+      <summary className="cursor-pointer text-sm text-muted">
         {current ? "Change or clear the health override" : "Override health"}
       </summary>
       <ActionForm action={action} resetOnSuccess className="mt-3 flex flex-wrap items-end gap-2">
@@ -54,7 +54,7 @@ export function HealthOverrideForm({ action, current }: { action: Action; curren
           </select>
         </Field>
         <Field label="Reason">
-          <input name="reason" required minLength={3} className={`${inputClass} w-72`} />
+          <input name="reason" required minLength={3} className={`${inputClass} w-full sm:w-72`} />
         </Field>
         <SubmitButton>Save</SubmitButton>
       </ActionForm>
@@ -112,8 +112,8 @@ export function AssignmentRowActions({
 }) {
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">Edit</summary>
-      <div className="mt-2 w-64 space-y-4">
+      <summary className="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">Edit</summary>
+      <div className="ml-auto mt-2 w-64 space-y-4 text-left">
         <ActionForm action={updateAction} className="space-y-2">
           <input name="roleOnProject" required defaultValue={defaults.roleOnProject} className={inputClass} />
           <input
@@ -312,7 +312,7 @@ export function RepoForm({ action, current }: { action: Action; current: string 
   return (
     <ActionForm action={action} className="flex flex-wrap items-end gap-2">
       <Field label="GitHub repository" hint="owner/name. Pull requests and issues mentioning a task key link to tasks automatically.">
-        <input name="githubRepo" defaultValue={current ?? ""} placeholder="ledgio-software/payroll" className={`${inputClass} w-72`} />
+        <input name="githubRepo" defaultValue={current ?? ""} placeholder="ledgio-software/payroll" className={`${inputClass} w-full sm:w-72`} />
       </Field>
       <SubmitButton variant="secondary">Save</SubmitButton>
     </ActionForm>
@@ -322,8 +322,10 @@ export function RepoForm({ action, current }: { action: Action; current: string 
 export function LinkGithubForm({ action }: { action: Action }) {
   return (
     <ActionForm action={action} resetOnSuccess className="flex flex-wrap items-end gap-2">
-      <input name="url" type="url" required placeholder="Paste a GitHub issue, PR, commit or branch link" className={`${inputClass} w-80`} />
-      <SubmitButton variant="secondary">Link</SubmitButton>
+      <input name="url" type="url" required placeholder="Paste a GitHub issue, PR, commit or branch link" className={`${inputClass} w-full sm:w-80`} />
+      <SubmitButton variant="secondary" size="sm">
+        Link
+      </SubmitButton>
     </ActionForm>
   );
 }
@@ -331,7 +333,9 @@ export function LinkGithubForm({ action }: { action: Action }) {
 export function SmallButtonForm({ action, label, confirmMessage }: { action: Action; label: string; confirmMessage?: string }) {
   return (
     <ActionForm action={action} confirmMessage={confirmMessage} className="inline-block">
-      <SubmitButton variant="secondary">{label}</SubmitButton>
+      <SubmitButton variant="secondary" size="sm">
+        {label}
+      </SubmitButton>
     </ActionForm>
   );
 }
@@ -390,8 +394,8 @@ export function CostForm({ action, today }: { action: Action; today: string }) {
 export function VoidCostForm({ action }: { action: Action }) {
   return (
     <ActionForm action={action} className="flex flex-wrap items-center gap-2">
-      <input name="reason" required minLength={3} placeholder="Why is this cost wrong?" className={`${inputClass} w-64 text-xs`} />
-      <SubmitButton variant="secondary">Void</SubmitButton>
+      <input name="reason" required minLength={3} placeholder="Why is this cost wrong?" className={`${inputClass} w-full text-xs sm:w-64`} />
+      <SubmitButton variant="secondary" size="sm">Void</SubmitButton>
     </ActionForm>
   );
 }
