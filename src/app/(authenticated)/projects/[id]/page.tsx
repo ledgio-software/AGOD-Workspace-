@@ -142,7 +142,10 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
           </div>
           <div>
             <dt className="text-zinc-500">Split mode</dt>
-            <dd>{pct ? "Percentages" : "Fixed amounts"}</dd>
+            <dd>
+              {pct ? "Percentages" : "Fixed amounts"}
+              {pct && project.agodShareBasisPoints > 0 && <> · AGOD keeps {formatPercent(project.agodShareBasisPoints)}</>}
+            </dd>
           </div>
           <div>
             <dt className="text-zinc-500">Start</dt>
@@ -203,6 +206,7 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
                   clientName: project.clientName,
                   totalValue: minorToInput(project.totalValueMinor),
                   splitMode: project.splitMode,
+                  agodShare: String(project.agodShareBasisPoints / 100),
                   projectOwnerId: project.projectOwnerId,
                   startDate: project.startDate,
                   targetDate: project.targetDate,
@@ -288,9 +292,16 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
           <div className="space-y-1 rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
             <p className="font-medium">Calculation preview</p>
             <p>
-              Project value {formatMoney(project.totalValueMinor, project.currency)} · allocated{" "}
-              {formatMoney(ws.compensation.allocatedMinor, project.currency)} · unallocated{" "}
-              <strong>{formatMoney(ws.compensation.unallocatedMinor, project.currency)}</strong>
+              Project value {formatMoney(project.totalValueMinor, project.currency)} · to the team{" "}
+              {formatMoney(ws.compensation.allocatedMinor, project.currency)} · kept by AGOD{" "}
+              <strong>{formatMoney(ws.compensation.agodShareMinor, project.currency)}</strong>
+              {pct && project.agodShareBasisPoints > 0 && <> ({formatPercent(project.agodShareBasisPoints)})</>}
+              {pct && ws.compensation.unallocatedMinor !== 0 && (
+                <>
+                  {" "}
+                  · unallocated <strong>{formatMoney(ws.compensation.unallocatedMinor, project.currency)}</strong>
+                </>
+              )}
             </p>
             {ws.compensation.roundingNote && <p className="text-zinc-600 dark:text-zinc-400">{ws.compensation.roundingNote}</p>}
             {ws.compensation.valid ? (

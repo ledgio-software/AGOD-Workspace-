@@ -32,6 +32,7 @@ function projectFields(form: FormData) {
     clientName: text(form, "clientName"),
     totalValue: text(form, "totalValue"),
     splitMode: text(form, "splitMode") as "PERCENTAGE" | "FIXED_AMOUNT",
+    agodShare: text(form, "agodShare"),
     projectOwnerId: text(form, "projectOwnerId"),
     startDate: text(form, "startDate"),
     targetDate: text(form, "targetDate"),

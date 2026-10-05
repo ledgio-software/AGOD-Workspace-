@@ -58,7 +58,7 @@ Project financials (also returned by `getProjectFinance(actor, projectId).financ
 | Field | Meaning |
 |---|---|
 | `revenueMinor` | Project value (0 for internal projects) |
-| `plannedPayoutMinor` | Payouts from the current compensation plan |
+| `plannedPayoutMinor` | Payouts to the team from the current compensation plan (excludes the AGOD share) |
 | `committedPayoutMinor`, `paidPayoutMinor`, `outstandingPayoutMinor` | From the ledger after approval |
 | `costBudgetMinor`, `actualCostMinor`, `costOverBudgetMinor` | Budgeted, recorded (non-voided) and over-budget costs |
 | `estimatedProfitMinor`, `estimatedMarginPct` | Revenue − planned payouts − cost budget |
@@ -75,3 +75,10 @@ returns one row per active person with `tasksCompleted`, `unestimated`, `complet
 Good candidates for charts in the redesign: profit by category and client (bar), the monthly forecast (stacked bar),
 aging buckets (bar), utilisation per person (bar with a 100% line). The numbers are all ready to plot; no extra
 calculation is needed in the browser.
+
+## AGOD share (Phase 11)
+
+The project form sends `agodShare` (a percentage such as "30", percentage mode only). Projects have
+`agodShareBasisPoints`; the compensation preview (`getProjectWorkspace(...).compensation`) has `allocatedMinor`
+(to the team), `agodShareMinor` (kept by AGOD) and `unallocatedMinor`; approval snapshots store
+`agodShareBasisPoints` and `agodShareMinor`.
