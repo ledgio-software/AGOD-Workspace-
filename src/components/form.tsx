@@ -2,9 +2,10 @@
 
 import { createContext, useActionState, useContext, useEffect, useRef, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import { buttonClass } from "@/components/ui";
 
 export const inputClass =
-  "w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
+  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-fg shadow-xs placeholder:text-muted focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50";
 
 type State = { ok: boolean; error?: string; message?: string } | null;
 
@@ -22,13 +23,8 @@ export function SubmitButton({
   const formStatus = useFormStatus();
   const contextPending = useContext(PendingContext);
   const pending = contextPending ?? formStatus.pending;
-  const styles = {
-    primary: "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900",
-    secondary: "border border-zinc-300 dark:border-zinc-700",
-    danger: "bg-red-700 text-white",
-  }[variant];
   return (
-    <button type="submit" disabled={pending} className={`rounded-md px-3 py-2 text-sm disabled:opacity-60 ${styles}`}>
+    <button type="submit" disabled={pending} className={buttonClass(variant)}>
       {pending ? (pendingText ?? "Saving…") : children}
     </button>
   );
@@ -38,12 +34,12 @@ export function FormMessage({ state }: { state: State }) {
   if (!state) return null;
   if (!state.ok) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-red-600 dark:text-red-400">
         {state.error}
       </p>
     );
   }
-  return state.message ? <p className="text-sm text-green-700 dark:text-green-500">{state.message}</p> : null;
+  return state.message ? <p className="text-sm text-emerald-700 dark:text-emerald-400">{state.message}</p> : null;
 }
 
 /**
@@ -96,10 +92,10 @@ export function ActionForm<S extends State>({
 
 export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <label className="block space-y-1 text-sm">
-      <span className="font-medium">{label}</span>
+    <label className="block space-y-1.5 text-sm">
+      <span className="font-medium text-fg">{label}</span>
       {children}
-      {hint && <span className="block whitespace-pre-line text-xs text-zinc-500">{hint}</span>}
+      {hint && <span className="block whitespace-pre-line text-xs text-muted">{hint}</span>}
     </label>
   );
 }
@@ -107,12 +103,12 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 /** Shows a one-time password once. It is never stored in readable form. */
 export function TemporaryPassword({ email, password }: { email: string; password: string }) {
   return (
-    <div className="space-y-1 rounded-md border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+    <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
       <p>
         Temporary password for <strong>{email}</strong>. Share it privately; it is shown only once. The member
         should change it on the Account page after signing in.
       </p>
-      <code className="block select-all rounded bg-white px-2 py-1 font-mono dark:bg-black">{password}</code>
+      <code className="block select-all rounded-lg bg-white px-3 py-2 font-mono dark:bg-black">{password}</code>
     </div>
   );
 }
