@@ -252,6 +252,8 @@ export function TaskProgressForm({ action, status, today }: { action: Action; st
         <option value="NOT_STARTED">Not started</option>
         <option value="IN_PROGRESS">In progress</option>
         <option value="BLOCKED">Blocked</option>
+        <option value="IN_REVIEW">In review</option>
+        <option value="READY_FOR_QA">Ready for QA</option>
         <option value="DONE">Done</option>
       </select>
       {next === "DONE" && (
@@ -302,6 +304,34 @@ export function CommentForm({ action, tasks }: { action: Action; tasks: { id: st
         </Field>
         <SubmitButton>Post comment</SubmitButton>
       </div>
+    </ActionForm>
+  );
+}
+
+export function RepoForm({ action, current }: { action: Action; current: string | null }) {
+  return (
+    <ActionForm action={action} className="flex flex-wrap items-end gap-2">
+      <Field label="GitHub repository" hint="owner/name. Pull requests and issues mentioning a task key link to tasks automatically.">
+        <input name="githubRepo" defaultValue={current ?? ""} placeholder="ledgio-software/payroll" className={`${inputClass} w-72`} />
+      </Field>
+      <SubmitButton variant="secondary">Save</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function LinkGithubForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="flex flex-wrap items-end gap-2">
+      <input name="url" type="url" required placeholder="Paste a GitHub issue, PR, commit or branch link" className={`${inputClass} w-80`} />
+      <SubmitButton variant="secondary">Link</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function SmallButtonForm({ action, label, confirmMessage }: { action: Action; label: string; confirmMessage?: string }) {
+  return (
+    <ActionForm action={action} confirmMessage={confirmMessage} className="inline-block">
+      <SubmitButton variant="secondary">{label}</SubmitButton>
     </ActionForm>
   );
 }

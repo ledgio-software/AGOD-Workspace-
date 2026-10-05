@@ -52,6 +52,9 @@ export const taskStatus = pgEnum("task_status", [
   "BLOCKED",
   "DONE",
   "WAIVED",
+  // Roadmap 2.5: a pull request is open (In review) or merged and waiting for PM verification (Ready for QA).
+  "IN_REVIEW",
+  "READY_FOR_QA",
 ]);
 export const payoutStatus = pgEnum("payout_status", [
   "OWED",
@@ -101,12 +104,15 @@ export const projects = pgTable(
     healthOverrideReason: text("health_override_reason"),
     healthOverrideBy: userRef("health_override_by"),
     healthOverrideAt: timestamp("health_override_at", { withTimezone: true }),
+    // GitHub repository ("owner/name") whose issues, pull requests and deployments relate to this project.
+    githubRepo: text("github_repo"),
     version: integer("version").notNull().default(1),
     createdAt,
     updatedAt,
   },
   (t) => [
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
+    check("projects_github_repo_format", sql`${t.githubRepo} IS NULL OR ${t.githubRepo} ~ '^[a-z0-9_.-]+/[a-z0-9_.-]+$'`),
     check(
       "projects_health_override_has_reason",
       sql`(${t.healthOverride} IS NULL AND ${t.healthOverrideReason} IS NULL)
@@ -175,6 +181,9 @@ export const tasks = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
     milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "restrict" }),
+    // Per-project task number, assigned by a database trigger; with the project code it forms the
+    // task key used in branch names and pull requests, e.g. AGOD-2026-005-T3.
+    number: integer("number").notNull().default(0),
     title: text("title").notNull(),
     description: text("description"),
     assignedTo: userRef("assigned_to"),
@@ -195,6 +204,7 @@ export const tasks = pgTable(
     updatedAt,
   },
   (t) => [
+    uniqueIndex("tasks_project_number_unique").on(t.projectId, t.number),
     check("tasks_estimate_range", sql`${t.estimateHours} IS NULL OR ${t.estimateHours} BETWEEN 1 AND 999`),
     check(
       "tasks_done_requires_note",
@@ -472,4 +482,92 @@ export const projectTemplates = pgTable(
     updatedAt,
   },
   (t) => [check("project_templates_name_length", sql`length(trim(${t.name})) >= 3`)],
+);
+
+// GitHub integration (roadmap 2.5). Written by people (links pasted on a task) and by the GitHub
+// webhook (pull requests, reviews, issues, deployments and releases), which runs as the system.
+export const githubLinkKind = pgEnum("github_link_kind", ["ISSUE", "PULL_REQUEST", "COMMIT", "BRANCH"]);
+
+export const taskLinks = pgTable(
+  "task_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "restrict" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    kind: githubLinkKind("kind").notNull(),
+    /** "owner/name", lower case. */
+    repo: text("repo").notNull(),
+    number: integer("number"),
+    /** Branch name or commit SHA. */
+    ref: text("ref"),
+    /** Identity of the linked item, e.g. "PULL_REQUEST:agod/app#12"; unique per task. */
+    key: text("key").notNull(),
+    url: text("url").notNull(),
+    title: text("title"),
+    /** open, closed, merged or draft, as last reported by GitHub. */
+    state: text("state"),
+    authorLogin: text("author_login"),
+    /** Latest review outcome: approved, changes_requested or commented. */
+    reviewState: text("review_state"),
+    reviewers: text("reviewers").array().notNull().default(sql`'{}'::text[]`),
+    headSha: text("head_sha"),
+    mergeCommitSha: text("merge_commit_sha"),
+    mergedAt: timestamp("merged_at", { withTimezone: true }),
+    /** Null when linked automatically by the webhook. */
+    linkedBy: userRef("linked_by"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("task_links_task_key_unique").on(t.taskId, t.key),
+    index("task_links_project_idx").on(t.projectId),
+    index("task_links_repo_number_idx").on(t.repo, t.number),
+  ],
+);
+
+export const githubDeliveries = pgTable("github_deliveries", {
+  /** X-GitHub-Delivery: each delivery is processed once, even if GitHub redelivers it. */
+  deliveryId: text("delivery_id").primaryKey(),
+  event: text("event").notNull(),
+  action: text("action"),
+  repo: text("repo"),
+  summary: text("summary").notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const githubDeployments = pgTable(
+  "github_deployments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    githubId: bigint("github_id", { mode: "number" }).notNull().unique(),
+    repo: text("repo").notNull(),
+    environment: text("environment").notNull(),
+    ref: text("ref"),
+    sha: text("sha").notNull(),
+    /** Latest deployment status: pending, in_progress, success, failure, error or inactive. */
+    state: text("state").notNull(),
+    url: text("url"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [index("github_deployments_repo_sha_idx").on(t.repo, t.sha)],
+);
+
+export const githubReleases = pgTable(
+  "github_releases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    githubId: bigint("github_id", { mode: "number" }).notNull().unique(),
+    repo: text("repo").notNull(),
+    tag: text("tag").notNull(),
+    name: text("name"),
+    url: text("url").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [index("github_releases_repo_idx").on(t.repo)],
 );

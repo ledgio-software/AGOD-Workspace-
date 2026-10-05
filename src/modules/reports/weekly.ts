@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/money";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { addDays } from "@/modules/notifications/deadlines";
 import { listProjects } from "@/modules/projects";
+import { OPEN_TASK_STATUSES } from "@/modules/projects/rules";
 
 // Weekly progress summary (roadmap Stage 2): what moved in one week (Monday to Sunday in the
 // operating timezone), what is stuck now, and what is due next. Read-only; also as plain text
@@ -57,7 +58,7 @@ export async function getWeeklySummary(actor: Actor, rawWeek?: string) {
       .from(tasks)
       .innerJoin(projects, eq(projects.id, tasks.projectId))
       .leftJoin(assignee, eq(assignee.id, tasks.assignedTo))
-      .where(and(inArray(tasks.status, ["NOT_STARTED", "IN_PROGRESS", "BLOCKED"]), inArray(projects.status, [...OPEN])))
+      .where(and(inArray(tasks.status, [...OPEN_TASK_STATUSES]), inArray(projects.status, [...OPEN])))
       .orderBy(asc(tasks.dueDate));
 
     const approvals = await tx

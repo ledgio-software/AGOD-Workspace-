@@ -9,6 +9,10 @@
 | `backend/AGOD-<id>-<name>` | Backend task branches |
 | `hotfix/AGOD-<id>-<name>` | Urgent production fixes |
 
+`AGOD-<id>` is the tracker's task key, e.g. `backend/AGOD-2026-005-T3-payslip-api` (each task shows its key and a
+suggested branch name). With the GitHub App set up (`docs/GITHUB_APP.md`), a pull request from such a branch links
+itself to the task and moves it to In review, then to Ready for QA when merged.
+
 No permanent `develop` branch. Feature branches live 1-2 working days.
 
 ## Flow

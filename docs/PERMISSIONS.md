@@ -53,6 +53,13 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Set task estimates | | ✓ | ✓ |
 | Set weekly capacity | | | ✓ |
 | Workload view, weekly summary | | ✓ | ✓ |
+| Link a GitHub item to a task | own tasks | ✓ | ✓ |
+| Remove a GitHub link, connect a repository, create a GitHub issue | | ✓ | ✓ |
+| GitHub integration page (status, deliveries) | | | ✓ |
+
+The GitHub webhook (`/api/github/webhook`) is the one place that writes domain data without a signed-in
+person: it verifies GitHub's signature, then acts as the system through the owner connection, only on projects
+connected to the event's repository, and records audit events with an empty actor.
 
 ## Running the tests
 

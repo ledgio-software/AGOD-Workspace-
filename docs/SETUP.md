@@ -73,6 +73,7 @@ Settings that must stay as they are:
 | `APP_TIMEZONE` | `Africa/Accra` | `Africa/Accra` | no |
 | `BETTER_AUTH_URL` | optional (defaults to the production domain) | optional (defaults to the branch URL) | no |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | optional, enables error monitoring | optional | no |
+| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | optional, the production GitHub App (`docs/GITHUB_APP.md`) | optional, the staging GitHub App | key and secret: yes |
 
 Generate a secret in PowerShell:
 `$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)`

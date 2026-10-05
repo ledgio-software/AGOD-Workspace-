@@ -175,6 +175,8 @@ const note = (message: string) => z.string().trim().min(3, message).max(2000);
 export const progressInput = z.discriminatedUnion("status", [
   z.object({ status: z.literal("NOT_STARTED") }),
   z.object({ status: z.literal("IN_PROGRESS") }),
+  z.object({ status: z.literal("IN_REVIEW") }),
+  z.object({ status: z.literal("READY_FOR_QA") }),
   z.object({
     status: z.literal("DONE"),
     completionNote: note("Describe what was completed (at least 3 characters)."),

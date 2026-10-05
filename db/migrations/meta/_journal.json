@@ -78,6 +78,20 @@
       "when": 1791166028596,
       "tag": "20261005020708_stage2_collaboration_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791167127646,
+      "tag": "20261005022527_github_integration",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791167148087,
+      "tag": "20261005022548_github_integration_rules",
+      "breakpoints": true
     }
   ]
 }

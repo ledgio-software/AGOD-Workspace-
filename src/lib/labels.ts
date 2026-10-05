@@ -21,6 +21,8 @@ export const taskStatusLabel: Record<TaskStatus, string> = {
   NOT_STARTED: "Not started",
   IN_PROGRESS: "In progress",
   BLOCKED: "Blocked",
+  IN_REVIEW: "In review",
+  READY_FOR_QA: "Ready for QA",
   DONE: "Done",
   WAIVED: "Waived",
 };
@@ -73,6 +75,10 @@ const auditActionLabel: Record<string, string> = {
   "template.created": "created a template",
   "template.updated": "updated a template",
   "user.capacity_changed": "changed weekly capacity",
+  "project.github_repo_set": "connected the GitHub repository",
+  "task.github_linked": "linked a GitHub item to a task",
+  "task.github_unlinked": "removed a GitHub link from a task",
+  "task.github_issue_created": "created a GitHub issue for a task",
 };
 
 export const payoutQuestionStatusLabel = {

@@ -175,6 +175,10 @@ src/
 - Project discussion with @mentions; project templates (starter set, apply, save as template)
 - Task estimates, weekly capacity and a workload view; approval reminders; weekly summary
 
+### Phase 8 — GitHub integration ✓ (setup: [docs/GITHUB_APP.md](docs/GITHUB_APP.md))
+- Task keys, automatic linking of pull requests and issues, In review / Ready for QA statuses
+- Reviews, deployments and releases on the project page; create a GitHub issue from a task
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
