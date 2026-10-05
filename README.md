@@ -158,11 +158,9 @@ src/
 - Request approval, approve (atomic snapshot + payout ledger), return for changes, Admin reopen
 - Payout ledger page and personal payout history in My Work
 
-### Phase 4 — Payments & Reporting
-- Manual payment recording
-- Dashboard analytics
-- CSV export
-- Reconciliation tools
+### Phase 4 — Payments & Reporting ✓
+- Admin-recorded payments (full or partial) and adjustments; statuses derived by the database
+- Dashboard, reports, CSV export, backup/restore runbook ([docs/RUNBOOK-backup-restore.md](docs/RUNBOOK-backup-restore.md))
 
 ### Phase 5 — Stabilization
 - Pilot with real projects

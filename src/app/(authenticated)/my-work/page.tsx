@@ -192,7 +192,7 @@ export default async function MyWorkPage() {
         <div className="grid grid-cols-3 gap-3 sm:max-w-xl">
           <Card label="Total owed" value={formatMoney(work.payouts.owedMinor)} />
           <Card label="Total paid" value={formatMoney(work.payouts.paidMinor)} />
-          <Card label="Remaining" value={formatMoney(work.payouts.owedMinor - work.payouts.paidMinor)} />
+          <Card label="Remaining" value={formatMoney(work.payouts.remainingMinor)} />
         </div>
         {work.payouts.rows.length === 0 ? (
           <p className="text-sm text-zinc-500">
@@ -202,7 +202,11 @@ export default async function MyWorkPage() {
           <ul className="space-y-1 text-sm">
             {work.payouts.rows.map((r) => (
               <li key={r.id}>
-                {r.projectCode} {r.projectName}: owed {formatMoney(r.owedMinor, r.currency)}, paid {formatMoney(r.paidMinor, r.currency)} ·{" "}
+                <Link href={`/payouts/${r.id}`} className="hover:underline">
+                  {r.projectCode} {r.projectName}
+                </Link>
+                : owed {formatMoney(r.owedMinor, r.currency)}, paid {formatMoney(r.paidMinor, r.currency)}, remaining{" "}
+                {formatMoney(r.remainingMinor, r.currency)} ·{" "}
                 {payoutStatusLabel[r.status]}
               </li>
             ))}

@@ -51,6 +51,8 @@ const auditActionLabel: Record<string, string> = {
   "project.approved": "approved the project and created payouts",
   "project.changes_requested": "returned the project for changes",
   "project.reopened": "reopened the project and voided its payouts",
+  "payment.recorded": "recorded a payment",
+  "adjustment.created": "adjusted a payout",
   "task.created": "added a task",
   "task.updated": "edited a task",
   "task.progress_updated": "updated task progress",
@@ -72,4 +74,18 @@ export const payoutStatusLabel = {
   PAID: "Paid",
   DISPUTED: "Disputed",
   VOIDED: "Voided",
+} as const;
+
+export const paymentMethodLabel = {
+  MOBILE_MONEY: "Mobile Money",
+  BANK_TRANSFER: "Bank transfer",
+  CASH: "Cash",
+  OTHER: "Other",
+} as const;
+
+export const adjustmentTypeLabel = {
+  INCREASE: "Increase",
+  DECREASE: "Decrease",
+  WRITE_OFF: "Write-off",
+  VOID: "Void",
 } as const;

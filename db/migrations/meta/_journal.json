@@ -43,6 +43,13 @@
       "when": 1791160121759,
       "tag": "20261005002841_approval_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791160833484,
+      "tag": "20261005004033_payment_rules",
+      "breakpoints": true
     }
   ]
 }
