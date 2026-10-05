@@ -12,6 +12,7 @@ const row: LedgerRow = {
   completedAt: new Date("2026-10-05T10:00:00Z"),
   memberId: "m",
   memberName: "Ama",
+  memberEmail: "ama@agod.test",
   roleOnProject: "Backend",
   status: "PARTIALLY_PAID",
   currency: "GHS",
