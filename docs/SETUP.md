@@ -110,3 +110,11 @@ Admins add and manage everyone on the **Team** page.
 
 Both refuse if an active Admin already exists. The temporary password is printed once (in the workflow log,
 which repo collaborators can read), so sign in and change it on the **Account** page immediately.
+
+## Restore exercises
+
+Backups and restore steps: `docs/RUNBOOK-backup-restore.md`. Record each exercise here.
+
+| Date | Who | Environment | Result |
+|---|---|---|---|
+| | | | |

@@ -21,6 +21,7 @@ import {
   type Health,
   type Progress,
   type ProjectStatus,
+  calculatedHealth,
   canTransition,
   isEditable,
   projectHealth,
@@ -248,6 +249,53 @@ export async function changeProjectStatus(
   });
 }
 
+export const healthOverrideInput = z.object({
+  /** Empty clears the override and returns to the calculated health. */
+  health: z
+    .enum(["ON_TRACK", "AT_RISK", "BLOCKED", "OVERDUE", ""])
+    .transform((v) => (v === "" ? null : v)),
+  reason: z.string().trim().min(3, "Give a reason (at least 3 characters)").max(1000),
+});
+
+/** Roadmap 2.2: a PM replaces the calculated health with a written reason, or clears it. */
+export async function setHealthOverride(
+  actor: Actor,
+  projectId: string,
+  raw: z.input<typeof healthOverrideInput>,
+  request?: RequestMeta,
+) {
+  assertCan(actor, "project.overrideHealth");
+  const input = healthOverrideInput.parse(raw);
+  await withActor(actor, async (tx) => {
+    const project = await lockProject(tx, projectId);
+    if (project.status === "COMPLETED" || project.status === "CANCELLED") {
+      throw new ServiceError("Health is only tracked for open projects.");
+    }
+    if (input.health === null && project.healthOverride === null) {
+      throw new ServiceError("There is no override to clear.");
+    }
+    await tx
+      .update(projects)
+      .set(
+        input.health
+          ? { healthOverride: input.health, healthOverrideReason: input.reason, healthOverrideBy: actor.id, healthOverrideAt: new Date() }
+          : { healthOverride: null, healthOverrideReason: null, healthOverrideBy: null, healthOverrideAt: null },
+      )
+      .where(eq(projects.id, projectId));
+    await recordAudit(tx, {
+      actorId: actor.id,
+      entityType: "project",
+      entityId: projectId,
+      projectId,
+      action: input.health ? "project.health_overridden" : "project.health_override_cleared",
+      before: { healthOverride: project.healthOverride },
+      after: { healthOverride: input.health },
+      reason: input.reason,
+      request,
+    });
+  });
+}
+
 export type ProjectSummary = {
   id: string;
   code: string;
@@ -379,6 +427,17 @@ export async function getProjectWorkspace(actor: Actor, projectId: string) {
       tasks: taskRows.map((t) => ({ ...t.task, assigneeName: t.assigneeName })),
       progress: projectProgress(progressTasks),
       health: projectHealth(row.project, progressTasks, today),
+      calculatedHealth: calculatedHealth(row.project, progressTasks, today),
+      healthOverride: row.project.healthOverride
+        ? {
+            health: row.project.healthOverride,
+            reason: row.project.healthOverrideReason,
+            at: row.project.healthOverrideAt,
+            byName: row.project.healthOverrideBy
+              ? ((await tx.select({ name: users.name }).from(users).where(eq(users.id, row.project.healthOverrideBy)))[0]?.name ?? null)
+              : null,
+          }
+        : null,
       today,
       compensation,
       activity: activity.map((a) => ({ ...a.event, actorName: a.actorName })),

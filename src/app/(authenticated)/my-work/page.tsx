@@ -5,6 +5,7 @@ import { describeAuditAction, payoutStatusLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { requireUser } from "@/lib/session";
 import { acceptsTaskUpdates } from "@/modules/projects/rules";
+import { refreshDeadlineAlertsQuietly } from "@/modules/notifications/deadlines";
 import { getMyWork } from "@/modules/work";
 import { taskProgressAction } from "../projects/actions";
 import { TaskProgressForm } from "../projects/[id]/workspace-forms";
@@ -34,6 +35,7 @@ function Section({ title, children, aside }: { title: string; children: React.Re
 
 export default async function MyWorkPage() {
   const actor = await requireUser();
+  await refreshDeadlineAlertsQuietly(actor);
   const work = await getMyWork(actor);
   const openTasks = work.tasks.filter((t) => t.status !== "DONE" && t.status !== "WAIVED");
 
@@ -41,7 +43,12 @@ export default async function MyWorkPage() {
     <div className="max-w-6xl space-y-8">
       <div>
         <h1 className="text-xl font-semibold">My work</h1>
-        <p className="text-sm text-zinc-500">What is assigned to you, what you have completed, and what you are owed.</p>
+        <p className="text-sm text-zinc-500">
+          What is assigned to you, what you have completed, and what you are owed. ·{" "}
+          <Link href={`/team/${actor.id}`} className="underline">
+            Full contribution history
+          </Link>
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
@@ -192,7 +199,7 @@ export default async function MyWorkPage() {
         <div className="grid grid-cols-3 gap-3 sm:max-w-xl">
           <Card label="Total owed" value={formatMoney(work.payouts.owedMinor)} />
           <Card label="Total paid" value={formatMoney(work.payouts.paidMinor)} />
-          <Card label="Remaining" value={formatMoney(work.payouts.owedMinor - work.payouts.paidMinor)} />
+          <Card label="Remaining" value={formatMoney(work.payouts.remainingMinor)} />
         </div>
         {work.payouts.rows.length === 0 ? (
           <p className="text-sm text-zinc-500">
@@ -202,8 +209,15 @@ export default async function MyWorkPage() {
           <ul className="space-y-1 text-sm">
             {work.payouts.rows.map((r) => (
               <li key={r.id}>
-                {r.projectCode} {r.projectName}: owed {formatMoney(r.owedMinor, r.currency)}, paid {formatMoney(r.paidMinor, r.currency)} ·{" "}
-                {payoutStatusLabel[r.status]}
+                <Link href={`/payouts/${r.id}`} className="hover:underline">
+                  {r.projectCode} {r.projectName}
+                </Link>
+                : owed {formatMoney(r.owedMinor, r.currency)}, paid {formatMoney(r.paidMinor, r.currency)}, remaining{" "}
+                {formatMoney(r.remainingMinor, r.currency)} ·{" "}
+                {payoutStatusLabel[r.status]} ·{" "}
+                <Link href={`/payouts/${r.id}#questions`} className="text-zinc-500 underline">
+                  Ask a question
+                </Link>
               </li>
             ))}
           </ul>

@@ -26,6 +26,12 @@ const matrix: Record<Action, [boolean, boolean, boolean]> = {
   "team.manage": [false, false, true],
   "audit.viewAll": [false, false, true],
   "audit.viewProject": [false, true, true],
+  "project.overrideHealth": [false, true, true],
+  "payoutQuestion.raise": [true, true, true],
+  "payoutQuestion.review": [false, true, true],
+  "payoutQuestion.resolve": [false, false, true],
+  "period.view": [false, true, true],
+  "period.close": [false, false, true],
 };
 
 describe("can: role matrix", () => {

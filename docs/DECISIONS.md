@@ -56,3 +56,37 @@ Not yet provided. Development uses seeded test accounts only (`npm run db:seed`)
 | Zero-amount lines | Kept in the snapshot, no ledger entry. |
 | Reopening (decision 5) | Admin only, with a reason. Current payouts are **voided** (never deleted or edited), the snapshot stays as history, and re-approval creates snapshot 2, 3, ... Refused once any payment is recorded; corrections after payment are adjustments (Phase 4). |
 | Database guarantees | A project can be marked completed only by the approval transaction; ledger amounts, recipients and approval facts can never change after creation; snapshots and lines are append-only. |
+
+## Phase 4 decisions (2026-10-05)
+
+| Decision | Choice |
+|---|---|
+| Who records payments and adjustments | Admin only (decision 4). |
+| Payout status | Derived from payments and adjustments by the database (Owed → Partially paid → Paid); cannot be set by hand. A fully written-off remainder counts as Paid (settled). |
+| Overpayment | Refused. Pay more only after an Increase adjustment with a reason. |
+| Adjustments | Increase, Decrease, Write-off (never below what was already paid), Void (only before any payment). The approved amount never changes. |
+| Payment evidence | A link (e.g. to a receipt) for now. File upload waits for a storage provider decision. |
+| CSV export | All ledger fields from design doc section 10, amounts in GHS with 2 decimals, formula-safe for spreadsheets. |
+| Backups | Neon point-in-time restore plus a monthly encrypted `pg_dump` kept off-Neon; restore exercise before real payouts. |
+
+## Phase 5 decisions (2026-10-05)
+
+| Decision | Choice |
+|---|---|
+| Pilot environment | Staging only. Pilot data is created through the real services (`npm run pilot:seed`, or the staging-only workflow); the script refuses any target but staging or local. |
+| Comparing with the spreadsheet | **Reconcile** page: paste `project_code, recipient_email, expected_owed[, expected_paid]`; matched by project code and recipient email against non-voided ledger lines. Nothing is stored. |
+| Explaining amounts | Per-project **Statement** with automatic checks (ledger equals approved line, stored status equals derived status, allocations vs project value). Members see only their own lines. |
+| Audit log viewer | PMs see events for projects they can view; Admins see everything (row-level security). 100 events per page with before/after differences. |
+| Source of truth | The spreadsheet remains authoritative until the sign-off in `docs/PILOT.md` is complete. |
+
+## Phase 6 decisions (2026-10-05): roadmap Stage 1 gaps
+
+Source: `Project doc/AGOD Project, Operations & Payout System - Roadmap.md`. Status of every roadmap item: `docs/ROADMAP.md`.
+
+| Decision | Choice |
+|---|---|
+| Health override (2.2) | PMs and Admins may replace the calculated health with On track / At risk / Blocked / Overdue, always with a reason (enforced by the database). It stays until cleared; the calculated health is shown next to it. Not available on completed or cancelled projects. |
+| Deadline alerts (2.4) | In-app only: "due soon" (due today to 2 days ahead) and "overdue" to the assignee, plus "overdue task" to the project owner. Created when the person opens Dashboard or My work, so no scheduler is needed while alerts are in-app; each alert is sent once per task and due date. Email/Slack/WhatsApp later would need a scheduled job. |
+| Contribution history (2.3) | `/team/<person>`: projects and roles (including removed ones), open and completed work, payouts, payments and adjustments, and current workload. Managers can open anyone's; members only their own (linked from My work). |
+| Payout questions (2.8) | A member asks about their own payout; the ledger is never touched by asking. The project owner is notified. A PM either answers with no change (closes it) or sends it to the Admins; only an Admin settles it, optionally recording an adjustment in the same step, which is linked to the question. Payout status stays derived from payments and adjustments (the unused `DISPUTED` status is not set). A PM cannot review their own question. |
+| Month close (2.9) | Calendar months in Africa/Accra. The checklist shows projects approved in the month, outstanding balances, payments dated in the month, adjustments made in the month, unresolved questions, and a CSV export. Only finished months can be closed, only by Admins. A closed month refuses payments dated in it (database trigger); reopening needs a reason and is audited. |

@@ -4,14 +4,13 @@ import {
   auditEvents,
   milestones,
   notifications,
-  paymentTransactions,
-  payoutLedgerEntries,
   projectAssignments,
   projects,
   tasks,
 } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import type { Actor } from "@/lib/permissions";
+import { ledgerRowsTx, ledgerTotals } from "@/modules/ledger";
 import {
   isTaskOverdue,
   personalProgress,
@@ -97,27 +96,20 @@ export async function getMyWork(actor: Actor) {
           .where(and(inArray(milestones.projectId, ids), eq(milestones.status, "COMPLETED")))
       : [];
 
-    // Payouts: own ledger entries only (row-level security). Filled from Phase 3 approvals on.
-    const ledger = await tx
-      .select({ entry: payoutLedgerEntries, projectCode: projects.code, projectName: projects.name })
-      .from(payoutLedgerEntries)
-      .innerJoin(projects, eq(projects.id, payoutLedgerEntries.projectId))
-      .where(eq(payoutLedgerEntries.memberId, actor.id));
-    const payments = ledger.length
-      ? await tx
-          .select({ ledgerEntryId: paymentTransactions.ledgerEntryId, amountMinor: paymentTransactions.amountMinor })
-          .from(paymentTransactions)
-          .where(inArray(paymentTransactions.ledgerEntryId, ledger.map((l) => l.entry.id)))
-      : [];
-    const payoutRows = ledger.map(({ entry, projectCode, projectName }) => {
-      const paid = payments.filter((p) => p.ledgerEntryId === entry.id).reduce((s, p) => s + p.amountMinor, 0);
-      return { id: entry.id, projectCode, projectName, status: entry.status, currency: entry.currency, owedMinor: entry.amountOwedMinor, paidMinor: paid };
-    });
-    const payouts = {
-      rows: payoutRows,
-      owedMinor: payoutRows.reduce((s, r) => s + r.owedMinor, 0),
-      paidMinor: payoutRows.reduce((s, r) => s + r.paidMinor, 0),
-    };
+    // Payouts: own ledger entries only (row-level security), with balances after adjustments.
+    const ledgerRows = await ledgerRowsTx(tx, { memberId: actor.id });
+    const payoutRows = ledgerRows.map((r) => ({
+      id: r.id,
+      projectCode: r.projectCode,
+      projectName: r.projectName,
+      status: r.status,
+      currency: r.currency,
+      owedMinor: r.effectiveOwedMinor,
+      paidMinor: r.paidMinor,
+      remainingMinor: r.remainingMinor,
+    }));
+    const totals = ledgerTotals(ledgerRows);
+    const payouts = { rows: payoutRows, owedMinor: totals.owedMinor, paidMinor: totals.paidMinor, remainingMinor: totals.remainingMinor };
 
     // Timeline: my own recorded actions plus notifications about things done to/for me.
     const myEvents = await tx

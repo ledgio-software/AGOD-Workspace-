@@ -8,13 +8,11 @@ import { requireUser } from "@/lib/session";
 import { listLedger } from "@/modules/ledger";
 import { listActiveMembers, listProjects } from "@/modules/projects";
 
-const selectClass = "rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
+const inputClass = "rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
 
-export default async function LedgerPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ memberId?: string; projectId?: string; status?: string }>;
-}) {
+type Filters = { memberId?: string; projectId?: string; status?: string; from?: string; to?: string };
+
+export default async function LedgerPage({ searchParams }: { searchParams: Promise<Filters> }) {
   const actor = await requireUser();
   if (!can(actor, "payout.viewAll")) return <AccessDenied what="the payout ledger" />;
   const filters = await searchParams;
@@ -23,20 +21,29 @@ export default async function LedgerPage({
     listActiveMembers(actor),
     listProjects(actor),
   ]);
-  const remaining = ledger.totals.owedMinor - ledger.totals.paidMinor;
+  const exportQuery = new URLSearchParams(Object.entries(filters).filter(([, v]) => v) as [string, string][]).toString();
 
   return (
     <div className="max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Payout ledger</h1>
-        <p className="text-sm text-zinc-500">
-          Created only by approving a project. Amounts are fixed at approval; corrections are made with adjustments
-          (Phase 4). Payment recording arrives in Phase 4.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Payout ledger</h1>
+          <p className="text-sm text-zinc-500">
+            Created only by approving a project. Statuses follow the recorded payments and adjustments.
+          </p>
+        </div>
+        {can(actor, "ledger.export") && (
+          <a
+            href={`/ledger/export${exportQuery ? `?${exportQuery}` : ""}`}
+            className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
+          >
+            Export CSV
+          </a>
+        )}
       </div>
 
-      <form className="flex flex-wrap gap-2">
-        <select name="memberId" defaultValue={filters.memberId ?? ""} className={selectClass}>
+      <form className="flex flex-wrap items-end gap-2">
+        <select name="memberId" defaultValue={filters.memberId ?? ""} className={inputClass}>
           <option value="">All members</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>
@@ -44,7 +51,7 @@ export default async function LedgerPage({
             </option>
           ))}
         </select>
-        <select name="projectId" defaultValue={filters.projectId ?? ""} className={selectClass}>
+        <select name="projectId" defaultValue={filters.projectId ?? ""} className={inputClass}>
           <option value="">All projects</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -52,7 +59,7 @@ export default async function LedgerPage({
             </option>
           ))}
         </select>
-        <select name="status" defaultValue={filters.status ?? ""} className={selectClass}>
+        <select name="status" defaultValue={filters.status ?? ""} className={inputClass}>
           <option value="">All statuses</option>
           {Object.entries(payoutStatusLabel).map(([value, label]) => (
             <option key={value} value={value}>
@@ -60,18 +67,27 @@ export default async function LedgerPage({
             </option>
           ))}
         </select>
+        <label className="text-xs text-zinc-500">
+          Approved from
+          <input type="date" name="from" defaultValue={filters.from} className={`${inputClass} block`} />
+        </label>
+        <label className="text-xs text-zinc-500">
+          to
+          <input type="date" name="to" defaultValue={filters.to} className={`${inputClass} block`} />
+        </label>
         <button type="submit" className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700">
           Filter
         </button>
       </form>
 
-      <dl className="grid grid-cols-3 gap-3 text-sm sm:max-w-xl">
+      <dl className="grid grid-cols-2 gap-3 text-sm sm:max-w-3xl sm:grid-cols-4">
         {[
           ["Owed (excl. voided)", ledger.totals.owedMinor],
+          ["Adjustments (net)", ledger.totals.adjustmentsMinor],
           ["Paid", ledger.totals.paidMinor],
-          ["Remaining", remaining],
+          ["Remaining", ledger.totals.remainingMinor],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+          <div key={label as string} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
             <dt className="text-xs text-zinc-500">{label}</dt>
             <dd className="text-lg font-semibold tabular-nums">{formatMoney(value as number)}</dd>
           </div>
@@ -103,14 +119,24 @@ export default async function LedgerPage({
                     </Link>{" "}
                     {r.projectName}
                   </td>
-                  <td className="py-2 pr-4">{r.memberName}</td>
-                  <td className="py-2 pr-4 tabular-nums">{formatMoney(r.owedMinor, r.currency)}</td>
-                  <td className="py-2 pr-4 tabular-nums">{formatMoney(r.paidMinor, r.currency)}</td>
-                  <td className="py-2 pr-4 tabular-nums">
-                    {r.status === "VOIDED" ? "—" : formatMoney(r.owedMinor - r.paidMinor, r.currency)}
+                  <td className="py-2 pr-4">
+                    {r.memberName}
+                    <div className="text-xs text-zinc-500">{r.roleOnProject}</div>
                   </td>
-                  <td className="py-2 pr-4" title={r.notes ?? undefined}>
-                    {payoutStatusLabel[r.status]}
+                  <td className="py-2 pr-4 tabular-nums">
+                    {formatMoney(r.effectiveOwedMinor, r.currency)}
+                    {r.adjustmentsMinor !== 0 && (
+                      <div className="text-xs text-zinc-500">
+                        approved {formatMoney(r.originalMinor, r.currency)}, adjusted {formatMoney(r.adjustmentsMinor, r.currency)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2 pr-4 tabular-nums">{formatMoney(r.paidMinor, r.currency)}</td>
+                  <td className="py-2 pr-4 tabular-nums">{r.status === "VOIDED" ? "—" : formatMoney(r.remainingMinor, r.currency)}</td>
+                  <td className="py-2 pr-4">
+                    <Link href={`/payouts/${r.id}`} className="underline" title={r.notes ?? undefined}>
+                      {payoutStatusLabel[r.status]}
+                    </Link>
                   </td>
                   <td className="py-2">
                     {formatDate(r.approvedAt)} by {r.approvedByName}

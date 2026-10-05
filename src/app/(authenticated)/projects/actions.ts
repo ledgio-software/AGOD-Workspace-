@@ -6,7 +6,7 @@ import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
 import { approveProject, rejectProject, reopenProject, requestApproval } from "@/modules/approvals";
-import { changeProjectStatus, createProject, updateProject } from "@/modules/projects";
+import { changeProjectStatus, createProject, setHealthOverride, updateProject } from "@/modules/projects";
 import {
   addAssignment,
   createMilestone,
@@ -72,6 +72,17 @@ export async function changeStatusAction(projectId: string, _prev: Result | null
     );
     return undefined;
   }, "Status updated.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function healthOverrideAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const health = text(form, "health") as "ON_TRACK" | "";
+  const result = await runAction(async () => {
+    await setHealthOverride(actor, projectId, { health, reason: text(form, "reason") }, await getRequestMeta());
+    return undefined;
+  }, health ? "Health override saved." : "Override cleared; health is calculated again.");
   if (result.ok) refresh(projectId);
   return result;
 }
