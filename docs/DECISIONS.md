@@ -33,3 +33,14 @@ Changing any of these later needs a PR that updates this file.
 
 Not yet provided. Development uses seeded test accounts only (`npm run db:seed`):
 `admin@agod.test`, `pm@agod.test`, `member@agod.test`. Real accounts are created by an Admin once user management ships (Phase 1).
+
+## Phase 2 decisions (2026-10-05)
+
+| Decision | Choice |
+|---|---|
+| Rounding remainder (percentage plans) | Shares are floored to the pesewa; the leftover (always fewer pesewas than team members) goes to the **largest share**, ties to the member listed first. Shown in the preview. |
+| Project codes | `AGOD-<year>-<nnn>`, sequential per year, assigned on creation. |
+| Task assignees | Must be on the project team first. |
+| Progress | Done required tasks / required tasks; waived tasks are excluded from both. Never typed in by hand. |
+| Health | Overdue (past target), Blocked (a required task is blocked), At risk (an overdue task, or target within 7 days and under 80% done), else On track. |
+| Split privacy | Members see who is on a project and their own split, not teammates' splits. |

@@ -34,6 +34,7 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Approve / reject | | ✓ | ✓ |
 | Reopen approved project | | | ✓ |
 | Update a task | own tasks (progress only) | ✓ | ✓ |
+| View compensation splits | own split only | all | all |
 | View payouts | own only | all | all |
 | Record payments, adjustments | | | ✓ |
 | Export ledger | | ✓ | ✓ |

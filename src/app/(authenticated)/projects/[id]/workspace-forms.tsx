@@ -1,0 +1,254 @@
+"use client";
+
+import { useState } from "react";
+import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
+import type { ActionResult } from "@/lib/action-result";
+import { milestoneStatusLabel, projectStatusLabel } from "@/lib/labels";
+import type { ProjectStatus, TaskStatus } from "@/modules/projects/rules";
+
+type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
+type Option = { id: string; name: string };
+
+export function StatusControls({ action, allowed }: { action: Action; allowed: ProjectStatus[] }) {
+  const [to, setTo] = useState<ProjectStatus | "">("");
+  if (allowed.length === 0) return null;
+  return (
+    <ActionForm action={action} className="flex flex-wrap items-end gap-2">
+      <Field label="Move project to">
+        <select name="to" required value={to} onChange={(e) => setTo(e.target.value as ProjectStatus)} className={inputClass}>
+          <option value="" disabled>
+            Choose…
+          </option>
+          {allowed.map((s) => (
+            <option key={s} value={s}>
+              {projectStatusLabel[s]}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {to === "CANCELLED" && (
+        <Field label="Reason for cancelling">
+          <input name="reason" required className={inputClass} />
+        </Field>
+      )}
+      <SubmitButton variant={to === "CANCELLED" ? "danger" : "primary"}>Update status</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function AddAssignmentForm({
+  action,
+  members,
+  splitMode,
+}: {
+  action: Action;
+  members: Option[];
+  splitMode: "PERCENTAGE" | "FIXED_AMOUNT";
+}) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="grid gap-3 sm:grid-cols-5 sm:items-end">
+      <Field label="Member">
+        <select name="memberId" required defaultValue="" className={inputClass}>
+          <option value="" disabled>
+            Choose…
+          </option>
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Role on project">
+        <input name="roleOnProject" required placeholder="e.g. Backend developer" className={inputClass} />
+      </Field>
+      <Field label={splitMode === "PERCENTAGE" ? "Share (%)" : "Amount (GHS)"}>
+        <input name="split" required inputMode="decimal" placeholder={splitMode === "PERCENTAGE" ? "40" : "2500.00"} className={inputClass} />
+      </Field>
+      <Field label="Rationale (optional)">
+        <input name="rationale" className={inputClass} />
+      </Field>
+      <SubmitButton>Add to team</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function AssignmentRowActions({
+  updateAction,
+  removeAction,
+  defaults,
+  splitMode,
+}: {
+  updateAction: Action;
+  removeAction: Action;
+  defaults: { roleOnProject: string; split: string; rationale: string };
+  splitMode: "PERCENTAGE" | "FIXED_AMOUNT";
+}) {
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">Edit</summary>
+      <div className="mt-2 w-64 space-y-4">
+        <ActionForm action={updateAction} className="space-y-2">
+          <input name="roleOnProject" required defaultValue={defaults.roleOnProject} className={inputClass} />
+          <input
+            name="split"
+            required
+            inputMode="decimal"
+            defaultValue={defaults.split}
+            aria-label={splitMode === "PERCENTAGE" ? "Share (%)" : "Amount (GHS)"}
+            className={inputClass}
+          />
+          <input name="rationale" defaultValue={defaults.rationale} placeholder="Rationale" className={inputClass} />
+          <SubmitButton>Save</SubmitButton>
+        </ActionForm>
+        <ActionForm action={removeAction} className="space-y-2">
+          <input name="reason" required placeholder="Why remove from the team?" className={inputClass} />
+          <SubmitButton variant="danger">Remove</SubmitButton>
+        </ActionForm>
+      </div>
+    </details>
+  );
+}
+
+export function MilestoneForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="grid gap-3 sm:grid-cols-4 sm:items-end">
+      <Field label="Milestone">
+        <input name="title" required className={inputClass} />
+      </Field>
+      <Field label="Due (optional)">
+        <input name="dueDate" type="date" className={inputClass} />
+      </Field>
+      <Field label="Description (optional)">
+        <input name="description" className={inputClass} />
+      </Field>
+      <SubmitButton>Add milestone</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function MilestoneStatusForm({ action, status }: { action: Action; status: keyof typeof milestoneStatusLabel }) {
+  return (
+    <ActionForm action={action} className="flex items-center gap-2">
+      <select name="status" defaultValue={status} className={`${inputClass} w-36`}>
+        {Object.entries(milestoneStatusLabel).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <SubmitButton variant="secondary">Set</SubmitButton>
+    </ActionForm>
+  );
+}
+
+type TaskDefaults = {
+  title?: string;
+  description?: string | null;
+  milestoneId?: string | null;
+  assignedTo?: string | null;
+  required?: boolean;
+  dueDate?: string | null;
+};
+
+export function TaskForm({
+  action,
+  team,
+  milestones,
+  defaults = {},
+  submitLabel,
+  reset = false,
+}: {
+  action: Action;
+  team: Option[];
+  milestones: { id: string; title: string }[];
+  defaults?: TaskDefaults;
+  submitLabel: string;
+  reset?: boolean;
+}) {
+  return (
+    <ActionForm action={action} resetOnSuccess={reset} className="grid gap-3 sm:grid-cols-3 sm:items-end">
+      <Field label="Task">
+        <input name="title" required defaultValue={defaults.title} className={inputClass} />
+      </Field>
+      <Field label="Assigned to">
+        <select name="assignedTo" defaultValue={defaults.assignedTo ?? ""} className={inputClass}>
+          <option value="">Unassigned</option>
+          {team.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Milestone">
+        <select name="milestoneId" defaultValue={defaults.milestoneId ?? ""} className={inputClass}>
+          <option value="">None</option>
+          {milestones.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.title}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Due (optional)">
+        <input name="dueDate" type="date" defaultValue={defaults.dueDate ?? ""} className={inputClass} />
+      </Field>
+      <Field label="Description (optional)">
+        <input name="description" defaultValue={defaults.description ?? ""} className={inputClass} />
+      </Field>
+      <label className="flex items-center gap-2 text-sm">
+        <input name="required" type="checkbox" defaultChecked={defaults.required ?? true} />
+        Required for approval
+      </label>
+      <div className="sm:col-span-3">
+        <SubmitButton>{submitLabel}</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+export function TaskProgressForm({ action, status, today }: { action: Action; status: TaskStatus; today: string }) {
+  const [next, setNext] = useState<TaskStatus>(status === "WAIVED" ? "IN_PROGRESS" : status);
+  return (
+    <ActionForm action={action} className="space-y-2">
+      <select
+        name="status"
+        value={next}
+        onChange={(e) => setNext(e.target.value as TaskStatus)}
+        aria-label="Task status"
+        className={inputClass}
+      >
+        <option value="NOT_STARTED">Not started</option>
+        <option value="IN_PROGRESS">In progress</option>
+        <option value="BLOCKED">Blocked</option>
+        <option value="DONE">Done</option>
+      </select>
+      {next === "DONE" && (
+        <>
+          <textarea name="completionNote" required rows={2} placeholder="What was completed?" className={inputClass} />
+          <Field label="Completed on">
+            <input name="completedOn" type="date" required max={today} defaultValue={today} className={inputClass} />
+          </Field>
+          <input name="evidenceUrl" type="url" placeholder="Evidence link (optional), e.g. a PR" className={inputClass} />
+        </>
+      )}
+      {next === "BLOCKED" && (
+        <>
+          <input name="blockedReason" required placeholder="What is blocking it?" className={inputClass} />
+          <input name="blockedNeeds" required placeholder="What is needed to continue?" className={inputClass} />
+        </>
+      )}
+      <SubmitButton>Save progress</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function WaiveForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} className="space-y-2">
+      <input name="reason" required placeholder="Why is this task no longer needed?" className={inputClass} />
+      <SubmitButton variant="secondary">Waive task</SubmitButton>
+    </ActionForm>
+  );
+}
