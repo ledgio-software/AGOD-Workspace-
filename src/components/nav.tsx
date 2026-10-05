@@ -4,6 +4,8 @@ import { type Actor, can } from "@/lib/permissions";
 export function Nav({ actor }: { actor: Actor }) {
   const links = [
     { href: "/dashboard", label: "Dashboard", show: true },
+    { href: "/my-work", label: "My work", show: true },
+    { href: "/projects", label: "Projects", show: true },
     { href: "/team", label: "Team", show: can(actor, "team.view") },
     { href: "/account", label: "Account", show: true },
   ];

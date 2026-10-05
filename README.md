@@ -150,11 +150,9 @@ src/
 - Full database schema, permission service and Postgres row-level security
 - Audit trail, Team management (Admin), Account page, optional Sentry monitoring
 
-### Phase 2 — Projects & Work Tracking
-- Project CRUD operations
-- Assignments and compensation plans
-- Milestones and tasks
-- My Work dashboard
+### Phase 2 — Projects & Work Tracking ✓
+- Projects with automatic codes, team and compensation splits with a live preview
+- Milestones, tasks (done with evidence, blocked with reason, waived), My Work, activity
 
 ### Phase 3 — Approval & Ledger
 - Approval workflows
