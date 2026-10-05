@@ -1,6 +1,9 @@
-# Deployment skeleton. NOT active until the hosting provider (Vercel is
-# recommended in frontend/README.md) and secrets are configured.
-# See docs/GIT_WORKFLOW.md for required secrets and manual steps.
+# Deployment skeleton for Vercel (app) + Neon (database).
+# NOT active until the secrets in docs/SETUP.md exist. Nothing is deployed today.
+#
+# Recommended: connect the repo with the Vercel GitHub integration, which gives
+# preview deployments per PR and staging from `integration`. This workflow only
+# applies database migrations, which must run before the matching app deploy.
 name: Deploy
 
 on:
@@ -18,25 +21,47 @@ permissions:
   contents: read
 
 jobs:
-  staging:
+  migrate-staging:
     if: github.event_name == 'push' || inputs.target == 'staging'
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to staging
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations to the staging Neon branch
+        env:
+          # Use the *direct* (non-pooled) Neon connection string for migrations.
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
         run: |
-          echo "TODO: configure provider deploy (e.g. vercel deploy --prebuilt using VERCEL_TOKEN)."
-          echo "No deployment was performed."
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL_DIRECT is not configured for 'staging'; skipping. No migration was applied."
+            exit 0
+          fi
+          npm run db:migrate
 
-  production:
-    # Explicit approval gate: configure required reviewers on the
-    # 'production' GitHub Environment. Only runs manually, from main.
+  migrate-production:
+    # Explicit approval gate: add required reviewers to the 'production' GitHub Environment.
+    # Manual only, and only from main.
     if: github.event_name == 'workflow_dispatch' && inputs.target == 'production' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to production
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations to the production Neon branch
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
         run: |
-          echo "TODO: configure provider deploy. No deployment was performed."
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL_DIRECT is not configured for 'production'."
+            exit 1
+          fi
+          npm run db:migrate

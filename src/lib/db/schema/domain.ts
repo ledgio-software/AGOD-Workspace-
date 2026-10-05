@@ -1,0 +1,356 @@
+import { sql } from "drizzle-orm";
+import {
+  bigint,
+  boolean,
+  char,
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
+import { users } from "./auth";
+
+// Domain tables from the design document, section 6.
+// Money is always integer minor units (pesewas) + ISO currency code.
+// Financial history is never cascade-deleted: every foreign key uses RESTRICT.
+
+const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+const updatedAt = timestamp("updated_at", { withTimezone: true })
+  .notNull()
+  .defaultNow()
+  .$onUpdate(() => new Date());
+const money = (name: string) => bigint(name, { mode: "number" });
+const currency = () => char("currency", { length: 3 }).notNull().default("GHS");
+const userRef = (name: string) => uuid(name).references(() => users.id, { onDelete: "restrict" });
+
+export const clientType = pgEnum("client_type", ["INTERNAL", "EXTERNAL"]);
+export const projectStatus = pgEnum("project_status", [
+  "DRAFT",
+  "PLANNING",
+  "IN_PROGRESS",
+  "PENDING_APPROVAL",
+  "CHANGES_REQUESTED",
+  "COMPLETED",
+  "CANCELLED",
+]);
+export const splitType = pgEnum("split_type", ["PERCENTAGE", "FIXED_AMOUNT"]);
+export const milestoneStatus = pgEnum("milestone_status", [
+  "NOT_STARTED",
+  "IN_PROGRESS",
+  "COMPLETED",
+]);
+export const taskStatus = pgEnum("task_status", [
+  "NOT_STARTED",
+  "IN_PROGRESS",
+  "BLOCKED",
+  "DONE",
+  "WAIVED",
+]);
+export const payoutStatus = pgEnum("payout_status", [
+  "OWED",
+  "PARTIALLY_PAID",
+  "PAID",
+  "DISPUTED",
+  "VOIDED",
+]);
+export const paymentMethod = pgEnum("payment_method", [
+  "MOBILE_MONEY",
+  "BANK_TRANSFER",
+  "CASH",
+  "OTHER",
+]);
+export const adjustmentType = pgEnum("adjustment_type", [
+  "INCREASE",
+  "DECREASE",
+  "WRITE_OFF",
+  "VOID",
+]);
+
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    description: text("description"),
+    clientType: clientType("client_type").notNull(),
+    clientName: text("client_name"),
+    totalValueMinor: money("total_value_minor").notNull(),
+    currency: currency(),
+    // Decision 3: one split mode per project.
+    splitMode: splitType("split_mode").notNull().default("PERCENTAGE"),
+    status: projectStatus("status").notNull().default("DRAFT"),
+    projectOwnerId: userRef("project_owner_id").notNull(),
+    startDate: date("start_date"),
+    targetDate: date("target_date"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdBy: userRef("created_by").notNull(),
+    approvedBy: userRef("approved_by"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
+    index("projects_owner_idx").on(t.projectOwnerId),
+    index("projects_status_idx").on(t.status),
+  ],
+);
+
+export const projectAssignments = pgTable(
+  "project_assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    memberId: userRef("member_id").notNull(),
+    roleOnProject: text("role_on_project").notNull(),
+    splitType: splitType("split_type").notNull(),
+    // PERCENTAGE: basis points (10000 = 100%). FIXED_AMOUNT: minor units.
+    splitBasisPoints: integer("split_basis_points"),
+    splitAmountMinor: money("split_amount_minor"),
+    rationale: text("rationale"),
+    active: boolean("active").notNull().default(true),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    check(
+      "project_assignments_split_value_matches_type",
+      sql`(${t.splitType} = 'PERCENTAGE' AND ${t.splitBasisPoints} BETWEEN 0 AND 10000 AND ${t.splitAmountMinor} IS NULL)
+       OR (${t.splitType} = 'FIXED_AMOUNT' AND ${t.splitAmountMinor} >= 0 AND ${t.splitBasisPoints} IS NULL)`,
+    ),
+    uniqueIndex("project_assignments_active_unique")
+      .on(t.projectId, t.memberId, t.roleOnProject)
+      .where(sql`${t.active}`),
+    index("project_assignments_member_idx").on(t.memberId),
+  ],
+);
+
+export const milestones = pgTable(
+  "milestones",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    sequence: integer("sequence").notNull(),
+    dueDate: date("due_date"),
+    status: milestoneStatus("status").notNull().default("NOT_STARTED"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [uniqueIndex("milestones_project_sequence_unique").on(t.projectId, t.sequence)],
+);
+
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    assignedTo: userRef("assigned_to"),
+    // Project progress counts required tasks only.
+    required: boolean("required").notNull().default(true),
+    status: taskStatus("status").notNull().default("NOT_STARTED"),
+    dueDate: date("due_date"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    completedBy: userRef("completed_by"),
+    completionNote: text("completion_note"),
+    evidenceUrl: text("evidence_url"),
+    blockedReason: text("blocked_reason"),
+    blockedNeeds: text("blocked_needs"),
+    waivedReason: text("waived_reason"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    check(
+      "tasks_done_requires_note",
+      sql`${t.status} <> 'DONE' OR (${t.completionNote} IS NOT NULL AND ${t.completedAt} IS NOT NULL)`,
+    ),
+    check(
+      "tasks_blocked_requires_reason",
+      sql`${t.status} <> 'BLOCKED' OR (${t.blockedReason} IS NOT NULL AND ${t.blockedNeeds} IS NOT NULL)`,
+    ),
+    check("tasks_waived_requires_reason", sql`${t.status} <> 'WAIVED' OR ${t.waivedReason} IS NOT NULL`),
+    index("tasks_project_idx").on(t.projectId),
+    index("tasks_assigned_to_idx").on(t.assignedTo),
+  ],
+);
+
+export const compensationSnapshots = pgTable(
+  "compensation_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    // 1 for the first approval; a reopened and re-approved project gets 2, 3, ...
+    // Earlier snapshots stay as history; their ledger entries are voided.
+    sequence: integer("sequence").notNull().default(1),
+    projectTotalValueMinor: money("project_total_value_minor").notNull(),
+    currency: currency(),
+    splitMode: splitType("split_mode").notNull(),
+    calculationVersion: integer("calculation_version").notNull(),
+    calculationNotes: text("calculation_notes"),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("compensation_snapshots_project_sequence_unique").on(t.projectId, t.sequence)],
+);
+
+export const compensationSnapshotLines = pgTable(
+  "compensation_snapshot_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    snapshotId: uuid("snapshot_id")
+      .notNull()
+      .references(() => compensationSnapshots.id, { onDelete: "restrict" }),
+    memberId: userRef("member_id").notNull(),
+    roleOnProject: text("role_on_project").notNull(),
+    sourceAssignmentId: uuid("source_assignment_id")
+      .notNull()
+      .references(() => projectAssignments.id, { onDelete: "restrict" }),
+    splitType: splitType("split_type").notNull(),
+    splitBasisPoints: integer("split_basis_points"),
+    splitAmountMinor: money("split_amount_minor"),
+    amountOwedMinor: money("amount_owed_minor").notNull(),
+    currency: currency(),
+    rationale: text("rationale"),
+    createdAt,
+  },
+  (t) => [
+    check("snapshot_lines_amount_non_negative", sql`${t.amountOwedMinor} >= 0`),
+    index("snapshot_lines_member_idx").on(t.memberId),
+  ],
+);
+
+export const payoutLedgerEntries = pgTable(
+  "payout_ledger_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    // One ledger entry per snapshot line: retries cannot duplicate payouts.
+    snapshotLineId: uuid("snapshot_line_id")
+      .notNull()
+      .unique()
+      .references(() => compensationSnapshotLines.id, { onDelete: "restrict" }),
+    memberId: userRef("member_id").notNull(),
+    amountOwedMinor: money("amount_owed_minor").notNull(),
+    currency: currency(),
+    status: payoutStatus("status").notNull().default("OWED"),
+    approvedBy: userRef("approved_by").notNull(),
+    approvedAt: timestamp("approved_at", { withTimezone: true }).notNull(),
+    notes: text("notes"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    check("ledger_amount_non_negative", sql`${t.amountOwedMinor} >= 0`),
+    index("ledger_member_idx").on(t.memberId),
+    index("ledger_project_idx").on(t.projectId),
+  ],
+);
+
+export const paymentTransactions = pgTable(
+  "payment_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ledgerEntryId: uuid("ledger_entry_id")
+      .notNull()
+      .references(() => payoutLedgerEntries.id, { onDelete: "restrict" }),
+    amountMinor: money("amount_minor").notNull(),
+    currency: currency(),
+    method: paymentMethod("method").notNull(),
+    reference: text("reference"),
+    paidAt: timestamp("paid_at", { withTimezone: true }).notNull(),
+    recordedBy: userRef("recorded_by").notNull(),
+    evidenceFilePath: text("evidence_file_path"),
+    notes: text("notes"),
+    createdAt,
+  },
+  (t) => [
+    check("payments_amount_positive", sql`${t.amountMinor} > 0`),
+    index("payments_ledger_idx").on(t.ledgerEntryId),
+  ],
+);
+
+export const adjustments = pgTable(
+  "adjustments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ledgerEntryId: uuid("ledger_entry_id")
+      .notNull()
+      .references(() => payoutLedgerEntries.id, { onDelete: "restrict" }),
+    type: adjustmentType("type").notNull(),
+    amountMinor: money("amount_minor").notNull(),
+    reason: text("reason").notNull(),
+    createdBy: userRef("created_by").notNull(),
+    approvedBy: userRef("approved_by"),
+    createdAt,
+  },
+  (t) => [
+    check("adjustments_amount_non_negative", sql`${t.amountMinor} >= 0`),
+    index("adjustments_ledger_idx").on(t.ledgerEntryId),
+  ],
+);
+
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: userRef("actor_id"),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    // For records belonging to a project (tasks, assignments, ...), lets PMs see project-scoped history.
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "restrict" }),
+    action: text("action").notNull(),
+    beforeJson: jsonb("before_json"),
+    afterJson: jsonb("after_json"),
+    reason: text("reason"),
+    ipHash: text("ip_hash"),
+    userAgent: text("user_agent"),
+    createdAt,
+  },
+  (t) => [
+    index("audit_entity_idx").on(t.entityType, t.entityId),
+    index("audit_project_idx").on(t.projectId),
+    index("audit_actor_idx").on(t.actorId),
+    index("audit_created_at_idx").on(t.createdAt),
+  ],
+);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recipientId: userRef("recipient_id").notNull(),
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    entityType: text("entity_type"),
+    entityId: uuid("entity_id"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [index("notifications_recipient_idx").on(t.recipientId, t.readAt)],
+);

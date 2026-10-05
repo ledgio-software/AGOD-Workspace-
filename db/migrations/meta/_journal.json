@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791148342708,
+      "tag": "20261004211222_create_auth_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791157720195,
+      "tag": "20261004234840_create_domain_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791157721089,
+      "tag": "20261004234841_row_level_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791159151181,
+      "tag": "20261005001231_assignment_privacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791160093275,
+      "tag": "20261005002813_snapshot_sequence",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791160121759,
+      "tag": "20261005002841_approval_rules",
+      "breakpoints": true
+    }
+  ]
+}
