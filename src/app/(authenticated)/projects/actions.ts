@@ -29,6 +29,8 @@ function projectFields(form: FormData) {
     name: text(form, "name"),
     description: text(form, "description"),
     clientType: text(form, "clientType") as "INTERNAL" | "EXTERNAL",
+    // "__new" (or nothing) means a new customer typed by name.
+    customerId: text(form, "customerId").startsWith("__") ? "" : text(form, "customerId"),
     clientName: text(form, "clientName"),
     totalValue: text(form, "totalValue"),
     splitMode: text(form, "splitMode") as "PERCENTAGE" | "FIXED_AMOUNT",

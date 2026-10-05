@@ -32,6 +32,7 @@ Still to do before Stage 1 is "in production": the pilot sign-off (`docs/PILOT.m
 |---|---|---|
 | 2. Team operations | **Done (Phases 6–9):** comments and mentions, templates, workload and capacity, approval reminders, overdue alerts, weekly summary, contribution history, GitHub issues/PRs/reviews, deployment and release history, file attachments (incl. payment receipts, also section 14). Notifications are in-app only; email, Slack or WhatsApp would need a scheduled job and a provider. | |
 | 3. Profitability | **Done (Phase 10, backend-first):** project costs and cost budgets, estimated vs actual profit and margin, revenue and profit by client and by project type, payout forecast and aging, utilisation, CSV export. | Pages are plain tables until the frontend redesign (`docs/FRONTEND_CONTRACT.md`). |
+| Customers | **Done (Phase 16):** customer records with contacts, projects linked to customers. Next: services and subscriptions, then renewal reminders. | Customers page |
 | 4. Accounting integration | Export approved payouts, import payment confirmations, accounting period locking | The month close and CSV exports are the starting point. |
 | 5. Automated payments | MoMo/bank APIs, batches, multi-level authorisation, reconciliation | Separate project with its own security and reconciliation design. |
 | 6. Portals | Client and contractor access | Only after the internal workflow is stable. |

@@ -5,6 +5,10 @@ import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
 import type { ActionResult } from "@/lib/action-result";
 
 type Member = { id: string; name: string };
+type CustomerOption = { id: string; name: string; status: string };
+
+/** Select value that switches the form to typing a new customer's name. */
+const NEW_CUSTOMER = "__new";
 
 /** The AGOD share pre-filled for new percentage-split projects; the PM can change it per project. */
 export const DEFAULT_AGOD_SHARE_PERCENT = "30";
@@ -12,6 +16,7 @@ type Defaults = {
   name?: string;
   description?: string | null;
   clientType?: "INTERNAL" | "EXTERNAL";
+  customerId?: string | null;
   clientName?: string | null;
   totalValue?: string;
   splitMode?: "PERCENTAGE" | "FIXED_AMOUNT";
@@ -25,17 +30,20 @@ type Defaults = {
 export function ProjectForm({
   action,
   members,
+  customers,
   defaults = {},
   submitLabel,
   splitModeLocked = false,
 }: {
   action: (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
   members: Member[];
+  customers: CustomerOption[];
   defaults?: Defaults;
   submitLabel: string;
   splitModeLocked?: boolean;
 }) {
   const [clientType, setClientType] = useState(defaults.clientType ?? "INTERNAL");
+  const [customer, setCustomer] = useState(defaults.customerId ?? (customers.length ? "" : NEW_CUSTOMER));
   const [splitMode, setSplitMode] = useState(defaults.splitMode ?? "PERCENTAGE");
 
   return (
@@ -68,15 +76,37 @@ export function ProjectForm({
           <option value="EXTERNAL">External</option>
         </select>
       </Field>
-      <Field label="Client name" hint={clientType === "INTERNAL" ? "Not needed for internal projects. Choose External to enter a client." : undefined}>
-        <input
-          name="clientName"
-          disabled={clientType === "INTERNAL"}
-          required={clientType === "EXTERNAL"}
-          defaultValue={defaults.clientName ?? ""}
-          className={`${inputClass} disabled:opacity-50`}
-        />
-      </Field>
+      {clientType === "INTERNAL" ? (
+        <p className="self-end text-sm text-muted">Internal projects have no customer. Choose External to pick one.</p>
+      ) : (
+        <Field label="Customer" hint={customer === NEW_CUSTOMER ? undefined : "Add contacts and details on the Customers page."}>
+          <select
+            name="customerId"
+            required
+            value={customer}
+            onChange={(e) => setCustomer(e.target.value)}
+            className={inputClass}
+          >
+            <option value="" disabled>
+              Choose…
+            </option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.status === "ARCHIVED" ? " (archived)" : ""}
+              </option>
+            ))}
+            <option value={NEW_CUSTOMER}>+ New customer…</option>
+          </select>
+        </Field>
+      )}
+      {clientType === "EXTERNAL" && customer === NEW_CUSTOMER && (
+        <div className="sm:col-span-2">
+          <Field label="New customer name" hint="Creates the customer. If one with this name exists, the project links to it.">
+            <input name="clientName" required className={inputClass} />
+          </Field>
+        </div>
+      )}
       <Field label="Project value (GHS)" hint="e.g. 12500.00. Stored exactly, in pesewas.">
         <input name="totalValue" required inputMode="decimal" defaultValue={defaults.totalValue} className={inputClass} />
       </Field>

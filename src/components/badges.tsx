@@ -1,4 +1,4 @@
-import { healthLabel, payoutQuestionStatusLabel, payoutStatusLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
+import { customerStatusLabel, healthLabel, payoutQuestionStatusLabel, payoutStatusLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
 import type { Health, Progress, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
 const base = "inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset";
@@ -75,4 +75,10 @@ export function PayoutStatusBadge({ status }: { status: keyof typeof payoutStatu
 export function QuestionStatusBadge({ status }: { status: keyof typeof payoutQuestionStatusLabel }) {
   const tone = ({ OPEN: "amber", AWAITING_ADMIN: "violet", RESOLVED: "green" } as const)[status];
   return <Badge tone={tone}>{payoutQuestionStatusLabel[status]}</Badge>;
+}
+
+const customerStatusTone = { PROSPECT: "violet", ACTIVE: "green", PAUSED: "amber", CHURNED: "red", ARCHIVED: "gray" } as const;
+
+export function CustomerStatusBadge({ status }: { status: keyof typeof customerStatusLabel }) {
+  return <Badge tone={customerStatusTone[status]}>{customerStatusLabel[status]}</Badge>;
 }

@@ -28,11 +28,15 @@ CREATE FUNCTION customers_guard() RETURNS trigger
     IF TG_OP = 'DELETE' THEN
       RAISE EXCEPTION '% cannot be deleted; archive or deactivate instead', TG_TABLE_NAME USING ERRCODE = 'insufficient_privilege';
     END IF;
-    IF TG_TABLE_NAME = 'customers' AND (NEW.id, NEW.created_by, NEW.created_at) IS DISTINCT FROM (OLD.id, OLD.created_by, OLD.created_at) THEN
-      RAISE EXCEPTION 'A customer''s identity cannot be changed' USING ERRCODE = 'insufficient_privilege';
-    END IF;
-    IF TG_TABLE_NAME = 'customer_contacts' AND (NEW.id, NEW.customer_id, NEW.created_at) IS DISTINCT FROM (OLD.id, OLD.customer_id, OLD.created_at) THEN
-      RAISE EXCEPTION 'A contact cannot move to another customer' USING ERRCODE = 'insufficient_privilege';
+    -- Nested IFs: plpgsql would resolve both tables' columns in a combined condition.
+    IF TG_TABLE_NAME = 'customers' THEN
+      IF (NEW.id, NEW.created_by, NEW.created_at) IS DISTINCT FROM (OLD.id, OLD.created_by, OLD.created_at) THEN
+        RAISE EXCEPTION 'A customer''s identity cannot be changed' USING ERRCODE = 'insufficient_privilege';
+      END IF;
+    ELSE
+      IF (NEW.id, NEW.customer_id, NEW.created_at) IS DISTINCT FROM (OLD.id, OLD.customer_id, OLD.created_at) THEN
+        RAISE EXCEPTION 'A contact cannot move to another customer' USING ERRCODE = 'insufficient_privilege';
+      END IF;
     END IF;
     RETURN NEW;
   END $$;
