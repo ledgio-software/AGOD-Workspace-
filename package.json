@@ -12,9 +12,12 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:check": "drizzle-kit check",
-    "db:seed": "tsx scripts/seed-dev.ts"
+    "db:seed": "tsx scripts/seed-dev.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "admin:create": "tsx scripts/create-admin.ts"
   },
   "dependencies": {
+    "@sentry/nextjs": "^11.4.0",
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3",
     "next": "16.3.8",
@@ -40,6 +43,6 @@
     "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   }
 }

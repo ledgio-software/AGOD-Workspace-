@@ -146,11 +146,9 @@ src/
 - Next.js app shell, Neon/Drizzle migrations, Better Auth sign-in
 - Development test users and CI
 
-### Phase 1 — Foundation
-- Authentication and authorization
-- Database migrations
-- Audit infrastructure
-- CI/CD pipeline
+### Phase 1 — Foundation ✓ (see [docs/PERMISSIONS.md](docs/PERMISSIONS.md))
+- Full database schema, permission service and Postgres row-level security
+- Audit trail, Team management (Admin), Account page, optional Sentry monitoring
 
 ### Phase 2 — Projects & Work Tracking
 - Project CRUD operations

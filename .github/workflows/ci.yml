@@ -24,8 +24,8 @@ jobs:
       BETTER_AUTH_SECRET: ci-build-placeholder-not-a-real-secret-000
       BETTER_AUTH_URL: http://localhost:3000
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -58,8 +58,8 @@ jobs:
       # Throwaway CI database. Never a Neon branch with real data.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/agod_ci
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -77,3 +77,5 @@ jobs:
             git status --porcelain db/migrations
             exit 1
           fi
+      - name: Integration tests (permissions and row-level security)
+        run: npm run test:integration
