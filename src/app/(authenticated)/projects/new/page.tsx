@@ -1,4 +1,7 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
+import { Card, PageHeader } from "@/components/ui";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { listActiveMembers } from "@/modules/projects";
@@ -11,14 +14,17 @@ export default async function NewProjectPage() {
   const members = await listActiveMembers(actor);
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">New project</h1>
-        <p className="text-sm text-zinc-500">
-          The project starts as a draft. Add the team, splits and tasks next. A project code is assigned automatically.
-        </p>
-      </div>
-      <ProjectForm action={createProjectAction} members={members} defaults={{ projectOwnerId: actor.id }} submitLabel="Create project" />
+    <div className="mx-auto max-w-3xl space-y-6">
+      <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
+        <ArrowLeft className="size-4" aria-hidden /> Projects
+      </Link>
+      <PageHeader
+        title="New project"
+        description="The project starts as a draft. Add the team, splits and tasks next. A project code is assigned automatically."
+      />
+      <Card>
+        <ProjectForm action={createProjectAction} members={members} defaults={{ projectOwnerId: actor.id }} submitLabel="Create project" />
+      </Card>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Paperclip } from "lucide-react";
 import { ActionForm, SubmitButton, inputClass } from "@/components/form";
 import type { ActionResult } from "@/lib/action-result";
 import { ALLOWED_EXTENSIONS, formatBytes } from "@/lib/files";
@@ -14,12 +15,12 @@ export function FileUploadForm({ action, label = "Upload" }: { action: Action; l
         type="file"
         required
         accept={ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
-        className={`${inputClass} w-auto text-xs`}
+        className={`${inputClass} w-full text-xs sm:w-auto file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-fg`}
       />
       <SubmitButton variant="secondary" pendingText="Uploading…">
         {label}
       </SubmitButton>
-      <span className="text-xs text-zinc-500">Max 4 MB. PDF, images, Office files, text, CSV or ZIP.</span>
+      <span className="text-xs text-muted">Max 4 MB. PDF, images, Office files, text, CSV or ZIP.</span>
     </ActionForm>
   );
 }
@@ -30,18 +31,26 @@ export type FileItem = { id: string; fileName: string; sizeBytes: number; upload
 export function FileList({ files }: { files: FileItem[] }) {
   if (files.length === 0) return null;
   return (
-    <ul className="space-y-1 text-xs">
+    <ul className="space-y-1.5 text-xs">
       {files.map((f) => (
-        <li key={f.id} className="flex flex-wrap items-center gap-x-2">
-          <a href={`/files/${f.id}`} target="_blank" rel="noopener noreferrer" className="underline">
-            📎 {f.fileName}
+        <li key={f.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <a
+            href={`/files/${f.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            <Paperclip className="size-3.5" aria-hidden />
+            {f.fileName}
           </a>
-          <span className="text-zinc-500">
+          <span className="text-muted">
             {formatBytes(f.sizeBytes)} · {f.uploaderName} · {f.createdAt}
           </span>
           {f.remove && (
             <ActionForm action={f.remove} confirmMessage={`Remove ${f.fileName}?`} className="inline-block">
-              <SubmitButton variant="secondary">Remove</SubmitButton>
+              <SubmitButton variant="secondary" size="sm">
+                Remove
+              </SubmitButton>
             </ActionForm>
           )}
         </li>

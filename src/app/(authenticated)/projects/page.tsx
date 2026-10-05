@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { FolderKanban, LayoutTemplate, Plus, Search } from "lucide-react";
 import { HealthBadge, ProgressBar, ProjectStatusBadge } from "@/components/badges";
+import { inputClass } from "@/components/form";
+import { Avatar, ButtonLink, Card, EmptyState, PageHeader, buttonClass, table } from "@/components/ui";
 import { formatCalendarDate } from "@/lib/dates";
 import { projectStatusLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
@@ -16,102 +19,109 @@ export default async function ProjectsPage({
   const { q, status } = await searchParams;
   const projects = await listProjects(actor, { q, status: status as never });
   const canCreate = can(actor, "project.create");
+  const filtered = Boolean(q || status);
 
   return (
-    <div className="max-w-6xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">Projects</h1>
-          <p className="text-sm text-zinc-500">
-            {canCreate ? "All AGOD projects." : "Projects you are part of."}
-          </p>
-        </div>
-        {canCreate && (
-          <div className="flex gap-2">
-            <Link href="/templates" className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700">
-              Templates
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Work"
+        title="Projects"
+        description={canCreate ? "All AGOD projects, their progress and health." : "Projects you are part of."}
+        actions={
+          canCreate && (
+            <>
+              <ButtonLink href="/templates">
+                <LayoutTemplate className="size-4" aria-hidden /> Templates
+              </ButtonLink>
+              <ButtonLink href="/projects/new" variant="primary">
+                <Plus className="size-4" aria-hidden /> New project
+              </ButtonLink>
+            </>
+          )
+        }
+      />
+
+      <Card bodyClassName="p-0">
+        <form className="flex flex-wrap items-center gap-2 border-b border-line px-5 py-3" role="search">
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+            <input name="q" defaultValue={q} placeholder="Search projects or clients" className={`${inputClass} pl-9`} />
+          </div>
+          <select name="status" defaultValue={status ?? ""} aria-label="Status" className={`${inputClass} w-auto`}>
+            <option value="">All statuses</option>
+            {Object.entries(projectStatusLabel).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className={buttonClass("secondary")}>
+            Filter
+          </button>
+          {filtered && (
+            <Link href="/projects" className="text-sm text-muted hover:text-fg">
+              Clear
             </Link>
-            <Link
-              href="/projects/new"
-              className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              New project
-            </Link>
+          )}
+          <span className="ml-auto text-xs text-muted">
+            {projects.length} project{projects.length === 1 ? "" : "s"}
+          </span>
+        </form>
+
+        {projects.length === 0 ? (
+          <div className="p-5">
+            <EmptyState icon={FolderKanban} title={filtered ? "No projects match these filters" : "No projects yet"}>
+              {!filtered && canCreate ? "Create the first project to start tracking work and payouts." : undefined}
+            </EmptyState>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className={table.table}>
+              <thead className={table.head}>
+                <tr>
+                  <th className={table.th}>Project</th>
+                  <th className={table.th}>Client</th>
+                  <th className={`${table.th} text-right`}>Value</th>
+                  <th className={table.th}>Status</th>
+                  <th className={table.th}>Progress</th>
+                  <th className={table.th}>Owner</th>
+                  <th className={table.th}>Target</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((p) => (
+                  <tr key={p.id} className={table.row}>
+                    <td className={`${table.td} min-w-56`}>
+                      <Link href={`/projects/${p.id}`} className="font-medium hover:text-brand-600">
+                        {p.name}
+                      </Link>
+                      <div className="font-mono text-xs text-muted">{p.code}</div>
+                    </td>
+                    <td className={`${table.td} text-muted`}>{p.clientType === "INTERNAL" ? "Internal" : p.clientName}</td>
+                    <td className={table.num}>{formatMoney(p.totalValueMinor, p.currency)}</td>
+                    <td className={table.td}>
+                      <div className="flex flex-col items-start gap-1">
+                        <ProjectStatusBadge status={p.status} />
+                        {p.health && <HealthBadge health={p.health} />}
+                      </div>
+                    </td>
+                    <td className={table.td}>
+                      <ProgressBar progress={p.progress} />
+                    </td>
+                    <td className={table.td}>
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <Avatar name={p.ownerName} size="sm" />
+                        {p.ownerName}
+                      </span>
+                    </td>
+                    <td className={`${table.td} whitespace-nowrap`}>{formatCalendarDate(p.targetDate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
-
-      <form className="flex flex-wrap gap-2" role="search">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search name, code or client"
-          className="w-64 rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
-        />
-        <select
-          name="status"
-          defaultValue={status ?? ""}
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
-        >
-          <option value="">All statuses</option>
-          {Object.entries(projectStatusLabel).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700">
-          Filter
-        </button>
-      </form>
-
-      {projects.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          {q || status ? "No projects match these filters." : "No projects yet."}
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
-              <tr>
-                <th className="py-2 pr-4 font-medium">Project</th>
-                <th className="py-2 pr-4 font-medium">Client</th>
-                <th className="py-2 pr-4 font-medium">Value</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 pr-4 font-medium">Health</th>
-                <th className="py-2 pr-4 font-medium">Progress</th>
-                <th className="py-2 pr-4 font-medium">Owner</th>
-                <th className="py-2 font-medium">Target</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((p) => (
-                <tr key={p.id} className="border-b border-zinc-100 dark:border-zinc-900">
-                  <td className="py-3 pr-4">
-                    <Link href={`/projects/${p.id}`} className="font-medium hover:underline">
-                      {p.name}
-                    </Link>
-                    <div className="text-xs text-zinc-500">{p.code}</div>
-                  </td>
-                  <td className="py-3 pr-4">{p.clientType === "INTERNAL" ? "Internal" : p.clientName}</td>
-                  <td className="py-3 pr-4 tabular-nums">{formatMoney(p.totalValueMinor, p.currency)}</td>
-                  <td className="py-3 pr-4">
-                    <ProjectStatusBadge status={p.status} />
-                  </td>
-                  <td className="py-3 pr-4">
-                    <HealthBadge health={p.health} />
-                  </td>
-                  <td className="py-3 pr-4">
-                    <ProgressBar progress={p.progress} />
-                  </td>
-                  <td className="py-3 pr-4">{p.ownerName}</td>
-                  <td className="py-3">{formatCalendarDate(p.targetDate)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </Card>
     </div>
   );
 }

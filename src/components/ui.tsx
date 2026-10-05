@@ -58,7 +58,7 @@ export function Card({
           {aside}
         </div>
       )}
-      <div className={cx("px-5 py-4", bodyClassName)}>{children}</div>
+      <div className={bodyClassName ?? "px-5 py-4"}>{children}</div>
     </section>
   );
 }
@@ -225,5 +225,5 @@ export const table = {
   th: "px-5 py-2.5 font-medium",
   row: "border-b border-line last:border-0 hover:bg-surface-muted/50",
   td: "px-5 py-3 align-middle",
-  num: "px-5 py-3 text-right tabular-nums",
+  num: "whitespace-nowrap px-5 py-3 text-right tabular-nums",
 };

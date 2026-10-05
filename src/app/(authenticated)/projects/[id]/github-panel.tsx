@@ -7,7 +7,7 @@ import { LinkGithubForm, SmallButtonForm } from "./workspace-forms";
 const kindLabel = { ISSUE: "Issue", PULL_REQUEST: "PR", COMMIT: "Commit", BRANCH: "Branch" } as const;
 const stateClass: Record<string, string> = {
   open: "text-green-700 dark:text-green-400",
-  draft: "text-zinc-500",
+  draft: "text-muted",
   merged: "text-violet-700 dark:text-violet-400",
   closed: "text-red-700 dark:text-red-400",
 };
@@ -38,12 +38,12 @@ export function TaskGithub({
   const key = taskKey(projectCode, task.number);
   return (
     <div className="space-y-1">
-      <div className="text-xs text-zinc-500">
-        Key <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{key}</code>
+      <div className="text-xs text-muted">
+        Key <code className="rounded bg-surface-muted px-1 font-mono text-[11px]">{key}</code>
         {canLink && (
           <>
             {" "}
-            · branch <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{suggestedBranch("backend", key, task.title)}</code>
+            · branch <code className="rounded bg-surface-muted px-1 font-mono text-[11px]">{suggestedBranch("backend", key, task.title)}</code>
           </>
         )}
       </div>
@@ -54,21 +54,21 @@ export function TaskGithub({
               <a href={l.url} target="_blank" rel="noopener noreferrer" className="underline">
                 {linkLabel(l)}
               </a>
-              {l.title && <span className="text-zinc-600 dark:text-zinc-400">{l.title}</span>}
-              {l.state && <span className={stateClass[l.state] ?? "text-zinc-500"}>{l.state}</span>}
+              {l.title && <span className="text-muted">{l.title}</span>}
+              {l.state && <span className={stateClass[l.state] ?? "text-muted"}>{l.state}</span>}
               {l.reviewState && (
-                <span className={l.reviewState === "approved" ? "text-green-700" : l.reviewState === "changes_requested" ? "text-red-700" : "text-zinc-500"}>
+                <span className={l.reviewState === "approved" ? "text-green-700" : l.reviewState === "changes_requested" ? "text-red-700" : "text-muted"}>
                   review: {l.reviewState.replace("_", " ")}
                   {l.reviewers.length > 0 && ` (${l.reviewers.join(", ")})`}
                 </span>
               )}
-              {l.mergedAt && <span className="text-zinc-500">merged {formatDateTime(l.mergedAt)}</span>}
+              {l.mergedAt && <span className="text-muted">merged {formatDateTime(l.mergedAt)}</span>}
               {l.deployedTo.map((d) => (
                 <span key={d.environment} className="rounded bg-green-100 px-1 text-green-800 dark:bg-green-900/40 dark:text-green-300">
                   deployed: {d.environment}
                 </span>
               ))}
-              {!l.linkedBy && <span className="text-zinc-400">auto</span>}
+              {!l.linkedBy && <span className="text-muted">auto</span>}
               {canManage && (
                 <SmallButtonForm action={unlinkGithubAction.bind(null, projectId, l.id)} label="Remove" confirmMessage="Remove this GitHub link from the task?" />
               )}
@@ -78,7 +78,7 @@ export function TaskGithub({
       )}
       {canLink && (
         <details className="text-xs">
-          <summary className="cursor-pointer text-zinc-500">Link GitHub</summary>
+          <summary className="cursor-pointer text-muted">Link GitHub</summary>
           <div className="mt-2 space-y-2">
             <LinkGithubForm action={linkGithubAction.bind(null, projectId, task.id)} />
             {canCreateIssue && <SmallButtonForm action={createIssueAction.bind(null, projectId, task.id)} label="Create a GitHub issue for this task" />}
@@ -98,7 +98,7 @@ type Delivery = {
 
 /** Release and deployment history for the project's repository. */
 export function DeliveryHistory({ delivery, taskKeys }: { delivery: Delivery; taskKeys: Map<string, string> }) {
-  const none = <p className="text-sm text-zinc-500">None yet.</p>;
+  const none = <p className="text-sm text-muted">None yet.</p>;
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-2">
@@ -112,7 +112,7 @@ export function DeliveryHistory({ delivery, taskKeys }: { delivery: Delivery; ta
                   <a href={l.url} target="_blank" rel="noopener noreferrer" className="underline">
                     #{l.number}
                   </a>{" "}
-                  {taskKeys.get(l.taskId)} {l.title && <span className="text-zinc-500">· {l.title}</span>}
+                  {taskKeys.get(l.taskId)} {l.title && <span className="text-muted">· {l.title}</span>}
                   {l.deployedTo.length > 0 && <span className="text-green-700"> · deployed ({l.deployedTo.map((d) => d.environment).join(", ")})</span>}
                 </li>
               ))}
@@ -127,7 +127,7 @@ export function DeliveryHistory({ delivery, taskKeys }: { delivery: Delivery; ta
             <ul className="space-y-1 text-sm">
               {delivery.deployments.map((d) => (
                 <li key={d.id}>
-                  <span className={d.state === "success" ? "text-green-700" : d.state === "failure" || d.state === "error" ? "text-red-700" : "text-zinc-500"}>
+                  <span className={d.state === "success" ? "text-green-700" : d.state === "failure" || d.state === "error" ? "text-red-700" : "text-muted"}>
                     {d.state}
                   </span>{" "}
                   · {d.environment} · <code>{d.sha.slice(0, 7)}</code> · {formatDateTime(d.updatedAt)}
@@ -156,8 +156,8 @@ export function DeliveryHistory({ delivery, taskKeys }: { delivery: Delivery; ta
                   <a href={r.url} target="_blank" rel="noopener noreferrer" className="underline">
                     {r.tag}
                   </a>
-                  {r.name && r.name !== r.tag && <span className="text-zinc-500"> · {r.name}</span>}
-                  {r.publishedAt && <span className="text-zinc-500"> · {formatDateTime(r.publishedAt)}</span>}
+                  {r.name && r.name !== r.tag && <span className="text-muted"> · {r.name}</span>}
+                  {r.publishedAt && <span className="text-muted"> · {formatDateTime(r.publishedAt)}</span>}
                 </li>
               ))}
             </ul>

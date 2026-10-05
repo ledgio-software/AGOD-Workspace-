@@ -42,6 +42,9 @@ export function ProjectForm({
     <ActionForm action={action} className="grid gap-4 sm:grid-cols-2">
       {defaults.version !== undefined && <input type="hidden" name="version" value={defaults.version} />}
       <div className="sm:col-span-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Basics</h3>
+      </div>
+      <div className="sm:col-span-2">
         <Field label="Project name">
           <input name="name" required defaultValue={defaults.name} className={inputClass} />
         </Field>
@@ -50,6 +53,9 @@ export function ProjectForm({
         <Field label="Description (optional)">
           <textarea name="description" rows={3} defaultValue={defaults.description ?? ""} className={inputClass} />
         </Field>
+      </div>
+      <div className="sm:col-span-2 border-t border-line pt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Client and money</h3>
       </div>
       <Field label="Client type">
         <select
@@ -98,8 +104,11 @@ export function ProjectForm({
           />
         </Field>
       ) : (
-        <p className="self-end text-sm text-zinc-500">AGOD keeps whatever the fixed amounts don&apos;t use.</p>
+        <p className="self-end text-sm text-muted">AGOD keeps whatever the fixed amounts don&apos;t use.</p>
       )}
+      <div className="sm:col-span-2 border-t border-line pt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Owner and dates</h3>
+      </div>
       <Field label="Project owner">
         <select name="projectOwnerId" required defaultValue={defaults.projectOwnerId ?? ""} className={inputClass}>
           <option value="" disabled>

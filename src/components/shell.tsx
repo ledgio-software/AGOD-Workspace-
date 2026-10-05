@@ -120,7 +120,7 @@ export function AppShell({ groups, user, children }: { groups: NavGroup[]; user:
 
   return (
     <div className="flex min-h-dvh flex-1">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-sidebar lg:block">{sidebar}</aside>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-sidebar lg:block print:hidden">{sidebar}</aside>
 
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
@@ -139,8 +139,8 @@ export function AppShell({ groups, user, children }: { groups: NavGroup[]; user:
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-64 print:pl-0">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden print:hidden">
           <button
             type="button"
             aria-label="Open menu"
