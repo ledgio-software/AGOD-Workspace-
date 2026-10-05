@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AccessDenied } from "@/components/access-denied";
 import { formatDate } from "@/lib/dates";
 import { roleLabel } from "@/lib/labels";
@@ -41,7 +42,11 @@ export default async function TeamPage() {
           <tbody>
             {members.map((member) => (
               <tr key={member.id} className="border-b border-zinc-100 align-top dark:border-zinc-900">
-                <td className="py-3 pr-4">{member.name}</td>
+                <td className="py-3 pr-4">
+                  <Link href={`/team/${member.id}`} className="underline">
+                    {member.name}
+                  </Link>
+                </td>
                 <td className="py-3 pr-4">{member.email}</td>
                 <td className="py-3 pr-4">{roleLabel[member.role]}</td>
                 <td className="py-3 pr-4">

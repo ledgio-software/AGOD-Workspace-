@@ -41,6 +41,13 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | View team | | ✓ | ✓ |
 | Manage team (add, roles, deactivate, reset password) | | | ✓ |
 | Audit log | own actions | projects they can see | all |
+| Override project health (with a reason) | | ✓ | ✓ |
+| Contribution history | own | everyone | everyone |
+| Ask about a payout | own payouts | own payouts | own payouts |
+| Review payout questions (answer, or send to Admin) | | ✓ (not their own) | ✓ |
+| Settle a payout question with an adjustment | | | ✓ |
+| Month close: view checklist and export | | ✓ | ✓ |
+| Month close: close or reopen a month | | | ✓ |
 
 ## Running the tests
 

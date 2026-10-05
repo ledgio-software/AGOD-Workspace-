@@ -4,6 +4,7 @@ import {
   acceptsTaskUpdates,
   canTransition,
   isEditable,
+  calculatedHealth,
   isTaskOverdue,
   personalProgress,
   projectHealth,
@@ -87,6 +88,13 @@ describe("health", () => {
     const soon = { ...active, targetDate: "2026-10-10" };
     expect(projectHealth(soon, [task("DONE"), task("NOT_STARTED")], today)).toBe("AT_RISK");
     expect(projectHealth(soon, [task("DONE"), task("DONE")], today)).toBe("ON_TRACK");
+  });
+
+  it("uses a PM override while one is set, but never for closed projects", () => {
+    expect(projectHealth({ ...active, healthOverride: "AT_RISK" }, [task("IN_PROGRESS")], today)).toBe("AT_RISK");
+    expect(projectHealth({ ...active, healthOverride: "ON_TRACK" }, [task("BLOCKED")], today)).toBe("ON_TRACK");
+    expect(calculatedHealth({ ...active, healthOverride: "ON_TRACK" } as typeof active, [task("BLOCKED")], today)).toBe("BLOCKED");
+    expect(projectHealth({ ...active, status: "COMPLETED", healthOverride: "AT_RISK" }, [], today)).toBeNull();
   });
 
   it("does not apply to completed or cancelled projects", () => {

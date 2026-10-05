@@ -160,54 +160,64 @@ export async function createAdjustment(
 ) {
   assertCan(actor, "adjustment.create");
   const input = adjustmentInput.parse(raw);
-  return withActor(actor, async (tx) => {
-    const { entry, projectCode } = await loadEntry(tx, entryId);
-    let adjustment;
-    try {
-      [adjustment] = await tx
-        .insert(adjustments)
-        .values({
-          ledgerEntryId: entryId,
-          type: input.type,
-          amountMinor: input.amountMinor,
-          reason: input.reason,
-          createdBy: actor.id,
-          approvedBy: actor.id,
-        })
-        .returning();
-    } catch (error) {
-      rethrowGuard(error);
-    }
-    const [updated] = await tx.select().from(payoutLedgerEntries).where(eq(payoutLedgerEntries.id, entryId));
-    const balance = await balanceOf(tx, updated);
-    await recordAudit(tx, {
-      actorId: actor.id,
-      entityType: "adjustment",
-      entityId: adjustment.id,
-      projectId: entry.projectId,
-      action: "adjustment.created",
-      before: { status: entry.status },
-      after: {
+  return withActor(actor, (tx) => createAdjustmentTx(tx, actor, entryId, input, request));
+}
+
+/** The adjustment itself, in the caller's transaction (also used when settling a payout question). */
+export async function createAdjustmentTx(
+  tx: Tx,
+  actor: Actor,
+  entryId: string,
+  input: z.output<typeof adjustmentInput>,
+  request?: RequestMeta,
+) {
+  assertCan(actor, "adjustment.create");
+  const { entry, projectCode } = await loadEntry(tx, entryId);
+  let adjustment;
+  try {
+    [adjustment] = await tx
+      .insert(adjustments)
+      .values({
         ledgerEntryId: entryId,
-        type: adjustment.type,
-        amountMinor: adjustment.amountMinor,
-        status: updated.status,
-        effectiveOwedMinor: balance.effectiveOwedMinor,
-        remainingMinor: balance.remainingMinor,
-      },
-      reason: input.reason,
-      request,
-    });
-    await notify(tx, actor, {
-      recipientId: entry.memberId,
-      type: "adjustment.created",
-      title: `Payout adjusted for ${projectCode}`,
-      message: `${input.type.replace("_", " ").toLowerCase()}${input.amountMinor ? ` of ${formatMoney(input.amountMinor, entry.currency)}` : ""}: ${input.reason}`,
-      entityType: "project",
-      entityId: entry.projectId,
-    });
-    return { adjustment, balance };
+        type: input.type,
+        amountMinor: input.amountMinor,
+        reason: input.reason,
+        createdBy: actor.id,
+        approvedBy: actor.id,
+      })
+      .returning();
+  } catch (error) {
+    rethrowGuard(error);
+  }
+  const [updated] = await tx.select().from(payoutLedgerEntries).where(eq(payoutLedgerEntries.id, entryId));
+  const balance = await balanceOf(tx, updated);
+  await recordAudit(tx, {
+    actorId: actor.id,
+    entityType: "adjustment",
+    entityId: adjustment.id,
+    projectId: entry.projectId,
+    action: "adjustment.created",
+    before: { status: entry.status },
+    after: {
+      ledgerEntryId: entryId,
+      type: adjustment.type,
+      amountMinor: adjustment.amountMinor,
+      status: updated.status,
+      effectiveOwedMinor: balance.effectiveOwedMinor,
+      remainingMinor: balance.remainingMinor,
+    },
+    reason: input.reason,
+    request,
   });
+  await notify(tx, actor, {
+    recipientId: entry.memberId,
+    type: "adjustment.created",
+    title: `Payout adjusted for ${projectCode}`,
+    message: `${input.type.replace("_", " ").toLowerCase()}${input.amountMinor ? ` of ${formatMoney(input.amountMinor, entry.currency)}` : ""}: ${input.reason}`,
+    entityType: "project",
+    entityId: entry.projectId,
+  });
+  return { adjustment, balance };
 }
 
 /** One payout with its payments and adjustments. Members can open only their own (row-level security). */

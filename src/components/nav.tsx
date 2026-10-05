@@ -7,6 +7,8 @@ export function Nav({ actor }: { actor: Actor }) {
     { href: "/my-work", label: "My work", show: true },
     { href: "/projects", label: "Projects", show: true },
     { href: "/ledger", label: "Ledger", show: can(actor, "payout.viewAll") },
+    { href: "/questions", label: "Questions", show: can(actor, "payoutQuestion.review") },
+    { href: "/close", label: "Month close", show: can(actor, "period.view") },
     { href: "/reconcile", label: "Reconcile", show: can(actor, "payout.viewAll") },
     { href: "/team", label: "Team", show: can(actor, "team.view") },
     { href: "/audit", label: "Audit", show: can(actor, "audit.viewProject") },
@@ -14,7 +16,7 @@ export function Nav({ actor }: { actor: Actor }) {
   ];
 
   return (
-    <nav className="flex items-center gap-4 text-sm">
+    <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
       {links
         .filter((link) => link.show)
         .map((link) => (

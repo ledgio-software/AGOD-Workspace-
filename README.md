@@ -166,6 +166,11 @@ src/
 - Project statements with arithmetic checks, audit log viewer, spreadsheet reconciliation
 - Staging-only pilot data, pilot plan and sign-off, go-live checklist ([docs/GO-LIVE.md](docs/GO-LIVE.md))
 
+### Phase 6 — Roadmap Stage 1 gaps ✓ (see [docs/ROADMAP.md](docs/ROADMAP.md))
+- Project health override with a reason; due-soon and overdue alerts
+- Contribution history per person; payout questions (member → PM → Admin adjustment)
+- Month close checklist, export and lock
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
@@ -182,7 +187,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)
