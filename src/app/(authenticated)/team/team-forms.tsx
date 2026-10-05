@@ -21,8 +21,7 @@ function RoleSelect({ defaultValue }: { defaultValue: Role }) {
 
 export function CreateMemberForm() {
   return (
-    <section className="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-      <h2 className="font-medium">Add a member</h2>
+    <section>
       <ActionForm
         action={createMemberAction}
         resetOnSuccess
@@ -35,16 +34,16 @@ export function CreateMemberForm() {
           )
         }
       >
-        <label className="space-y-1 text-sm">
-          <span>Name</span>
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium">Name</span>
           <input name="name" required className={inputClass} />
         </label>
-        <label className="space-y-1 text-sm">
-          <span>Email</span>
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium">Email</span>
           <input name="email" type="email" required className={inputClass} />
         </label>
-        <label className="space-y-1 text-sm">
-          <span>Role</span>
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium">Role</span>
           <RoleSelect defaultValue="TEAM_MEMBER" />
         </label>
         <SubmitButton pendingText="Adding…">Add member</SubmitButton>
@@ -58,22 +57,22 @@ type Member = { id: string; email: string; role: Role; active: boolean; weeklyCa
 export function MemberActions({ member }: { member: Member }) {
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">Manage</summary>
-      <div className="mt-3 w-72 space-y-4">
+      <summary className="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">Manage</summary>
+      <div className="ml-auto mt-3 w-72 space-y-4 rounded-lg border border-line bg-surface p-3 text-left shadow-sm">
         <ActionForm action={changeRoleAction} resetOnSuccess className="space-y-2">
           <input type="hidden" name="userId" value={member.id} />
           <RoleSelect defaultValue={member.role} />
           <input name="reason" required placeholder="Reason for the change" className={inputClass} />
-          <SubmitButton>Change role</SubmitButton>
+          <SubmitButton size="sm">Change role</SubmitButton>
         </ActionForm>
 
         <ActionForm action={setCapacityAction} className="space-y-2">
           <input type="hidden" name="userId" value={member.id} />
-          <label className="block space-y-1">
-            <span>Weekly capacity (hours for project work)</span>
+          <label className="block space-y-1 text-xs">
+            <span className="font-medium">Weekly capacity (hours for project work)</span>
             <input name="hours" type="number" min={0} max={80} required defaultValue={member.weeklyCapacityHours} className={inputClass} />
           </label>
-          <SubmitButton>Save capacity</SubmitButton>
+          <SubmitButton size="sm" variant="secondary">Save capacity</SubmitButton>
         </ActionForm>
 
         <ActionForm action={setActiveAction} resetOnSuccess className="space-y-2">
@@ -85,7 +84,7 @@ export function MemberActions({ member }: { member: Member }) {
             placeholder={member.active ? "Why deactivate?" : "Why reactivate?"}
             className={inputClass}
           />
-          <SubmitButton>{member.active ? "Deactivate" : "Reactivate"}</SubmitButton>
+          <SubmitButton size="sm" variant={member.active ? "danger" : "secondary"}>{member.active ? "Deactivate" : "Reactivate"}</SubmitButton>
         </ActionForm>
 
         <ActionForm
@@ -98,7 +97,7 @@ export function MemberActions({ member }: { member: Member }) {
         >
           <input type="hidden" name="userId" value={member.id} />
           <input type="hidden" name="email" value={member.email} />
-          <SubmitButton pendingText="Resetting…">Reset password</SubmitButton>
+          <SubmitButton size="sm" variant="secondary" pendingText="Resetting…">Reset password</SubmitButton>
         </ActionForm>
       </div>
     </details>
