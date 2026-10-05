@@ -97,6 +97,63 @@ export const costCategory = pgEnum("cost_category", [
 export const projectHealthStatus = pgEnum("project_health", ["ON_TRACK", "AT_RISK", "BLOCKED", "OVERDUE"]);
 export const payoutQuestionStatus = pgEnum("payout_question_status", ["OPEN", "AWAITING_ADMIN", "RESOLVED"]);
 
+// Phase 16 (customers): one record per client, with contacts. Projects link to it.
+export const customerType = pgEnum("customer_type", ["COMPANY", "PERSON", "PARTNER", "OTHER"]);
+export const customerStatus = pgEnum("customer_status", ["PROSPECT", "ACTIVE", "PAUSED", "CHURNED", "ARCHIVED"]);
+export const contactChannel = pgEnum("contact_channel", ["EMAIL", "PHONE", "WHATSAPP", "OTHER"]);
+
+export const customers = pgTable(
+  "customers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    type: customerType("type").notNull().default("COMPANY"),
+    status: customerStatus("status").notNull().default("ACTIVE"),
+    ownerId: userRef("owner_id").notNull(),
+    notes: text("notes"),
+    // Optional reference in another system (e.g. Ledgio's customer number).
+    externalReference: text("external_reference"),
+    createdBy: userRef("created_by").notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    // One customer per name (case and surrounding spaces ignored): prevents duplicates.
+    uniqueIndex("customers_name_unique").on(sql`lower(btrim(${t.name}))`),
+    check("customers_name_not_blank", sql`length(btrim(${t.name})) >= 2`),
+    check("customers_archived_matches_status", sql`(${t.status} = 'ARCHIVED') = (${t.archivedAt} IS NOT NULL)`),
+  ],
+);
+
+export const customerContacts = pgTable(
+  "customer_contacts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    role: text("role"),
+    email: text("email"),
+    phone: text("phone"),
+    preferredChannel: contactChannel("preferred_channel").notNull().default("EMAIL"),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    isBilling: boolean("is_billing").notNull().default(false),
+    // Contacts are removed by deactivating them, so history stays readable.
+    active: boolean("active").notNull().default(true),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("customer_contacts_customer_idx").on(t.customerId),
+    check("customer_contacts_reachable", sql`${t.email} IS NOT NULL OR ${t.phone} IS NOT NULL`),
+    // At most one active primary contact per customer.
+    uniqueIndex("customer_contacts_one_primary").on(t.customerId).where(sql`${t.isPrimary} AND ${t.active}`),
+  ],
+);
+
 export const projects = pgTable(
   "projects",
   {
@@ -106,6 +163,8 @@ export const projects = pgTable(
     description: text("description"),
     clientType: clientType("client_type").notNull(),
     clientName: text("client_name"),
+    // External projects belong to a customer; client_name keeps a copy of its name for display and reports.
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "restrict" }),
     totalValueMinor: money("total_value_minor").notNull(),
     currency: currency(),
     // Decision 3: one split mode per project.
@@ -137,6 +196,8 @@ export const projects = pgTable(
   (t) => [
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
     check("projects_cost_budget_non_negative", sql`${t.costBudgetMinor} >= 0`),
+    check("projects_customer_matches_client_type", sql`(${t.clientType} = 'EXTERNAL') = (${t.customerId} IS NOT NULL)`),
+    index("projects_customer_idx").on(t.customerId),
     check(
       "projects_agod_share_valid",
       sql`${t.agodShareBasisPoints} BETWEEN 0 AND 10000 AND (${t.splitMode} = 'PERCENTAGE' OR ${t.agodShareBasisPoints} = 0)`,

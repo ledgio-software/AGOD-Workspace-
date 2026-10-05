@@ -127,6 +127,20 @@
       "when": 1791218828169,
       "tag": "20261005164708_agod_share",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791239079965,
+      "tag": "20261005222439_customers",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791239102105,
+      "tag": "20261005222502_customers_rules",
+      "breakpoints": true
     }
   ]
 }

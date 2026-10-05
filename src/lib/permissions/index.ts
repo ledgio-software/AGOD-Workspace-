@@ -36,7 +36,9 @@ export type Action =
   | "workload.view"
   | "report.weekly"
   | "finance.view"
-  | "finance.manage";
+  | "finance.manage"
+  | "customer.view"
+  | "customer.manage";
 
 /** Facts about the record being acted on, when the rule depends on it. */
 export type ResourceContext = {
@@ -88,6 +90,9 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   // Stage 3: profitability, costs and forecasts (PMs and Admins; see docs/DECISIONS.md).
   "finance.view": isManager,
   "finance.manage": isManager,
+  // Phase 16: customers and their contacts (PMs and Admins; members see only the client name on their projects).
+  "customer.view": isManager,
+  "customer.manage": isManager,
 };
 
 export function can(actor: Actor, action: Action, resource: ResourceContext = {}): boolean {
