@@ -186,6 +186,9 @@ src/
 - Project costs and budgets, estimated vs actual profit and margin, by client and project type
 - Payout forecast and aging, team utilisation, profitability CSV export
 
+### Phase 11 — AGOD share ✓
+- The company's share per project (default 30%); team splits total the rest, recorded in the approval snapshot
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

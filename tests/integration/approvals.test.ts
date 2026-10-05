@@ -18,7 +18,9 @@ import {
   requestApproval,
 } from "@/modules/approvals";
 import { ServiceError } from "@/modules/errors";
+import { getProjectFinance } from "@/modules/finance";
 import { listLedger } from "@/modules/ledger";
+import { getProjectStatement } from "@/modules/reports/statement";
 import { changeProjectStatus, createProject, getProjectWorkspace, updateProject } from "@/modules/projects";
 import { addAssignment } from "@/modules/projects/team";
 import { createTask, updateTaskProgress, waiveTask } from "@/modules/tasks";
@@ -324,5 +326,75 @@ describe("returning and reopening", () => {
       recordedBy: admin.id,
     });
     await expect(reopenProject(admin, project.id, "Too late")).rejects.toThrow(ServiceError);
+  });
+});
+
+describe("AGOD share", () => {
+  async function shareProject(splits: [string, string], extra: Partial<Parameters<typeof createProject>[1]> = {}) {
+    const pm = await createUser("PROJECT_MANAGER");
+    const a = await createUser("TEAM_MEMBER");
+    const b = await createUser("TEAM_MEMBER");
+    const project = await createProject(pm, {
+      name: `Share ${crypto.randomUUID().slice(0, 6)}`,
+      clientType: "EXTERNAL",
+      clientName: "Ledgio",
+      totalValue: "100.01",
+      splitMode: "PERCENTAGE",
+      agodShare: "30",
+      projectOwnerId: pm.id,
+      ...extra,
+    });
+    await addAssignment(pm, project.id, { memberId: a.id, roleOnProject: "Backend", split: splits[0] });
+    await addAssignment(pm, project.id, { memberId: b.id, roleOnProject: "Frontend", split: splits[1] });
+    await changeProjectStatus(pm, project.id, { to: "PLANNING" });
+    await changeProjectStatus(pm, project.id, { to: "IN_PROGRESS" });
+    return { pm, a, b, project };
+  }
+
+  it("the team must total 100% minus the AGOD share", async () => {
+    const { pm, project } = await shareProject(["50", "50"]);
+    expect(project.agodShareBasisPoints).toBe(3_000);
+    const ws = (await getProjectWorkspace(pm, project.id))!;
+    expect(ws.compensation?.errors.join()).toMatch(/total exactly 70.00%/);
+    await expect(
+      (async () => {
+        await requestApproval(pm, project.id);
+        await approveProject(pm, project.id, { expectedVersion: await version(project.id) });
+      })(),
+    ).rejects.toThrow(ServiceError);
+    expect(await db.select().from(compensationSnapshots).where(eq(compensationSnapshots.projectId, project.id))).toHaveLength(0);
+  });
+
+  it("records what AGOD keeps in the snapshot; members get exact floors and profit equals the share", async () => {
+    const { pm, a, b, project } = await shareProject(["35", "35"]);
+    await requestApproval(pm, project.id);
+    await approveProject(pm, project.id, { expectedVersion: await version(project.id), overrideReason: "No tasks in this test" });
+
+    const [snapshot] = await db.select().from(compensationSnapshots).where(eq(compensationSnapshots.projectId, project.id));
+    expect(snapshot).toMatchObject({ agodShareBasisPoints: 3_000, agodShareMinor: 3_001, calculationVersion: 2 });
+    expect(snapshot.calculationNotes).toMatch(/AGOD share \(30%\): GHS 30.01/);
+    const ledger = await db.select().from(payoutLedgerEntries).where(eq(payoutLedgerEntries.projectId, project.id));
+    expect(Object.fromEntries(ledger.map((e) => [e.memberId, e.amountOwedMinor]))).toEqual({ [a.id]: 3_500, [b.id]: 3_500 });
+
+    const finance = (await getProjectFinance(pm, project.id))!;
+    expect(finance.financials).toMatchObject({ revenueMinor: 10_001, committedPayoutMinor: 7_000, actualProfitMinor: 3_001 });
+    const statement = (await getProjectStatement(pm, project.id))!;
+    expect(statement.checks.every((c) => c.ok)).toBe(true);
+    expect(statement.checks.map((c) => c.label).join()).toMatch(/plus the AGOD share equal/);
+  });
+
+  it("fixed-amount projects keep no share percentage, and the database refuses one", async () => {
+    const pm = await createUser("PROJECT_MANAGER");
+    const project = await createProject(pm, {
+      name: `Fixed ${crypto.randomUUID().slice(0, 6)}`,
+      clientType: "INTERNAL",
+      totalValue: "100",
+      splitMode: "FIXED_AMOUNT",
+      agodShare: "30",
+      projectOwnerId: pm.id,
+    });
+    expect(project.agodShareBasisPoints).toBe(0);
+    await expectDbError(db.update(projects).set({ agodShareBasisPoints: 1_000 }).where(eq(projects.id, project.id)), /projects_agod_share_valid/);
+    await expect(updateProject(pm, project.id, { ...project, totalValue: "100", splitMode: "PERCENTAGE", agodShare: "120", clientName: null, version: project.version })).rejects.toThrow(/AGOD share/);
   });
 });

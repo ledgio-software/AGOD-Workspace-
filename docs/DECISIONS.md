@@ -142,3 +142,14 @@ Phase 9 (file attachments in Vercel Blob).
 | Payout aging | Unpaid balances grouped by days since the project was approved: 0–30, 31–60, 61–90, over 90. |
 | Utilisation | Estimated hours of tasks completed in the month ÷ (weekly capacity × weeks in the month). Tasks without an estimate are counted separately. |
 | Frontend | Backend-first: the pages are plain tables; the redesign builds on the services listed in `docs/FRONTEND_CONTRACT.md`. |
+
+## Phase 11 decisions (2026-10-05): AGOD share
+
+| Decision | Choice |
+|---|---|
+| What | Each percentage-split project has an **AGOD share**: the percentage the company keeps. Team percentages must total 100% minus the share (e.g. 30% AGOD + 70% team). New projects are pre-filled with 30%; the PM can change it while the project is editable. |
+| Existing projects | Kept at 0%, so their plans and approvals are unchanged. |
+| Fixed amounts | No share percentage (the database refuses one); AGOD keeps whatever the fixed amounts leave, shown explicitly in the preview. |
+| Rounding | With an AGOD share, team members get their exact floored amounts and any leftover pesewas stay with AGOD. With 0%, the old rule applies (remainder to the largest share). |
+| Record | The approval snapshot stores the share percentage and amount (calculation version 2) and its notes say what AGOD kept. The project statement checks team lines + AGOD share = project value. |
+| Profit | No change to the profit rules: the AGOD share is simply what is left after payouts, so profit = AGOD share − other costs. |

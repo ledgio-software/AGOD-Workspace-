@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PlanResult } from "@/modules/compensation/calculate";
 import { approvalReadiness } from "./readiness";
 
-const validPlan: PlanResult = { valid: true, errors: [], lines: [], allocatedMinor: 0, unallocatedMinor: 0, roundingNote: null };
+const validPlan: PlanResult = { valid: true, errors: [], lines: [], allocatedMinor: 0, agodShareMinor: 0, unallocatedMinor: 0, roundingNote: null };
 const t = (status: "DONE" | "WAIVED" | "IN_PROGRESS" | "BLOCKED", required = true) => ({
   id: status,
   title: status,

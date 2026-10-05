@@ -83,13 +83,15 @@ export async function getProjectStatement(actor: Actor, projectId: string) {
     const seesAllLines = lines.length === 0 || actor.role !== "TEAM_MEMBER";
     if (seesAllLines) {
       for (const s of statementSnapshots) {
-        const ok = s.snapshot.splitMode === "PERCENTAGE"
-          ? s.allocatedMinor === s.snapshot.projectTotalValueMinor
+        // Percentage mode: team lines plus the AGOD share (0 before calculation version 2) make up the value.
+        const pct = s.snapshot.splitMode === "PERCENTAGE";
+        const ok = pct
+          ? s.allocatedMinor + s.snapshot.agodShareMinor === s.snapshot.projectTotalValueMinor
           : s.allocatedMinor <= s.snapshot.projectTotalValueMinor;
         checks.push({
-          label: `Snapshot ${s.snapshot.sequence}: allocations ${s.snapshot.splitMode === "PERCENTAGE" ? "equal" : "do not exceed"} the project value`,
+          label: `Snapshot ${s.snapshot.sequence}: allocations ${pct ? (s.snapshot.agodShareMinor > 0 ? "plus the AGOD share equal" : "equal") : "do not exceed"} the project value`,
           ok,
-          detail: `${s.allocatedMinor} of ${s.snapshot.projectTotalValueMinor} pesewas`,
+          detail: `${s.allocatedMinor}${pct && s.snapshot.agodShareMinor > 0 ? ` + ${s.snapshot.agodShareMinor}` : ""} of ${s.snapshot.projectTotalValueMinor} pesewas`,
         });
       }
     }

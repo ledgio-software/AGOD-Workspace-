@@ -13,7 +13,7 @@ import {
   tasks,
   users,
 } from "@/lib/db/schema";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, formatPercent } from "@/lib/money";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { CALCULATION_VERSION } from "@/modules/compensation/calculate";
@@ -140,7 +140,11 @@ export async function approveProject(
       .where(eq(compensationSnapshots.projectId, projectId));
     const notes = [
       plan.roundingNote,
-      plan.unallocatedMinor > 0 ? `Unallocated: ${formatMoney(plan.unallocatedMinor, project.currency)}.` : null,
+      plan.agodShareMinor > 0
+        ? project.splitMode === "PERCENTAGE"
+          ? `AGOD share (${formatPercent(project.agodShareBasisPoints)}): ${formatMoney(plan.agodShareMinor, project.currency)}.`
+          : `Not allocated to the team, kept by AGOD: ${formatMoney(plan.agodShareMinor, project.currency)}.`
+        : null,
     ]
       .filter(Boolean)
       .join(" ");
@@ -153,6 +157,8 @@ export async function approveProject(
         projectTotalValueMinor: project.totalValueMinor,
         currency: project.currency,
         splitMode: project.splitMode,
+        agodShareBasisPoints: project.agodShareBasisPoints,
+        agodShareMinor: plan.agodShareMinor,
         calculationVersion: CALCULATION_VERSION,
         calculationNotes: notes || null,
         createdBy: actor.id,
@@ -225,6 +231,8 @@ export async function approveProject(
         sequence: snapshot.sequence,
         totalValueMinor: project.totalValueMinor,
         allocatedMinor: plan.allocatedMinor,
+        agodShareBasisPoints: project.agodShareBasisPoints,
+        agodShareMinor: plan.agodShareMinor,
         unallocatedMinor: plan.unallocatedMinor,
         lines: lines.map((l) => ({ memberId: l.memberId, role: l.roleOnProject, amountOwedMinor: l.amountOwedMinor })),
         overriddenTasks: readiness.incompleteTasks.map((t) => ({ id: t.id, title: t.title, status: t.status })),

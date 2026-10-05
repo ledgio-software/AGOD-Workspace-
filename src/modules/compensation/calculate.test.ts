@@ -85,6 +85,57 @@ describe("percentage plans", () => {
   });
 });
 
+describe("AGOD share", () => {
+  it("keeps the AGOD share and splits the rest among the team", () => {
+    const result = calculateCompensation(plan({ agodShareBasisPoints: 3_000, lines: [pct(4_000), pct(3_000)] }));
+    expect(result.valid).toBe(true);
+    expect(result.lines.map((l) => l.amountMinor)).toEqual([40_000, 30_000]);
+    expect(result.allocatedMinor).toBe(70_000);
+    expect(result.agodShareMinor).toBe(30_000);
+    expect(result.unallocatedMinor).toBe(0);
+  });
+
+  it("requires the team to total 100% minus the share", () => {
+    const result = calculateCompensation(plan({ agodShareBasisPoints: 3_000, lines: [pct(6_000), pct(4_000)] }));
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]).toMatch(/total exactly 70.00%.*30.00% AGOD share.*currently 100.00%/);
+  });
+
+  it("keeps the rounding remainder in the AGOD share, so members get exact floors", () => {
+    // GHS 100.01: 35% = 3500.35 -> 3500 each; AGOD gets 10001 - 7000 = 3001 (3000.3 + 1 remainder)
+    const result = calculateCompensation(
+      plan({ totalValueMinor: 10_001, agodShareBasisPoints: 3_000, lines: [pct(3_500), pct(3_500)] }),
+    );
+    expect(result.lines.map((l) => [l.amountMinor, l.roundingAdjustmentMinor])).toEqual([[3_500, 0], [3_500, 0]]);
+    expect(result.agodShareMinor).toBe(3_001);
+    expect(result.allocatedMinor + result.agodShareMinor).toBe(10_001);
+    expect(result.roundingNote).toMatch(/1 pesewa .* AGOD share/);
+  });
+
+  it("allows AGOD to keep everything only if the team lines are 0%", () => {
+    const result = calculateCompensation(plan({ agodShareBasisPoints: 10_000, lines: [pct(0)] }));
+    expect(result).toMatchObject({ valid: true, allocatedMinor: 0, agodShareMinor: 100_000 });
+  });
+
+  it("rejects a share outside 0–100% or with fixed amounts", () => {
+    expect(calculateCompensation(plan({ agodShareBasisPoints: 10_001, lines: [pct(0)] })).errors.join()).toMatch(/between 0% and 100%/);
+    expect(
+      calculateCompensation(plan({ splitMode: "FIXED_AMOUNT", agodShareBasisPoints: 1_000, lines: [fixed(1)] })).errors.join(),
+    ).toMatch(/only applies to percentage/);
+  });
+
+  it("in fixed-amount mode AGOD keeps what the team amounts leave", () => {
+    const result = calculateCompensation(plan({ splitMode: "FIXED_AMOUNT", lines: [fixed(30_000), fixed(50_000)] }));
+    expect(result).toMatchObject({ allocatedMinor: 80_000, agodShareMinor: 20_000 });
+  });
+
+  it("with a 0% share gives the same amounts as before", () => {
+    const result = calculateCompensation(plan({ agodShareBasisPoints: 0, totalValueMinor: 10_001, lines: [pct(5_000), pct(5_000)] }));
+    expect(result.lines.map((l) => l.amountMinor)).toEqual([5_001, 5_000]);
+    expect(result.agodShareMinor).toBe(0);
+  });
+});
+
 describe("fixed-amount plans", () => {
   it("shows the unallocated amount explicitly", () => {
     const result = calculateCompensation(

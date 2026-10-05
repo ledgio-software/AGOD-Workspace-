@@ -110,6 +110,8 @@ export const projects = pgTable(
     currency: currency(),
     // Decision 3: one split mode per project.
     splitMode: splitType("split_mode").notNull().default("PERCENTAGE"),
+    // Percentage mode: the share AGOD keeps (basis points); team splits total the rest. 0 = none.
+    agodShareBasisPoints: integer("agod_share_basis_points").notNull().default(0),
     status: projectStatus("status").notNull().default("DRAFT"),
     projectOwnerId: userRef("project_owner_id").notNull(),
     startDate: date("start_date"),
@@ -135,6 +137,10 @@ export const projects = pgTable(
   (t) => [
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
     check("projects_cost_budget_non_negative", sql`${t.costBudgetMinor} >= 0`),
+    check(
+      "projects_agod_share_valid",
+      sql`${t.agodShareBasisPoints} BETWEEN 0 AND 10000 AND (${t.splitMode} = 'PERCENTAGE' OR ${t.agodShareBasisPoints} = 0)`,
+    ),
     check("projects_github_repo_format", sql`${t.githubRepo} IS NULL OR ${t.githubRepo} ~ '^[a-z0-9_.-]+/[a-z0-9_.-]+$'`),
     check(
       "projects_health_override_has_reason",
@@ -256,6 +262,9 @@ export const compensationSnapshots = pgTable(
     projectTotalValueMinor: money("project_total_value_minor").notNull(),
     currency: currency(),
     splitMode: splitType("split_mode").notNull(),
+    // What AGOD keeps from this approval (version 2+): the share percentage and the amount.
+    agodShareBasisPoints: integer("agod_share_basis_points").notNull().default(0),
+    agodShareMinor: money("agod_share_minor").notNull().default(0),
     calculationVersion: integer("calculation_version").notNull(),
     calculationNotes: text("calculation_notes"),
     createdBy: userRef("created_by").notNull(),
