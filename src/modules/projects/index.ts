@@ -15,6 +15,7 @@ import { DEFAULT_CURRENCY, parseMoney } from "@/lib/money";
 import { type Actor, assertCan, can } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { type PlanResult, calculateCompensation } from "@/modules/compensation/calculate";
+import { approvalReadiness } from "@/modules/approvals/readiness";
 import { ServiceError } from "@/modules/errors";
 import {
   type Health,
@@ -362,9 +363,17 @@ export async function getProjectWorkspace(actor: Actor, projectId: string) {
       .orderBy(desc(auditEvents.createdAt))
       .limit(50);
 
+    const readiness = compensation
+      ? approvalReadiness(compensation, taskRows.map((t) => t.task))
+      : approvalReadiness(
+          { valid: true, errors: [], lines: [], allocatedMinor: 0, unallocatedMinor: 0, roundingNote: null },
+          taskRows.map((t) => t.task),
+        );
+
     return {
       project: row.project,
       ownerName: row.ownerName,
+      readiness,
       team,
       milestones: milestoneRows,
       tasks: taskRows.map((t) => ({ ...t.task, assigneeName: t.assigneeName })),

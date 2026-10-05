@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { HealthBadge, ProgressBar, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
-import { describeAuditAction } from "@/lib/labels";
+import { describeAuditAction, payoutStatusLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { requireUser } from "@/lib/session";
 import { acceptsTaskUpdates } from "@/modules/projects/rules";
@@ -203,7 +203,7 @@ export default async function MyWorkPage() {
             {work.payouts.rows.map((r) => (
               <li key={r.id}>
                 {r.projectCode} {r.projectName}: owed {formatMoney(r.owedMinor, r.currency)}, paid {formatMoney(r.paidMinor, r.currency)} ·{" "}
-                {r.status.toLowerCase().replace("_", " ")}
+                {payoutStatusLabel[r.status]}
               </li>
             ))}
           </ul>

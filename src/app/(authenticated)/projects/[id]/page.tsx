@@ -2,19 +2,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HealthBadge, ProgressBar, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
-import { describeAuditAction, milestoneStatusLabel } from "@/lib/labels";
+import { describeAuditAction, milestoneStatusLabel, payoutStatusLabel } from "@/lib/labels";
 import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
+import { getProjectPayouts } from "@/modules/approvals";
 import { getProjectWorkspace, listActiveMembers } from "@/modules/projects";
 import { acceptsTaskUpdates, allowedManualTransitions, isEditable, isTaskOverdue } from "@/modules/projects/rules";
 import {
   addAssignmentAction,
+  approveAction,
   changeStatusAction,
   createMilestoneAction,
   createTaskAction,
   milestoneStatusAction,
+  rejectAction,
   removeAssignmentAction,
+  reopenAction,
+  requestApprovalAction,
   taskProgressAction,
   updateAssignmentAction,
   updateProjectAction,
@@ -22,6 +27,7 @@ import {
   waiveTaskAction,
 } from "../actions";
 import { ProjectForm } from "../project-form";
+import { ApproveForm, RejectForm, ReopenForm, RequestApprovalForm } from "./approval-forms";
 import {
   AddAssignmentForm,
   AssignmentRowActions,
@@ -60,6 +66,9 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
   const teamOptions = Array.from(new Map(ws.team.map((t) => [t.memberId, { id: t.memberId, name: t.memberName }])).values());
   const pct = project.splitMode === "PERCENTAGE";
   const workOpen = acceptsTaskUpdates(project.status);
+  const payouts = await getProjectPayouts(actor, project.id);
+  const lastReturn = ws.activity.find((a) => a.action === "project.changes_requested");
+  const canRequest = project.status === "IN_PROGRESS" || project.status === "CHANGES_REQUESTED";
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -332,6 +341,106 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
               />
             </div>
           </details>
+        )}
+      </Section>
+
+      <Section title="Approval and payouts">
+        {project.status === "CHANGES_REQUESTED" && lastReturn && (
+          <p className="rounded-md bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            Returned for changes by {lastReturn.actorName}: “{lastReturn.reason}”
+          </p>
+        )}
+
+        {canRequest && (
+          <div className="space-y-3 text-sm">
+            <ul className="space-y-1">
+              {ws.compensation && (
+                <li>{ws.compensation.valid ? "✓ Compensation plan is valid" : "✗ Compensation plan needs fixing (see above)"}</li>
+              )}
+              <li>
+                {ws.readiness.incompleteTasks.length === 0
+                  ? "✓ All required tasks are done or waived"
+                  : `• ${ws.readiness.incompleteTasks.length} required task(s) still open: ${ws.readiness.incompleteTasks.map((t) => t.title).join(", ")}`}
+              </li>
+            </ul>
+            <RequestApprovalForm action={requestApprovalAction.bind(null, project.id)} />
+          </div>
+        )}
+
+        {project.status === "PENDING_APPROVAL" &&
+          (isManager ? (
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2 text-sm">
+                <p>Review the calculation preview, the completed tasks and their evidence above, then decide.</p>
+                {ws.readiness.blockers.length > 0 && (
+                  <ul className="list-disc pl-5 text-red-600">
+                    {ws.readiness.blockers.map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                )}
+                {ws.readiness.incompleteTasks.length > 0 && (
+                  <p className="text-amber-700 dark:text-amber-400">
+                    Required tasks not done: {ws.readiness.incompleteTasks.map((t) => t.title).join(", ")}.
+                  </p>
+                )}
+                {ws.readiness.blockers.length === 0 && ws.compensation && (
+                  <ApproveForm
+                    action={approveAction.bind(null, project.id)}
+                    expectedVersion={project.version}
+                    needsOverride={ws.readiness.incompleteTasks.length > 0}
+                    totalLabel={formatMoney(ws.compensation.allocatedMinor, project.currency)}
+                  />
+                )}
+              </div>
+              <RejectForm action={rejectAction.bind(null, project.id)} />
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">Waiting for a project manager to review and approve.</p>
+          ))}
+
+        {payouts.length === 0 && !canRequest && project.status !== "PENDING_APPROVAL" && (
+          <p className="text-sm text-zinc-500">No approvals yet.</p>
+        )}
+
+        {[...payouts].reverse().map((snapshot) => (
+          <div key={snapshot.id} className="space-y-2 text-sm">
+            <p>
+              <strong>Snapshot {snapshot.sequence}</strong> · approved by {snapshot.approverName} on {formatDateTime(snapshot.createdAt)} ·
+              value {formatMoney(snapshot.projectTotalValueMinor, snapshot.currency)}
+              {snapshot.calculationNotes && <span className="text-zinc-500"> · {snapshot.calculationNotes}</span>}
+            </p>
+            <table className="w-full text-left">
+              <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
+                <tr>
+                  <th className="py-1 pr-4 font-medium">Recipient</th>
+                  <th className="py-1 pr-4 font-medium">Role</th>
+                  <th className="py-1 pr-4 font-medium">Split</th>
+                  <th className="py-1 pr-4 font-medium">Amount owed</th>
+                  <th className="py-1 font-medium">Payout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {snapshot.lines.map((line) => (
+                  <tr key={line.id} className="border-b border-zinc-100 dark:border-zinc-900">
+                    <td className="py-1 pr-4">{line.memberName}</td>
+                    <td className="py-1 pr-4">{line.roleOnProject}</td>
+                    <td className="py-1 pr-4 tabular-nums">
+                      {line.splitType === "PERCENTAGE"
+                        ? formatPercent(line.splitBasisPoints ?? 0)
+                        : formatMoney(line.splitAmountMinor ?? 0, line.currency)}
+                    </td>
+                    <td className="py-1 pr-4 tabular-nums">{formatMoney(line.amountOwedMinor, line.currency)}</td>
+                    <td className="py-1">{line.ledgerStatus ? payoutStatusLabel[line.ledgerStatus] : "No payout (zero amount)"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+
+        {project.status === "COMPLETED" && can(actor, "project.reopen") && (
+          <ReopenForm action={reopenAction.bind(null, project.id)} />
         )}
       </Section>
 

@@ -195,20 +195,26 @@ export const tasks = pgTable(
   ],
 );
 
-export const compensationSnapshots = pgTable("compensation_snapshots", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id")
-    .notNull()
-    .unique()
-    .references(() => projects.id, { onDelete: "restrict" }),
-  projectTotalValueMinor: money("project_total_value_minor").notNull(),
-  currency: currency(),
-  splitMode: splitType("split_mode").notNull(),
-  calculationVersion: integer("calculation_version").notNull(),
-  calculationNotes: text("calculation_notes"),
-  createdBy: userRef("created_by").notNull(),
-  createdAt,
-});
+export const compensationSnapshots = pgTable(
+  "compensation_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    // 1 for the first approval; a reopened and re-approved project gets 2, 3, ...
+    // Earlier snapshots stay as history; their ledger entries are voided.
+    sequence: integer("sequence").notNull().default(1),
+    projectTotalValueMinor: money("project_total_value_minor").notNull(),
+    currency: currency(),
+    splitMode: splitType("split_mode").notNull(),
+    calculationVersion: integer("calculation_version").notNull(),
+    calculationNotes: text("calculation_notes"),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("compensation_snapshots_project_sequence_unique").on(t.projectId, t.sequence)],
+);
 
 export const compensationSnapshotLines = pgTable(
   "compensation_snapshot_lines",
