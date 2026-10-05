@@ -82,3 +82,28 @@ The project form sends `agodShare` (a percentage such as "30", percentage mode o
 `agodShareBasisPoints`; the compensation preview (`getProjectWorkspace(...).compensation`) has `allocatedMinor`
 (to the team), `agodShareMinor` (kept by AGOD) and `unallocatedMinor`; approval snapshots store
 `agodShareBasisPoints` and `agodShareMinor`.
+
+## Design system (Phase 12)
+
+The redesign is rolled out in phases: Phase 12 built the foundation, the app shell, the sign-in page, the
+Dashboard and My Work. Later phases move the remaining pages onto the same pieces.
+
+- **Tokens** (`src/app/globals.css`): use the semantic colours, not raw greys: `bg-canvas` (page), `bg-surface`
+  (cards), `bg-surface-muted`, `border-line`, `border-line-strong`, `text-fg`, `text-muted`, and the accent
+  `brand-50…950` (indigo). Light and dark mode follow the device setting.
+- **Building blocks** (`src/components/ui.tsx`): `PageHeader`, `Card`, `StatCard`, `EmptyState`, `Callout`,
+  `ButtonLink` / `buttonClass`, `List` / `ListRow`, `Avatar`, and `table` class names for data tables.
+- **Badges** (`src/components/badges.tsx`): `Badge` with tones, plus the status, health and progress badges.
+- **Forms** (`src/components/form.tsx`): `inputClass`, `Field`, `SubmitButton` (primary, secondary, danger).
+- **Shell** (`src/components/shell.tsx`, `nav.tsx`): the sidebar groups come from `navGroups(actor)`; add a page
+  there with its permission. Icons are from `lucide-react`.
+- **Lists that can grow** use `ExpandableList` (`src/components/expandable-list.tsx`).
+
+### Project page tabs (Phase 13)
+
+`/projects/[id]?tab=` selects a section: `overview` (default: approval and payouts, about, delivery, manager
+controls, edit details), `tasks` (milestones, tasks, add task, templates), `team` (team, compensation preview and,
+for managers, the Finance card `#finance`), `discussion`, `files` (project and task files) and `activity`. Server
+actions keep the URL, so a form submitted on a tab stays on that tab. Link to finance with
+`/projects/<id>?tab=team#finance`. Occasional forms sit in a collapsible "Disclosure" block.
+

@@ -1,52 +1,66 @@
 import { healthLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
 import type { Health, Progress, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
-const base = "inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium";
+const base = "inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset";
+
+// Badge colours: soft background, matching text and a faint ring.
+const tones = {
+  gray: "bg-zinc-50 text-zinc-600 ring-zinc-500/20 dark:bg-zinc-400/10 dark:text-zinc-400 dark:ring-zinc-400/20",
+  blue: "bg-brand-50 text-brand-700 ring-brand-600/20 dark:bg-brand-400/10 dark:text-brand-300 dark:ring-brand-400/30",
+  green: "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/20",
+  amber: "bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20",
+  red: "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-400/10 dark:text-red-300 dark:ring-red-400/20",
+  violet: "bg-violet-50 text-violet-700 ring-violet-600/20 dark:bg-violet-400/10 dark:text-violet-300 dark:ring-violet-400/20",
+} as const;
+
+export function Badge({ tone = "gray", children }: { tone?: keyof typeof tones; children: React.ReactNode }) {
+  return <span className={`${base} ${tones[tone]}`}>{children}</span>;
+}
 
 export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
-  const color =
+  const tone =
     status === "COMPLETED"
-      ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-      : status === "CANCELLED"
-        ? "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+      ? "green"
+      : status === "CANCELLED" || status === "DRAFT"
+        ? "gray"
         : status === "PENDING_APPROVAL" || status === "CHANGES_REQUESTED"
-          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-          : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
-  return <span className={`${base} ${color}`}>{projectStatusLabel[status]}</span>;
+          ? "amber"
+          : "blue";
+  return <Badge tone={tone}>{projectStatusLabel[status]}</Badge>;
 }
 
 export function HealthBadge({ health }: { health: Health | null }) {
-  if (!health) return <span className="text-xs text-zinc-500">—</span>;
-  const color = {
-    ON_TRACK: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-    AT_RISK: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-    BLOCKED: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-    OVERDUE: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-  }[health];
-  return <span className={`${base} ${color}`}>{healthLabel[health]}</span>;
+  if (!health) return <span className="text-xs text-muted">—</span>;
+  const tone = ({ ON_TRACK: "green", AT_RISK: "amber", BLOCKED: "red", OVERDUE: "red" } as const)[health];
+  return <Badge tone={tone}>{healthLabel[health]}</Badge>;
 }
 
 export function TaskStatusBadge({ status }: { status: TaskStatus }) {
-  const color = {
-    NOT_STARTED: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-    IN_PROGRESS: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-    BLOCKED: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-    IN_REVIEW: "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300",
-    READY_FOR_QA: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-    DONE: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-    WAIVED: "bg-zinc-100 text-zinc-500 line-through dark:bg-zinc-900",
-  }[status];
-  return <span className={`${base} ${color}`}>{taskStatusLabel[status]}</span>;
+  const tone = (
+    {
+      NOT_STARTED: "gray",
+      IN_PROGRESS: "blue",
+      BLOCKED: "red",
+      IN_REVIEW: "violet",
+      READY_FOR_QA: "amber",
+      DONE: "green",
+      WAIVED: "gray",
+    } as const
+  )[status];
+  return <Badge tone={tone}>{status === "WAIVED" ? <s>{taskStatusLabel[status]}</s> : taskStatusLabel[status]}</Badge>;
 }
 
 export function ProgressBar({ progress }: { progress: Progress }) {
-  if (progress.percent === null) return <span className="text-xs text-zinc-500">No tasks yet</span>;
+  if (progress.percent === null) return <span className="text-xs text-muted">No tasks yet</span>;
   return (
-    <div className="flex items-center gap-2" title={`${progress.done} of ${progress.total} tasks done`}>
-      <div className="h-2 w-24 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-        <div className="h-full bg-green-600" style={{ width: `${progress.percent}%` }} />
+    <div className="flex items-center gap-2 whitespace-nowrap" title={`${progress.done} of ${progress.total} tasks done`}>
+      <div className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-surface-muted ring-1 ring-inset ring-line">
+        <div
+          className={`h-full rounded-full ${progress.percent === 100 ? "bg-emerald-500" : "bg-brand-500"}`}
+          style={{ width: `${progress.percent}%` }}
+        />
       </div>
-      <span className="text-xs tabular-nums text-zinc-600 dark:text-zinc-400">
+      <span className="text-xs tabular-nums text-muted">
         {progress.percent}% ({progress.done}/{progress.total})
       </span>
     </div>

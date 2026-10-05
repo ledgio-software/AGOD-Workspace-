@@ -189,6 +189,12 @@ src/
 ### Phase 11 — AGOD share ✓
 - The company's share per project (default 30%); team splits total the rest, recorded in the approval snapshot
 
+### Phase 12 — Frontend redesign, part 1 ✓
+- Design system (indigo, light/dark), sidebar app shell with mobile menu, new sign-in, Dashboard and My Work
+
+### Phase 13 — Frontend redesign, part 2 ✓
+- Projects list, project page with tabs (Overview, Tasks, Team & money, Discussion, Files, Activity), new project and statement
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

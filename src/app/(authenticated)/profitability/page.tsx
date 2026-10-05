@@ -129,7 +129,7 @@ async function Overview({ q }: { q: Search }) {
           {d.projects.map((p) => (
             <tr key={p.id} className="border-t border-zinc-100 dark:border-zinc-900">
               <td className="py-1 pr-3">
-                <Link href={`/projects/${p.id}#finance`} className="underline">
+                <Link href={`/projects/${p.id}?tab=team#finance`} className="underline">
                   {p.code}
                 </Link>{" "}
                 {p.name}

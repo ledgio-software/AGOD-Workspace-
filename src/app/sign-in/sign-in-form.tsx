@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { inputClass } from "@/components/form";
+import { buttonClass } from "@/components/ui";
 import { authClient } from "@/lib/auth-client";
 
 export function SignInForm() {
@@ -33,35 +35,35 @@ export function SignInForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <label className="block space-y-1">
-        <span className="text-sm font-medium">Email</span>
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium text-fg">Email</span>
         <input
           name="email"
           type="email"
           required
           autoComplete="email"
-          className="w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+          className={inputClass}
         />
       </label>
-      <label className="block space-y-1">
-        <span className="text-sm font-medium">Password</span>
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium text-fg">Password</span>
         <input
           name="password"
           type="password"
           required
           autoComplete="current-password"
-          className="w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+          className={inputClass}
         />
       </label>
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-zinc-900 px-3 py-2 text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+        className={`${buttonClass("primary")} w-full`}
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>
