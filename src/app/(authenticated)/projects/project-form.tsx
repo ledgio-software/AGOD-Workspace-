@@ -57,7 +57,7 @@ export function ProjectForm({
           <option value="EXTERNAL">External</option>
         </select>
       </Field>
-      <Field label="Client name">
+      <Field label="Client name" hint={clientType === "INTERNAL" ? "Not needed for internal projects. Choose External to enter a client." : undefined}>
         <input
           name="clientName"
           disabled={clientType === "INTERNAL"}

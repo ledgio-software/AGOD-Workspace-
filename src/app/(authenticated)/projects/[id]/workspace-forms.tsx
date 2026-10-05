@@ -175,6 +175,7 @@ type TaskDefaults = {
   assignedTo?: string | null;
   required?: boolean;
   dueDate?: string | null;
+  estimateHours?: number | null;
 };
 
 export function TaskForm({
@@ -219,6 +220,9 @@ export function TaskForm({
       </Field>
       <Field label="Due (optional)">
         <input name="dueDate" type="date" defaultValue={defaults.dueDate ?? ""} className={inputClass} />
+      </Field>
+      <Field label="Estimate in hours (optional)">
+        <input name="estimateHours" type="number" min={1} max={999} step={1} defaultValue={defaults.estimateHours ?? ""} className={inputClass} />
       </Field>
       <Field label="Description (optional)">
         <input name="description" defaultValue={defaults.description ?? ""} className={inputClass} />
@@ -275,6 +279,29 @@ export function WaiveForm({ action }: { action: Action }) {
     <ActionForm action={action} className="space-y-2">
       <input name="reason" required placeholder="Why is this task no longer needed?" className={inputClass} />
       <SubmitButton variant="secondary">Waive task</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function CommentForm({ action, tasks }: { action: Action; tasks: { id: string; title: string }[] }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="space-y-2">
+      <Field label="Add to the discussion" hint="Mention someone on the project with @Full Name or @emailname to notify them.">
+        <textarea name="body" required maxLength={5000} rows={3} className={inputClass} />
+      </Field>
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="About a task (optional)">
+          <select name="taskId" defaultValue="" className={inputClass}>
+            <option value="">The whole project</option>
+            {tasks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <SubmitButton>Post comment</SubmitButton>
+      </div>
     </ActionForm>
   );
 }

@@ -17,6 +17,7 @@ export type TeamMember = {
   phone: string | null;
   role: Role;
   active: boolean;
+  weeklyCapacityHours: number;
   createdAt: Date;
 };
 
@@ -31,6 +32,10 @@ export const createMemberInput = z.object({
 export const changeRoleInput = z.object({ userId: z.uuid(), role: z.enum(ROLES), reason });
 export const setActiveInput = z.object({ userId: z.uuid(), active: z.boolean(), reason });
 export const resetPasswordInput = z.object({ userId: z.uuid() });
+export const capacityInput = z.object({
+  userId: z.uuid(),
+  hours: z.coerce.number().int("Whole hours").min(0, "0 to 80 hours").max(80, "0 to 80 hours"),
+});
 
 /** A one-time password the Admin passes to the member, who changes it after signing in. */
 export function generateTemporaryPassword(): string {
@@ -44,6 +49,7 @@ const memberColumns = {
   phone: users.phone,
   role: users.role,
   active: users.active,
+  weeklyCapacityHours: users.weeklyCapacityHours,
   createdAt: users.createdAt,
 };
 
@@ -195,4 +201,24 @@ export async function resetPassword(
   });
 
   return { temporaryPassword };
+}
+
+/** Roadmap 2.6: hours a week a person has for project work (0 for someone on leave). */
+export async function setCapacity(actor: Actor, rawInput: z.input<typeof capacityInput>, request?: RequestMeta): Promise<void> {
+  assertCan(actor, "team.manage");
+  const input = capacityInput.parse(rawInput);
+  await withActor(actor, async (tx) => {
+    const member = await loadMember(tx, input.userId);
+    if (member.weeklyCapacityHours === input.hours) return;
+    await tx.update(users).set({ weeklyCapacityHours: input.hours }).where(eq(users.id, input.userId));
+    await recordAudit(tx, {
+      actorId: actor.id,
+      entityType: "user",
+      entityId: input.userId,
+      action: "user.capacity_changed",
+      before: { weeklyCapacityHours: member.weeklyCapacityHours },
+      after: { weeklyCapacityHours: input.hours },
+      request,
+    });
+  });
 }

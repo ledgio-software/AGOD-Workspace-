@@ -1,6 +1,6 @@
-import { and, eq, inArray, isNotNull, lte, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lte, notInArray, sql } from "drizzle-orm";
 import { withActor } from "@/lib/db/actor";
-import { notifications, projects, tasks } from "@/lib/db/schema";
+import { auditEvents, notifications, projects, tasks } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import type { Actor } from "@/lib/permissions";
 
@@ -10,7 +10,7 @@ export const DUE_SOON_DAYS = 2;
 type DeadlineTask = { id: string; title: string; dueDate: string; assignedTo: string | null; projectCode: string; projectId: string };
 export type DeadlineAlert = {
   recipientId: string;
-  type: "task.due_soon" | "task.overdue" | "task.overdue_owner";
+  type: "task.due_soon" | "task.overdue" | "task.overdue_owner" | "approval.waiting" | "approval.escalated";
   title: string;
   message: string;
   projectId: string;
@@ -65,6 +65,48 @@ export function deadlineAlerts(userId: string, assigned: DeadlineTask[], ownedOv
   return alerts;
 }
 
+/** Days a project may wait in "pending approval" before its owner is reminded, then Admins too. */
+export const APPROVAL_REMINDER_DAYS = { owner: 2, again: 7 } as const;
+
+type PendingApproval = { projectId: string; code: string; ownerId: string; requestEventId: string; requestedAt: Date };
+
+/**
+ * Pure: approval reminders (roadmap Stage 2). The project owner is reminded after 2 days and again
+ * after 7; Admins are told about anything waiting 7 days. Keys include the approval request, so a
+ * new request starts the clock again.
+ */
+export function approvalReminders(userId: string, isAdmin: boolean, pending: PendingApproval[], now: Date): DeadlineAlert[] {
+  const alerts: DeadlineAlert[] = [];
+  for (const p of pending) {
+    const days = Math.floor((now.getTime() - p.requestedAt.getTime()) / 86_400_000);
+    const waiting = `${p.code} has been waiting for approval for ${days} days.`;
+    if (p.ownerId === userId) {
+      for (const step of [APPROVAL_REMINDER_DAYS.owner, APPROVAL_REMINDER_DAYS.again]) {
+        if (days >= step) {
+          alerts.push({
+            recipientId: userId,
+            type: "approval.waiting",
+            title: `Approval waiting: ${p.code}`,
+            message: `${waiting} Approve it or return it for changes.`,
+            projectId: p.projectId,
+            dedupeKey: `approval.waiting:${p.requestEventId}:${step}d`,
+          });
+        }
+      }
+    } else if (isAdmin && days >= APPROVAL_REMINDER_DAYS.again) {
+      alerts.push({
+        recipientId: userId,
+        type: "approval.escalated",
+        title: `Approval overdue: ${p.code}`,
+        message: `${waiting} The project owner has been reminded.`,
+        projectId: p.projectId,
+        dedupeKey: `approval.escalated:${p.requestEventId}`,
+      });
+    }
+  }
+  return alerts;
+}
+
 const openTask = notInArray(tasks.status, ["DONE", "WAIVED"]);
 const openProject = inArray(projects.status, ["PLANNING", "IN_PROGRESS", "CHANGES_REQUESTED"]);
 const fields = {
@@ -100,6 +142,24 @@ export async function refreshDeadlineAlerts(actor: Actor, now: Date = new Date()
               and(eq(projects.projectOwnerId, actor.id), isNotNull(tasks.dueDate), lte(tasks.dueDate, addDays(today, -1)), openTask, openProject),
             );
     const alerts = deadlineAlerts(actor.id, assigned as DeadlineTask[], ownedOverdue as DeadlineTask[], today);
+    if (actor.role !== "TEAM_MEMBER") {
+      const pending = await tx
+        .select({ projectId: projects.id, code: projects.code, ownerId: projects.projectOwnerId })
+        .from(projects)
+        .where(eq(projects.status, "PENDING_APPROVAL"));
+      const withRequests: PendingApproval[] = [];
+      for (const p of pending) {
+        if (p.ownerId !== actor.id && actor.role !== "ADMIN") continue;
+        const [request] = await tx
+          .select({ id: auditEvents.id, at: auditEvents.createdAt })
+          .from(auditEvents)
+          .where(and(eq(auditEvents.projectId, p.projectId), eq(auditEvents.action, "project.approval_requested")))
+          .orderBy(desc(auditEvents.createdAt))
+          .limit(1);
+        if (request) withRequests.push({ ...p, requestEventId: request.id, requestedAt: request.at });
+      }
+      alerts.push(...approvalReminders(actor.id, actor.role === "ADMIN", withRequests, now));
+    }
     if (alerts.length === 0) return 0;
     const inserted = await tx
       .insert(notifications)

@@ -48,6 +48,11 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Settle a payout question with an adjustment | | | ✓ |
 | Month close: view checklist and export | | ✓ | ✓ |
 | Month close: close or reopen a month | | | ✓ |
+| Read and post project comments | projects they can see | ✓ | ✓ |
+| Manage and apply templates | | ✓ | ✓ |
+| Set task estimates | | ✓ | ✓ |
+| Set weekly capacity | | | ✓ |
+| Workload view, weekly summary | | ✓ | ✓ |
 
 ## Running the tests
 

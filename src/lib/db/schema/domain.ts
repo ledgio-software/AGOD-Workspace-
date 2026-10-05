@@ -182,6 +182,8 @@ export const tasks = pgTable(
     required: boolean("required").notNull().default(true),
     status: taskStatus("status").notNull().default("NOT_STARTED"),
     dueDate: date("due_date"),
+    // Planning estimate in whole hours (roadmap 2.6); optional.
+    estimateHours: integer("estimate_hours"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     completedBy: userRef("completed_by"),
     completionNote: text("completion_note"),
@@ -193,6 +195,7 @@ export const tasks = pgTable(
     updatedAt,
   },
   (t) => [
+    check("tasks_estimate_range", sql`${t.estimateHours} IS NULL OR ${t.estimateHours} BETWEEN 1 AND 999`),
     check(
       "tasks_done_requires_note",
       sql`${t.status} <> 'DONE' OR (${t.completionNote} IS NOT NULL AND ${t.completedAt} IS NOT NULL)`,
@@ -430,4 +433,43 @@ export const payoutPeriods = pgTable(
     check("payout_periods_format", sql`${t.period} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
     check("payout_periods_locked_by", sql`NOT ${t.locked} OR (${t.lockedBy} IS NOT NULL AND ${t.lockedAt} IS NOT NULL)`),
   ],
+);
+
+// Discussion on a project, optionally about one task (roadmap Stage 2: comments and mentions).
+// Append-only, like the rest of the history.
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "restrict" }),
+    authorId: userRef("author_id").notNull(),
+    body: text("body").notNull(),
+    mentionedIds: uuid("mentioned_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    createdAt,
+  },
+  (t) => [
+    check("comments_body_length", sql`length(trim(${t.body})) BETWEEN 1 AND 5000`),
+    index("comments_project_idx").on(t.projectId, t.createdAt),
+  ],
+);
+
+// Reusable outlines of milestones and tasks (roadmap 2.7), written in a plain-text format
+// parsed by src/modules/templates/outline.ts. Deactivated, never deleted.
+export const projectTemplates = pgTable(
+  "project_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull().unique(),
+    description: text("description"),
+    outline: text("outline").notNull(),
+    active: boolean("active").notNull().default(true),
+    // Null for the starter templates shipped with the app.
+    createdBy: userRef("created_by"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [check("project_templates_name_length", sql`length(trim(${t.name})) >= 3`)],
 );

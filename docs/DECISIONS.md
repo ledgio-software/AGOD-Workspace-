@@ -90,3 +90,17 @@ Source: `Project doc/AGOD Project, Operations & Payout System - Roadmap.md`. Sta
 | Contribution history (2.3) | `/team/<person>`: projects and roles (including removed ones), open and completed work, payouts, payments and adjustments, and current workload. Managers can open anyone's; members only their own (linked from My work). |
 | Payout questions (2.8) | A member asks about their own payout; the ledger is never touched by asking. The project owner is notified. A PM either answers with no change (closes it) or sends it to the Admins; only an Admin settles it, optionally recording an adjustment in the same step, which is linked to the question. Payout status stays derived from payments and adjustments (the unused `DISPUTED` status is not set). A PM cannot review their own question. |
 | Month close (2.9) | Calendar months in Africa/Accra. The checklist shows projects approved in the month, outstanding balances, payments dated in the month, adjustments made in the month, unresolved questions, and a CSV export. Only finished months can be closed, only by Admins. A closed month refuses payments dated in it (database trigger); reopening needs a reason and is audited. |
+
+## Phase 7 decisions (2026-10-05): roadmap Stage 2, part 1
+
+Stage 2 is split into Phase 7 (no outside services), Phase 8 (GitHub integration through a GitHub App) and
+Phase 9 (file attachments in Vercel Blob).
+
+| Decision | Choice |
+|---|---|
+| Comments and mentions | A discussion on each project, optionally about one task. Anyone who can see the project can read and post; comments are never edited or deleted. Mention people on the project with `@Full Name` or `@emailname`; mentioned people, the project owner and the task's assignee get an in-app notification. People outside the project cannot be mentioned. |
+| Templates | Plain-text outlines (`# Milestone`, `- Task \| +10d \| 12h \| optional`) managed by PMs and Admins. Six starter templates for the roadmap's project types. Applying a template adds milestones and **unassigned** tasks to an editable project, with due dates counted from the project start date (or today). Any project can be saved as a new template. Templates are deactivated, never deleted. |
+| Estimates and capacity | Optional whole-hour estimates on tasks (set by managers only). Each person has a weekly capacity (default 40 hours, 0 for leave), set by Admins on the Team page. |
+| Workload | Per person: open, in-progress, blocked, overdue and due-this-week tasks, tasks without an estimate, and "planned" hours (estimates of tasks due in the next 7 days or overdue) against capacity. Unassigned open tasks are counted separately. |
+| Approval reminders | In-app, generated like deadline alerts: the project owner after 2 and 7 days in "pending approval", Admins after 7 days. A new approval request restarts the clock. |
+| Weekly summary | Monday to Sunday (Africa/Accra). Completed tasks by person, newly blocked tasks, approvals, payments and adjustments for the week, plus blocked, overdue, at-risk and due-next-7-days items as of today. Also as plain text to paste into WhatsApp, Slack or email. Managers only. |

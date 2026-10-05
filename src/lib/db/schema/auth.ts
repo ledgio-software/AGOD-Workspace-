@@ -37,6 +37,8 @@ export const users = pgTable("users", {
   role: userRole("role").notNull().default("TEAM_MEMBER"),
   // Inactive members stay in historical records but cannot sign in.
   active: boolean("active").notNull().default(true),
+  // Hours per week available for project work; the workload view compares estimates with it.
+  weeklyCapacityHours: integer("weekly_capacity_hours").notNull().default(40),
   ...timestamps,
 });
 

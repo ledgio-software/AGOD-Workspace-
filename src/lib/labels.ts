@@ -69,6 +69,10 @@ const auditActionLabel: Record<string, string> = {
   "payout_question.resolved": "resolved a payout question",
   "period.closed": "closed a payout month",
   "period.reopened": "reopened a payout month",
+  "project.template_applied": "added milestones and tasks from a template",
+  "template.created": "created a template",
+  "template.updated": "updated a template",
+  "user.capacity_changed": "changed weekly capacity",
 };
 
 export const payoutQuestionStatusLabel = {
