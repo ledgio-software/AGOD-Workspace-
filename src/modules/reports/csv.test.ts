@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LedgerRow } from "@/modules/ledger";
-import { csvField, ledgerToCsv, periodToCsv } from "./csv";
+import { csvField, ledgerToCsv, periodToCsv, profitabilityToCsv } from "./csv";
 
 const row: LedgerRow = {
   id: "1",
@@ -55,5 +55,32 @@ describe("periodToCsv", () => {
     expect(lines[0]).toBe('"Date","Type","Project code","Recipient","Currency","Amount","Method","Reference","Reason or notes"');
     expect(lines[1]).toBe('"2026-09-02","PAYMENT","AGOD-2026-001","Ama","GHS","1500.00","CASH","R-1",""');
     expect(lines[2]).toBe('"2026-09-20","DECREASE","AGOD-2026-001","Ama","GHS","-300.00","","","Scope cut"');
+  });
+});
+
+describe("profitabilityToCsv", () => {
+  it("writes one row per project with signed amounts", () => {
+    const csv = profitabilityToCsv([
+      {
+        code: "AGOD-2026-001",
+        name: "Site",
+        status: "COMPLETED",
+        category: "WEBSITE",
+        clientName: null,
+        clientType: "INTERNAL",
+        revenueMinor: 0,
+        plannedPayoutMinor: 350_000,
+        committedPayoutMinor: 350_000,
+        paidPayoutMinor: 0,
+        costBudgetMinor: 0,
+        actualCostMinor: 1_000,
+        estimatedProfitMinor: -350_000,
+        actualProfitMinor: -351_000,
+        actualMarginPct: null,
+      },
+    ]);
+    expect(csv.replace("\uFEFF", "").trim().split("\r\n")[1]).toBe(
+      '"AGOD-2026-001","Site","COMPLETED","WEBSITE","Internal","0.00","3500.00","3500.00","0.00","0.00","10.00","-3500.00","-3510.00",""',
+    );
   });
 });

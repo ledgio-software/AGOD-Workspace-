@@ -17,6 +17,7 @@ import {
 } from "@/modules/projects/team";
 import { removeAttachment, uploadAttachment } from "@/modules/attachments";
 import { addComment } from "@/modules/comments";
+import { recordCost, setProjectFinance, voidCost } from "@/modules/finance";
 import { createIssueForTask, linkTaskUrl, setProjectRepo, unlinkTask } from "@/modules/github";
 import { createTask, updateTaskDetails, updateTaskProgress, waiveTask } from "@/modules/tasks";
 
@@ -389,6 +390,47 @@ export async function removeFileAction(projectId: string, attachmentId: string):
     await removeAttachment(actor, attachmentId, await getRequestMeta());
     return undefined;
   }, "File removed.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function projectFinanceAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await setProjectFinance(actor, projectId, { category: text(form, "category") as "OTHER", costBudget: text(form, "costBudget") }, await getRequestMeta());
+    return undefined;
+  }, "Saved.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function recordCostAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await recordCost(
+      actor,
+      projectId,
+      {
+        category: text(form, "category") as "OTHER",
+        description: text(form, "description"),
+        vendor: text(form, "vendor"),
+        amount: text(form, "amount"),
+        incurredOn: text(form, "incurredOn"),
+      },
+      await getRequestMeta(),
+    );
+    return undefined;
+  }, "Cost recorded.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function voidCostAction(projectId: string, costId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await voidCost(actor, costId, text(form, "reason"), await getRequestMeta());
+    return undefined;
+  }, "Cost voided.");
   if (result.ok) refresh(projectId);
   return result;
 }

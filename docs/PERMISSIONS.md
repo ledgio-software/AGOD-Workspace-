@@ -61,6 +61,8 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Upload payment receipts | | | ✓ |
 | See payment receipts | own payouts | ✓ | ✓ |
 | Remove a file (not receipts) | own uploads | ✓ | ✓ |
+| Profitability, payout forecast and aging, utilisation; CSV export | | ✓ | ✓ |
+| Set project type and cost budget; record or void project costs | | ✓ | ✓ |
 
 The GitHub webhook (`/api/github/webhook`) is the one place that writes domain data without a signed-in
 person: it verifies GitHub's signature, then acts as the system through the owner connection, only on projects

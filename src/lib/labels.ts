@@ -81,7 +81,30 @@ const auditActionLabel: Record<string, string> = {
   "task.github_issue_created": "created a GitHub issue for a task",
   "attachment.uploaded": "uploaded a file",
   "attachment.removed": "removed a file",
+  "project.finance_updated": "changed the project type or cost budget",
+  "cost.recorded": "recorded a project cost",
+  "cost.voided": "voided a project cost",
 };
+
+export const projectCategoryLabel = {
+  DISCOVERY: "Discovery / research",
+  WEBSITE: "Website",
+  MOBILE_APP: "Mobile app",
+  AI_INTEGRATION: "AI integration",
+  INTERNAL_PRODUCT: "Internal product feature",
+  MAINTENANCE: "Maintenance / support",
+  OTHER: "Other",
+} as const;
+
+export const costCategoryLabel = {
+  SOFTWARE: "Software / licences",
+  HOSTING: "Hosting / cloud",
+  HARDWARE: "Hardware",
+  SUBCONTRACTOR: "Subcontractor",
+  TRAVEL: "Travel",
+  MARKETING: "Marketing",
+  OTHER: "Other",
+} as const;
 
 export const payoutQuestionStatusLabel = {
   OPEN: "Waiting for PM review",

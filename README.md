@@ -182,6 +182,10 @@ src/
 ### Phase 9 — File attachments ✓
 - Project documents, task files and payment receipts in private Vercel Blob storage, served with access checks
 
+### Phase 10 — Profitability ✓ (backend-first; UI contract: [docs/FRONTEND_CONTRACT.md](docs/FRONTEND_CONTRACT.md))
+- Project costs and budgets, estimated vs actual profit and margin, by client and project type
+- Payout forecast and aging, team utilisation, profitability CSV export
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
@@ -198,7 +202,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)
