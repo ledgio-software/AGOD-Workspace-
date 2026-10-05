@@ -198,6 +198,9 @@ src/
 ### Phase 14 — Frontend redesign, part 3 ✓
 - Money pages: Ledger, payout detail, Questions, Month close, Reconcile, and Profitability with charts (profit by type and client, payout forecast, ageing, utilisation)
 
+### Phase 15 — Frontend redesign, part 4 ✓
+- Team (with the add/manage panels), contribution history, Workload (load meters), Weekly summary, Audit log, Templates, Integrations and Account; every page now uses the design system
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

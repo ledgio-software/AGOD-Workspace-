@@ -118,3 +118,9 @@ were checked with the dataviz palette validator against both surfaces, so keep t
 keeps them colour-blind safe. Every mark has a hover/focus tooltip, and every chart has a table with the same
 numbers. Other shared pieces: `TabNav`, `compactTable`, `PayoutStatusBadge` and `QuestionStatusBadge`.
 
+### Redesign complete (Phase 15)
+
+Every page now uses the design system; no page uses raw grey classes any more (badges use them for their grey
+tone only). `Disclosure` (in `ui.tsx`) is the collapsible block for occasional forms such as add a member, a task or
+a template.
+

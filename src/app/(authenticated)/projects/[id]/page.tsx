@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Badge, HealthBadge, ProgressBar, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
 import { FileList, type FileItem, FileUploadForm } from "@/components/files";
-import { Avatar, ButtonLink, Callout, Card, EmptyState, cx, table } from "@/components/ui";
+import { Avatar, ButtonLink, Callout, Card, Disclosure, EmptyState, cx, table } from "@/components/ui";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
 import { costCategoryLabel, describeAuditAction, healthLabel, milestoneStatusLabel, payoutStatusLabel, projectCategoryLabel } from "@/lib/labels";
 import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
@@ -79,21 +79,6 @@ import {
 
 const TABS = ["overview", "tasks", "team", "discussion", "files", "activity"] as const;
 type Tab = (typeof TABS)[number];
-
-/** A collapsible block for forms that are only needed now and then. */
-function Disclosure({ summary, children, className }: { summary: React.ReactNode; children: React.ReactNode; className?: string }) {
-  return (
-    <details className={cx("group rounded-lg border border-line", className)}>
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium text-fg hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
-        {summary}
-        <span className="text-muted transition group-open:rotate-90" aria-hidden>
-          ›
-        </span>
-      </summary>
-      <div className="border-t border-line p-4">{children}</div>
-    </details>
-  );
-}
 
 function Meta({ label, children }: { label: string; children: React.ReactNode }) {
   return (

@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { LayoutTemplate, Plus } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
+import { Badge } from "@/components/badges";
+import { Card, Disclosure, EmptyState, PageHeader, table } from "@/components/ui";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { listTemplates } from "@/modules/templates";
@@ -12,46 +15,62 @@ export default async function TemplatesPage() {
   const templates = await listTemplates(actor, { includeInactive: true });
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Project templates</h1>
-        <p className="text-sm text-zinc-500">
-          Reusable milestones and tasks for common project types. Apply one from a project page; tasks are added unassigned.
-        </p>
-      </div>
-      <table className="w-full text-left text-sm">
-        <thead className="text-zinc-500">
-          <tr>
-            <th className="py-2 pr-3 font-medium">Template</th>
-            <th className="py-2 pr-3 text-right font-medium">Milestones</th>
-            <th className="py-2 pr-3 text-right font-medium">Tasks</th>
-            <th className="py-2 pr-3 text-right font-medium">Estimated hours</th>
-            <th className="py-2 font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {templates.map((t) => (
-            <tr key={t.id} className="border-t border-zinc-100 align-top dark:border-zinc-900">
-              <td className="py-2 pr-3">
-                <Link href={`/templates/${t.id}`} className="underline">
-                  {t.name}
-                </Link>
-                {t.description && <div className="text-zinc-500">{t.description}</div>}
-              </td>
-              <td className="py-2 pr-3 text-right tabular-nums">{t.counts.milestones}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{t.counts.tasks}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{t.counts.hours}</td>
-              <td className="py-2">{t.active ? "Active" : <span className="text-zinc-500">Inactive</span>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <details className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-        <summary className="cursor-pointer font-medium">New template</summary>
-        <div className="mt-4">
-          <TemplateForm action={createTemplateAction} submitLabel="Create template" />
-        </div>
-      </details>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Work"
+        title="Project templates"
+        description="Reusable milestones and tasks for common project types. Apply one from a project's Tasks tab; tasks are added unassigned."
+      />
+      <Card bodyClassName="p-0">
+        {templates.length === 0 ? (
+          <div className="p-5">
+            <EmptyState icon={LayoutTemplate} title="No templates yet" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className={table.table}>
+              <thead className={table.head}>
+                <tr>
+                  <th className={table.th}>Template</th>
+                  <th className={`${table.th} text-right`}>Milestones</th>
+                  <th className={`${table.th} text-right`}>Tasks</th>
+                  <th className={`${table.th} text-right`}>Estimated hours</th>
+                  <th className={table.th}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {templates.map((t) => (
+                  <tr key={t.id} className={`${table.row} align-top`}>
+                    <td className={`${table.td} min-w-64`}>
+                      <Link href={`/templates/${t.id}`} className="inline-flex items-center gap-2 font-medium hover:text-brand-600">
+                        <LayoutTemplate className="size-4 text-muted" aria-hidden />
+                        {t.name}
+                      </Link>
+                      {t.description && <div className="mt-0.5 text-xs text-muted">{t.description}</div>}
+                    </td>
+                    <td className={table.num}>{t.counts.milestones}</td>
+                    <td className={table.num}>{t.counts.tasks}</td>
+                    <td className={table.num}>{t.counts.hours}h</td>
+                    <td className={table.td}>
+                      <Badge tone={t.active ? "green" : "gray"}>{t.active ? "Active" : "Inactive"}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+      <Disclosure
+        className="bg-surface shadow-xs"
+        summary={
+          <span className="inline-flex items-center gap-2">
+            <Plus className="size-4 text-brand-600" aria-hidden /> New template
+          </span>
+        }
+      >
+        <TemplateForm action={createTemplateAction} submitLabel="Create template" />
+      </Disclosure>
     </div>
   );
 }
