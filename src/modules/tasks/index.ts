@@ -37,6 +37,12 @@ export const taskInput = z.object({
   assignedTo: optionalId,
   required: z.boolean().default(true),
   dueDate: optionalDate,
+  /** Whole hours; empty for no estimate (roadmap 2.6). */
+  estimateHours: z
+    .union([z.number(), z.string()])
+    .transform((v) => (v === "" ? null : Number(v)))
+    .pipe(z.number().int("Estimate whole hours").min(1, "At least 1 hour").max(999, "At most 999 hours").nullable())
+    .nullish(),
 });
 
 type TaskRow = typeof tasks.$inferSelect;
@@ -69,6 +75,7 @@ export async function createTask(actor: Actor, projectId: string, raw: z.input<t
         assignedTo: input.assignedTo ?? null,
         required: input.required,
         dueDate: input.dueDate ?? null,
+        estimateHours: input.estimateHours ?? null,
       })
       .returning();
     await recordAudit(tx, {
@@ -102,6 +109,7 @@ function taskDetails(t: TaskRow) {
     assignedTo: t.assignedTo,
     required: t.required,
     dueDate: t.dueDate,
+    estimateHours: t.estimateHours,
   };
 }
 
@@ -135,6 +143,7 @@ export async function updateTaskDetails(actor: Actor, taskId: string, raw: z.inp
         assignedTo: input.assignedTo ?? null,
         required: input.required,
         dueDate: input.dueDate ?? null,
+        estimateHours: input.estimateHours ?? null,
       })
       .where(eq(tasks.id, taskId))
       .returning();
@@ -166,6 +175,8 @@ const note = (message: string) => z.string().trim().min(3, message).max(2000);
 export const progressInput = z.discriminatedUnion("status", [
   z.object({ status: z.literal("NOT_STARTED") }),
   z.object({ status: z.literal("IN_PROGRESS") }),
+  z.object({ status: z.literal("IN_REVIEW") }),
+  z.object({ status: z.literal("READY_FOR_QA") }),
   z.object({
     status: z.literal("DONE"),
     completionNote: note("Describe what was completed (at least 3 characters)."),

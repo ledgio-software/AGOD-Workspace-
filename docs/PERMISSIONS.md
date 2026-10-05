@@ -48,6 +48,25 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Settle a payout question with an adjustment | | | ✓ |
 | Month close: view checklist and export | | ✓ | ✓ |
 | Month close: close or reopen a month | | | ✓ |
+| Read and post project comments | projects they can see | ✓ | ✓ |
+| Manage and apply templates | | ✓ | ✓ |
+| Set task estimates | | ✓ | ✓ |
+| Set weekly capacity | | | ✓ |
+| Workload view, weekly summary | | ✓ | ✓ |
+| Link a GitHub item to a task | own tasks | ✓ | ✓ |
+| Remove a GitHub link, connect a repository, create a GitHub issue | | ✓ | ✓ |
+| GitHub integration page (status, deliveries) | | | ✓ |
+| Upload project documents | | ✓ | ✓ |
+| Upload task files | own tasks | ✓ | ✓ |
+| Upload payment receipts | | | ✓ |
+| See payment receipts | own payouts | ✓ | ✓ |
+| Remove a file (not receipts) | own uploads | ✓ | ✓ |
+| Profitability, payout forecast and aging, utilisation; CSV export | | ✓ | ✓ |
+| Set project type and cost budget; record or void project costs | | ✓ | ✓ |
+
+The GitHub webhook (`/api/github/webhook`) is the one place that writes domain data without a signed-in
+person: it verifies GitHub's signature, then acts as the system through the owner connection, only on projects
+connected to the event's repository, and records audit events with an empty actor.
 
 ## Running the tests
 

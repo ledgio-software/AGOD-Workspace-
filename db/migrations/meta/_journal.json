@@ -64,6 +64,69 @@
       "when": 1791163841148,
       "tag": "20261005013041_roadmap_stage1_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791166001453,
+      "tag": "20261005020641_stage2_collaboration",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791166028596,
+      "tag": "20261005020708_stage2_collaboration_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791167127646,
+      "tag": "20261005022527_github_integration",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791167148087,
+      "tag": "20261005022548_github_integration_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791200437235,
+      "tag": "20261005114037_attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791200438177,
+      "tag": "20261005114038_attachments_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791203636061,
+      "tag": "20261005123356_profitability",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791203637116,
+      "tag": "20261005123357_profitability_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791218828169,
+      "tag": "20261005164708_agod_share",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
+import { ServiceError } from "@/modules/errors";
 import { approveProject, rejectProject, reopenProject, requestApproval } from "@/modules/approvals";
 import { changeProjectStatus, createProject, setHealthOverride, updateProject } from "@/modules/projects";
 import {
@@ -14,6 +15,10 @@ import {
   setMilestoneStatus,
   updateAssignment,
 } from "@/modules/projects/team";
+import { removeAttachment, uploadAttachment } from "@/modules/attachments";
+import { addComment } from "@/modules/comments";
+import { recordCost, setProjectFinance, voidCost } from "@/modules/finance";
+import { createIssueForTask, linkTaskUrl, setProjectRepo, unlinkTask } from "@/modules/github";
 import { createTask, updateTaskDetails, updateTaskProgress, waiveTask } from "@/modules/tasks";
 
 type Result = ActionResult<undefined>;
@@ -27,6 +32,7 @@ function projectFields(form: FormData) {
     clientName: text(form, "clientName"),
     totalValue: text(form, "totalValue"),
     splitMode: text(form, "splitMode") as "PERCENTAGE" | "FIXED_AMOUNT",
+    agodShare: text(form, "agodShare"),
     projectOwnerId: text(form, "projectOwnerId"),
     startDate: text(form, "startDate"),
     targetDate: text(form, "targetDate"),
@@ -180,6 +186,7 @@ function taskFields(form: FormData) {
     assignedTo: text(form, "assignedTo"),
     required: form.get("required") === "on",
     dueDate: text(form, "dueDate"),
+    estimateHours: text(form, "estimateHours"),
   };
 }
 
@@ -299,5 +306,132 @@ export async function reopenAction(projectId: string, _prev: Result | null, form
     refresh(projectId);
     revalidatePath("/ledger");
   }
+  return result;
+}
+
+export async function addCommentAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await addComment(actor, projectId, { body: text(form, "body"), taskId: text(form, "taskId") });
+    return undefined;
+  });
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function setRepoAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await setProjectRepo(actor, projectId, text(form, "githubRepo"), await getRequestMeta());
+    return undefined;
+  }, "GitHub repository saved.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function linkGithubAction(projectId: string, taskId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await linkTaskUrl(actor, taskId, text(form, "url"), await getRequestMeta());
+    return undefined;
+  }, "Linked.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function unlinkGithubAction(projectId: string, linkId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await unlinkTask(actor, linkId, await getRequestMeta());
+    return undefined;
+  }, "Link removed.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function createIssueAction(projectId: string, taskId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await createIssueForTask(actor, taskId, await getRequestMeta());
+    return undefined;
+  }, "GitHub issue created and linked.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+async function fileFrom(form: FormData) {
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) throw new ServiceError("Choose a file to upload.");
+  return { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
+}
+
+export async function uploadProjectFileAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await uploadAttachment(actor, { kind: "PROJECT", projectId }, await fileFrom(form), await getRequestMeta());
+    return undefined;
+  }, "File uploaded.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function uploadTaskFileAction(projectId: string, taskId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await uploadAttachment(actor, { kind: "TASK", taskId }, await fileFrom(form), await getRequestMeta());
+    return undefined;
+  }, "File attached.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function removeFileAction(projectId: string, attachmentId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await removeAttachment(actor, attachmentId, await getRequestMeta());
+    return undefined;
+  }, "File removed.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function projectFinanceAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await setProjectFinance(actor, projectId, { category: text(form, "category") as "OTHER", costBudget: text(form, "costBudget") }, await getRequestMeta());
+    return undefined;
+  }, "Saved.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function recordCostAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await recordCost(
+      actor,
+      projectId,
+      {
+        category: text(form, "category") as "OTHER",
+        description: text(form, "description"),
+        vendor: text(form, "vendor"),
+        amount: text(form, "amount"),
+        incurredOn: text(form, "incurredOn"),
+      },
+      await getRequestMeta(),
+    );
+    return undefined;
+  }, "Cost recorded.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function voidCostAction(projectId: string, costId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await voidCost(actor, costId, text(form, "reason"), await getRequestMeta());
+    return undefined;
+  }, "Cost voided.");
+  if (result.ok) refresh(projectId);
   return result;
 }

@@ -52,6 +52,9 @@ export const taskStatus = pgEnum("task_status", [
   "BLOCKED",
   "DONE",
   "WAIVED",
+  // Roadmap 2.5: a pull request is open (In review) or merged and waiting for PM verification (Ready for QA).
+  "IN_REVIEW",
+  "READY_FOR_QA",
 ]);
 export const payoutStatus = pgEnum("payout_status", [
   "OWED",
@@ -72,6 +75,25 @@ export const adjustmentType = pgEnum("adjustment_type", [
   "WRITE_OFF",
   "VOID",
 ]);
+// Stage 3: project types for revenue/profit by type (matches the starter templates).
+export const projectCategory = pgEnum("project_category", [
+  "DISCOVERY",
+  "WEBSITE",
+  "MOBILE_APP",
+  "AI_INTEGRATION",
+  "INTERNAL_PRODUCT",
+  "MAINTENANCE",
+  "OTHER",
+]);
+export const costCategory = pgEnum("cost_category", [
+  "SOFTWARE",
+  "HOSTING",
+  "HARDWARE",
+  "SUBCONTRACTOR",
+  "TRAVEL",
+  "MARKETING",
+  "OTHER",
+]);
 export const projectHealthStatus = pgEnum("project_health", ["ON_TRACK", "AT_RISK", "BLOCKED", "OVERDUE"]);
 export const payoutQuestionStatus = pgEnum("payout_question_status", ["OPEN", "AWAITING_ADMIN", "RESOLVED"]);
 
@@ -88,6 +110,8 @@ export const projects = pgTable(
     currency: currency(),
     // Decision 3: one split mode per project.
     splitMode: splitType("split_mode").notNull().default("PERCENTAGE"),
+    // Percentage mode: the share AGOD keeps (basis points); team splits total the rest. 0 = none.
+    agodShareBasisPoints: integer("agod_share_basis_points").notNull().default(0),
     status: projectStatus("status").notNull().default("DRAFT"),
     projectOwnerId: userRef("project_owner_id").notNull(),
     startDate: date("start_date"),
@@ -101,12 +125,23 @@ export const projects = pgTable(
     healthOverrideReason: text("health_override_reason"),
     healthOverrideBy: userRef("health_override_by"),
     healthOverrideAt: timestamp("health_override_at", { withTimezone: true }),
+    // GitHub repository ("owner/name") whose issues, pull requests and deployments relate to this project.
+    githubRepo: text("github_repo"),
+    // Stage 3 (profitability): the project type, and the budget for costs other than contributor payouts.
+    category: projectCategory("category").notNull().default("OTHER"),
+    costBudgetMinor: money("cost_budget_minor").notNull().default(0),
     version: integer("version").notNull().default(1),
     createdAt,
     updatedAt,
   },
   (t) => [
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
+    check("projects_cost_budget_non_negative", sql`${t.costBudgetMinor} >= 0`),
+    check(
+      "projects_agod_share_valid",
+      sql`${t.agodShareBasisPoints} BETWEEN 0 AND 10000 AND (${t.splitMode} = 'PERCENTAGE' OR ${t.agodShareBasisPoints} = 0)`,
+    ),
+    check("projects_github_repo_format", sql`${t.githubRepo} IS NULL OR ${t.githubRepo} ~ '^[a-z0-9_.-]+/[a-z0-9_.-]+$'`),
     check(
       "projects_health_override_has_reason",
       sql`(${t.healthOverride} IS NULL AND ${t.healthOverrideReason} IS NULL)
@@ -175,6 +210,9 @@ export const tasks = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
     milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "restrict" }),
+    // Per-project task number, assigned by a database trigger; with the project code it forms the
+    // task key used in branch names and pull requests, e.g. AGOD-2026-005-T3.
+    number: integer("number").notNull().default(0),
     title: text("title").notNull(),
     description: text("description"),
     assignedTo: userRef("assigned_to"),
@@ -182,6 +220,8 @@ export const tasks = pgTable(
     required: boolean("required").notNull().default(true),
     status: taskStatus("status").notNull().default("NOT_STARTED"),
     dueDate: date("due_date"),
+    // Planning estimate in whole hours (roadmap 2.6); optional.
+    estimateHours: integer("estimate_hours"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     completedBy: userRef("completed_by"),
     completionNote: text("completion_note"),
@@ -193,6 +233,8 @@ export const tasks = pgTable(
     updatedAt,
   },
   (t) => [
+    uniqueIndex("tasks_project_number_unique").on(t.projectId, t.number),
+    check("tasks_estimate_range", sql`${t.estimateHours} IS NULL OR ${t.estimateHours} BETWEEN 1 AND 999`),
     check(
       "tasks_done_requires_note",
       sql`${t.status} <> 'DONE' OR (${t.completionNote} IS NOT NULL AND ${t.completedAt} IS NOT NULL)`,
@@ -220,6 +262,9 @@ export const compensationSnapshots = pgTable(
     projectTotalValueMinor: money("project_total_value_minor").notNull(),
     currency: currency(),
     splitMode: splitType("split_mode").notNull(),
+    // What AGOD keeps from this approval (version 2+): the share percentage and the amount.
+    agodShareBasisPoints: integer("agod_share_basis_points").notNull().default(0),
+    agodShareMinor: money("agod_share_minor").notNull().default(0),
     calculationVersion: integer("calculation_version").notNull(),
     calculationNotes: text("calculation_notes"),
     createdBy: userRef("created_by").notNull(),
@@ -429,5 +474,206 @@ export const payoutPeriods = pgTable(
   (t) => [
     check("payout_periods_format", sql`${t.period} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
     check("payout_periods_locked_by", sql`NOT ${t.locked} OR (${t.lockedBy} IS NOT NULL AND ${t.lockedAt} IS NOT NULL)`),
+  ],
+);
+
+// Discussion on a project, optionally about one task (roadmap Stage 2: comments and mentions).
+// Append-only, like the rest of the history.
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "restrict" }),
+    authorId: userRef("author_id").notNull(),
+    body: text("body").notNull(),
+    mentionedIds: uuid("mentioned_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    createdAt,
+  },
+  (t) => [
+    check("comments_body_length", sql`length(trim(${t.body})) BETWEEN 1 AND 5000`),
+    index("comments_project_idx").on(t.projectId, t.createdAt),
+  ],
+);
+
+// Reusable outlines of milestones and tasks (roadmap 2.7), written in a plain-text format
+// parsed by src/modules/templates/outline.ts. Deactivated, never deleted.
+export const projectTemplates = pgTable(
+  "project_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull().unique(),
+    description: text("description"),
+    outline: text("outline").notNull(),
+    active: boolean("active").notNull().default(true),
+    // Null for the starter templates shipped with the app.
+    createdBy: userRef("created_by"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [check("project_templates_name_length", sql`length(trim(${t.name})) >= 3`)],
+);
+
+// GitHub integration (roadmap 2.5). Written by people (links pasted on a task) and by the GitHub
+// webhook (pull requests, reviews, issues, deployments and releases), which runs as the system.
+export const githubLinkKind = pgEnum("github_link_kind", ["ISSUE", "PULL_REQUEST", "COMMIT", "BRANCH"]);
+
+export const taskLinks = pgTable(
+  "task_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "restrict" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    kind: githubLinkKind("kind").notNull(),
+    /** "owner/name", lower case. */
+    repo: text("repo").notNull(),
+    number: integer("number"),
+    /** Branch name or commit SHA. */
+    ref: text("ref"),
+    /** Identity of the linked item, e.g. "PULL_REQUEST:agod/app#12"; unique per task. */
+    key: text("key").notNull(),
+    url: text("url").notNull(),
+    title: text("title"),
+    /** open, closed, merged or draft, as last reported by GitHub. */
+    state: text("state"),
+    authorLogin: text("author_login"),
+    /** Latest review outcome: approved, changes_requested or commented. */
+    reviewState: text("review_state"),
+    reviewers: text("reviewers").array().notNull().default(sql`'{}'::text[]`),
+    headSha: text("head_sha"),
+    mergeCommitSha: text("merge_commit_sha"),
+    mergedAt: timestamp("merged_at", { withTimezone: true }),
+    /** Null when linked automatically by the webhook. */
+    linkedBy: userRef("linked_by"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("task_links_task_key_unique").on(t.taskId, t.key),
+    index("task_links_project_idx").on(t.projectId),
+    index("task_links_repo_number_idx").on(t.repo, t.number),
+  ],
+);
+
+export const githubDeliveries = pgTable("github_deliveries", {
+  /** X-GitHub-Delivery: each delivery is processed once, even if GitHub redelivers it. */
+  deliveryId: text("delivery_id").primaryKey(),
+  event: text("event").notNull(),
+  action: text("action"),
+  repo: text("repo"),
+  summary: text("summary").notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const githubDeployments = pgTable(
+  "github_deployments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    githubId: bigint("github_id", { mode: "number" }).notNull().unique(),
+    repo: text("repo").notNull(),
+    environment: text("environment").notNull(),
+    ref: text("ref"),
+    sha: text("sha").notNull(),
+    /** Latest deployment status: pending, in_progress, success, failure, error or inactive. */
+    state: text("state").notNull(),
+    url: text("url"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [index("github_deployments_repo_sha_idx").on(t.repo, t.sha)],
+);
+
+export const githubReleases = pgTable(
+  "github_releases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    githubId: bigint("github_id", { mode: "number" }).notNull().unique(),
+    repo: text("repo").notNull(),
+    tag: text("tag").notNull(),
+    name: text("name"),
+    url: text("url").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [index("github_releases_repo_idx").on(t.repo)],
+);
+
+// File attachments (roadmap Stage 2): project documents, task deliverables and payment receipts.
+// The file itself lives in private storage (Vercel Blob); this row records who may see it.
+// Payment receipts are never removed; other files are soft-removed (the row and file stay).
+export const attachmentKind = pgEnum("attachment_kind", ["PROJECT", "TASK", "PAYMENT"]);
+
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: attachmentKind("kind").notNull(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "restrict" }),
+    paymentId: uuid("payment_id").references(() => paymentTransactions.id, { onDelete: "restrict" }),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    /** Storage pathname; never sent to browsers (downloads go through the app). */
+    storageKey: text("storage_key").notNull(),
+    uploadedBy: userRef("uploaded_by").notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: userRef("removed_by"),
+    createdAt,
+  },
+  (t) => [
+    check(
+      "attachments_target_matches_kind",
+      sql`(${t.kind} = 'PROJECT' AND ${t.taskId} IS NULL AND ${t.paymentId} IS NULL)
+       OR (${t.kind} = 'TASK' AND ${t.taskId} IS NOT NULL AND ${t.paymentId} IS NULL)
+       OR (${t.kind} = 'PAYMENT' AND ${t.paymentId} IS NOT NULL AND ${t.taskId} IS NULL)`,
+    ),
+    check("attachments_size", sql`${t.sizeBytes} > 0 AND ${t.sizeBytes} <= 4194304`),
+    check("attachments_removed_pair", sql`(${t.removedAt} IS NULL) = (${t.removedBy} IS NULL)`),
+    index("attachments_project_idx").on(t.projectId),
+    index("attachments_task_idx").on(t.taskId),
+    index("attachments_payment_idx").on(t.paymentId),
+  ],
+);
+
+// Project costs other than contributor payouts (Stage 3): software, hosting, subcontractors...
+// Never edited or deleted; a wrong entry is voided with a reason and stays visible.
+export const projectCosts = pgTable(
+  "project_costs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    category: costCategory("category").notNull(),
+    description: text("description").notNull(),
+    vendor: text("vendor"),
+    amountMinor: money("amount_minor").notNull(),
+    currency: currency(),
+    incurredOn: date("incurred_on").notNull(),
+    createdBy: userRef("created_by").notNull(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: userRef("voided_by"),
+    voidReason: text("void_reason"),
+    createdAt,
+  },
+  (t) => [
+    check("project_costs_amount_positive", sql`${t.amountMinor} > 0`),
+    check("project_costs_description", sql`length(trim(${t.description})) >= 3`),
+    check(
+      "project_costs_void_complete",
+      sql`(${t.voidedAt} IS NULL AND ${t.voidedBy} IS NULL AND ${t.voidReason} IS NULL)
+       OR (${t.voidedAt} IS NOT NULL AND ${t.voidedBy} IS NOT NULL AND length(trim(coalesce(${t.voidReason}, ''))) >= 3)`,
+    ),
+    index("project_costs_project_idx").on(t.projectId),
+    index("project_costs_incurred_idx").on(t.incurredOn),
   ],
 );

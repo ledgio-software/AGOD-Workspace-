@@ -5,6 +5,9 @@ import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
 import type { ActionResult } from "@/lib/action-result";
 
 type Member = { id: string; name: string };
+
+/** The AGOD share pre-filled for new percentage-split projects; the PM can change it per project. */
+export const DEFAULT_AGOD_SHARE_PERCENT = "30";
 type Defaults = {
   name?: string;
   description?: string | null;
@@ -12,6 +15,7 @@ type Defaults = {
   clientName?: string | null;
   totalValue?: string;
   splitMode?: "PERCENTAGE" | "FIXED_AMOUNT";
+  agodShare?: string;
   projectOwnerId?: string;
   startDate?: string | null;
   targetDate?: string | null;
@@ -32,6 +36,7 @@ export function ProjectForm({
   splitModeLocked?: boolean;
 }) {
   const [clientType, setClientType] = useState(defaults.clientType ?? "INTERNAL");
+  const [splitMode, setSplitMode] = useState(defaults.splitMode ?? "PERCENTAGE");
 
   return (
     <ActionForm action={action} className="grid gap-4 sm:grid-cols-2">
@@ -57,7 +62,7 @@ export function ProjectForm({
           <option value="EXTERNAL">External</option>
         </select>
       </Field>
-      <Field label="Client name">
+      <Field label="Client name" hint={clientType === "INTERNAL" ? "Not needed for internal projects. Choose External to enter a client." : undefined}>
         <input
           name="clientName"
           disabled={clientType === "INTERNAL"}
@@ -73,11 +78,28 @@ export function ProjectForm({
         label="Compensation split"
         hint={splitModeLocked ? "Remove all team splits to switch modes." : "One mode per project (decision 3)."}
       >
-        <select name="splitMode" defaultValue={defaults.splitMode ?? "PERCENTAGE"} className={inputClass}>
-          <option value="PERCENTAGE">Percentages (must total 100%)</option>
-          <option value="FIXED_AMOUNT">Fixed amounts (up to the project value)</option>
+        <select
+          name="splitMode"
+          value={splitMode}
+          onChange={(e) => setSplitMode(e.target.value as "PERCENTAGE" | "FIXED_AMOUNT")}
+          className={inputClass}
+        >
+          <option value="PERCENTAGE">Percentages (AGOD share + team = 100%)</option>
+          <option value="FIXED_AMOUNT">Fixed amounts (AGOD keeps the rest)</option>
         </select>
       </Field>
+      {splitMode === "PERCENTAGE" ? (
+        <Field label="AGOD share (%)" hint="What the company keeps. Team percentages must total the rest.">
+          <input
+            name="agodShare"
+            inputMode="decimal"
+            defaultValue={defaults.agodShare ?? DEFAULT_AGOD_SHARE_PERCENT}
+            className={inputClass}
+          />
+        </Field>
+      ) : (
+        <p className="self-end text-sm text-zinc-500">AGOD keeps whatever the fixed amounts don&apos;t use.</p>
+      )}
       <Field label="Project owner">
         <select name="projectOwnerId" required defaultValue={defaults.projectOwnerId ?? ""} className={inputClass}>
           <option value="" disabled>

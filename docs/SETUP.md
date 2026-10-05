@@ -73,6 +73,8 @@ Settings that must stay as they are:
 | `APP_TIMEZONE` | `Africa/Accra` | `Africa/Accra` | no |
 | `BETTER_AUTH_URL` | optional (defaults to the production domain) | optional (defaults to the branch URL) | no |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | optional, enables error monitoring | optional | no |
+| `BLOB_READ_WRITE_TOKEN` | added by connecting a Blob store (below) | same store or a separate one | yes |
+| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | optional, the production GitHub App (`docs/GITHUB_APP.md`) | optional, the staging GitHub App | key and secret: yes |
 
 Generate a secret in PowerShell:
 `$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)`
@@ -87,6 +89,20 @@ Pull-request previews (branches other than `integration`) get no database settin
 run. Test on staging after merging into `integration`.
 
 Do not set `ALLOW_DEV_SEED` or `SEED_PASSWORD` in Vercel.
+
+## File storage (Vercel Blob)
+
+Attachments (project documents, task files, payment receipts) are stored in a **private** Vercel Blob store and
+only ever served through the app, which checks who may see each file. Until a store is connected, the upload
+buttons say uploads are not set up; everything else works.
+
+1. Vercel → project **agod-workspace** → **Storage** → **Create Database** → **Blob** → name it `agod-files`.
+2. Choose **Private** access if asked, and connect it to the project for the environments that should have
+   uploads (Preview and/or Production). Vercel adds `BLOB_READ_WRITE_TOKEN` automatically.
+3. Redeploy the branch (Deployments → ⋯ → Redeploy).
+
+Files can be at most 4 MB (Vercel's request limit is 4.5 MB). Allowed: PDF, PNG, JPEG, GIF, WebP, TXT, CSV,
+Markdown, DOCX, XLSX, PPTX and ZIP; the content must match the extension.
 
 ## GitHub Environments
 

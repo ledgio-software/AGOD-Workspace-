@@ -171,6 +171,24 @@ src/
 - Contribution history per person; payout questions (member → PM → Admin adjustment)
 - Month close checklist, export and lock
 
+### Phase 7 — Stage 2, part 1 ✓
+- Project discussion with @mentions; project templates (starter set, apply, save as template)
+- Task estimates, weekly capacity and a workload view; approval reminders; weekly summary
+
+### Phase 8 — GitHub integration ✓ (setup: [docs/GITHUB_APP.md](docs/GITHUB_APP.md))
+- Task keys, automatic linking of pull requests and issues, In review / Ready for QA statuses
+- Reviews, deployments and releases on the project page; create a GitHub issue from a task
+
+### Phase 9 — File attachments ✓
+- Project documents, task files and payment receipts in private Vercel Blob storage, served with access checks
+
+### Phase 10 — Profitability ✓ (backend-first; UI contract: [docs/FRONTEND_CONTRACT.md](docs/FRONTEND_CONTRACT.md))
+- Project costs and budgets, estimated vs actual profit and margin, by client and project type
+- Payout forecast and aging, team utilisation, profitability CSV export
+
+### Phase 11 — AGOD share ✓
+- The company's share per project (default 30%); team splits total the rest, recorded in the approval snapshot
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
@@ -187,7 +205,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)

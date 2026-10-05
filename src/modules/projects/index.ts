@@ -11,7 +11,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
-import { DEFAULT_CURRENCY, parseMoney } from "@/lib/money";
+import { DEFAULT_CURRENCY, parseMoney, parsePercent } from "@/lib/money";
 import { type Actor, assertCan, can } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { type PlanResult, calculateCompensation } from "@/modules/compensation/calculate";
@@ -56,6 +56,19 @@ export const projectInput = z
       return minor;
     }),
     splitMode: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]),
+    // Percentage mode only: what AGOD keeps, e.g. "30". Empty or missing means none.
+    agodShare: z
+      .string()
+      .nullish()
+      .transform((v, ctx) => {
+        if (!v || v.trim() === "") return 0;
+        const bps = parsePercent(v);
+        if (bps === null) {
+          ctx.addIssue({ code: "custom", message: "Enter the AGOD share as a percentage from 0 to 100, e.g. 30" });
+          return z.NEVER;
+        }
+        return bps;
+      }),
     projectOwnerId: z.uuid("Choose a project owner"),
     startDate: optionalDate,
     targetDate: optionalDate,
@@ -105,6 +118,7 @@ export async function createProject(actor: Actor, raw: ProjectInput, request?: R
         totalValueMinor: input.totalValue,
         currency: DEFAULT_CURRENCY,
         splitMode: input.splitMode,
+        agodShareBasisPoints: input.splitMode === "PERCENTAGE" ? input.agodShare : 0,
         projectOwnerId: input.projectOwnerId,
         startDate: input.startDate ?? null,
         targetDate: input.targetDate ?? null,
@@ -135,6 +149,7 @@ function auditableProject(p: ProjectRow) {
     totalValueMinor: p.totalValueMinor,
     currency: p.currency,
     splitMode: p.splitMode,
+    agodShareBasisPoints: p.agodShareBasisPoints,
     projectOwnerId: p.projectOwnerId,
     startDate: p.startDate,
     targetDate: p.targetDate,
@@ -191,6 +206,7 @@ export async function updateProject(
         clientName: input.clientType === "EXTERNAL" ? (input.clientName ?? null) : null,
         totalValueMinor: input.totalValue,
         splitMode: input.splitMode,
+        agodShareBasisPoints: input.splitMode === "PERCENTAGE" ? input.agodShare : 0,
         projectOwnerId: input.projectOwnerId,
         startDate: input.startDate ?? null,
         targetDate: input.targetDate ?? null,
@@ -414,7 +430,7 @@ export async function getProjectWorkspace(actor: Actor, projectId: string) {
     const readiness = compensation
       ? approvalReadiness(compensation, taskRows.map((t) => t.task))
       : approvalReadiness(
-          { valid: true, errors: [], lines: [], allocatedMinor: 0, unallocatedMinor: 0, roundingNote: null },
+          { valid: true, errors: [], lines: [], allocatedMinor: 0, agodShareMinor: 0, unallocatedMinor: 0, roundingNote: null },
           taskRows.map((t) => t.task),
         );
 
@@ -495,6 +511,7 @@ export async function previewCompensationTx(tx: Tx, project: ProjectRow): Promis
     totalValueMinor: project.totalValueMinor,
     currency: project.currency,
     splitMode: project.splitMode,
+    agodShareBasisPoints: project.agodShareBasisPoints,
     lines: lines.map((a) => ({
       assignmentId: a.id,
       memberId: a.memberId,

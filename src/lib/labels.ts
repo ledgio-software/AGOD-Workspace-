@@ -21,6 +21,8 @@ export const taskStatusLabel: Record<TaskStatus, string> = {
   NOT_STARTED: "Not started",
   IN_PROGRESS: "In progress",
   BLOCKED: "Blocked",
+  IN_REVIEW: "In review",
+  READY_FOR_QA: "Ready for QA",
   DONE: "Done",
   WAIVED: "Waived",
 };
@@ -69,7 +71,40 @@ const auditActionLabel: Record<string, string> = {
   "payout_question.resolved": "resolved a payout question",
   "period.closed": "closed a payout month",
   "period.reopened": "reopened a payout month",
+  "project.template_applied": "added milestones and tasks from a template",
+  "template.created": "created a template",
+  "template.updated": "updated a template",
+  "user.capacity_changed": "changed weekly capacity",
+  "project.github_repo_set": "connected the GitHub repository",
+  "task.github_linked": "linked a GitHub item to a task",
+  "task.github_unlinked": "removed a GitHub link from a task",
+  "task.github_issue_created": "created a GitHub issue for a task",
+  "attachment.uploaded": "uploaded a file",
+  "attachment.removed": "removed a file",
+  "project.finance_updated": "changed the project type or cost budget",
+  "cost.recorded": "recorded a project cost",
+  "cost.voided": "voided a project cost",
 };
+
+export const projectCategoryLabel = {
+  DISCOVERY: "Discovery / research",
+  WEBSITE: "Website",
+  MOBILE_APP: "Mobile app",
+  AI_INTEGRATION: "AI integration",
+  INTERNAL_PRODUCT: "Internal product feature",
+  MAINTENANCE: "Maintenance / support",
+  OTHER: "Other",
+} as const;
+
+export const costCategoryLabel = {
+  SOFTWARE: "Software / licences",
+  HOSTING: "Hosting / cloud",
+  HARDWARE: "Hardware",
+  SUBCONTRACTOR: "Subcontractor",
+  TRAVEL: "Travel",
+  MARKETING: "Marketing",
+  OTHER: "Other",
+} as const;
 
 export const payoutQuestionStatusLabel = {
   OPEN: "Waiting for PM review",

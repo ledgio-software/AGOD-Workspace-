@@ -18,6 +18,13 @@ export default async function TeamPage() {
     <div className="max-w-5xl space-y-8">
       <div>
         <h1 className="text-xl font-semibold">Team</h1>
+        {canManage && (
+          <p className="text-sm">
+            <Link href="/integrations" className="underline">
+              GitHub integration
+            </Link>
+          </p>
+        )}
         <p className="text-sm text-zinc-500">
           {canManage
             ? "Add members, change roles and deactivate accounts. Every change is recorded in the audit log."

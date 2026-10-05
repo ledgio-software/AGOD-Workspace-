@@ -31,6 +31,8 @@ export function TaskStatusBadge({ status }: { status: TaskStatus }) {
     NOT_STARTED: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
     IN_PROGRESS: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
     BLOCKED: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+    IN_REVIEW: "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300",
+    READY_FOR_QA: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
     DONE: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
     WAIVED: "bg-zinc-100 text-zinc-500 line-through dark:bg-zinc-900",
   }[status];

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
 import type { ActionResult } from "@/lib/action-result";
-import { healthLabel, milestoneStatusLabel, projectStatusLabel } from "@/lib/labels";
+import { costCategoryLabel, healthLabel, milestoneStatusLabel, projectCategoryLabel, projectStatusLabel } from "@/lib/labels";
 import type { Health, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
@@ -175,6 +175,7 @@ type TaskDefaults = {
   assignedTo?: string | null;
   required?: boolean;
   dueDate?: string | null;
+  estimateHours?: number | null;
 };
 
 export function TaskForm({
@@ -220,6 +221,9 @@ export function TaskForm({
       <Field label="Due (optional)">
         <input name="dueDate" type="date" defaultValue={defaults.dueDate ?? ""} className={inputClass} />
       </Field>
+      <Field label="Estimate in hours (optional)">
+        <input name="estimateHours" type="number" min={1} max={999} step={1} defaultValue={defaults.estimateHours ?? ""} className={inputClass} />
+      </Field>
       <Field label="Description (optional)">
         <input name="description" defaultValue={defaults.description ?? ""} className={inputClass} />
       </Field>
@@ -248,6 +252,8 @@ export function TaskProgressForm({ action, status, today }: { action: Action; st
         <option value="NOT_STARTED">Not started</option>
         <option value="IN_PROGRESS">In progress</option>
         <option value="BLOCKED">Blocked</option>
+        <option value="IN_REVIEW">In review</option>
+        <option value="READY_FOR_QA">Ready for QA</option>
         <option value="DONE">Done</option>
       </select>
       {next === "DONE" && (
@@ -275,6 +281,117 @@ export function WaiveForm({ action }: { action: Action }) {
     <ActionForm action={action} className="space-y-2">
       <input name="reason" required placeholder="Why is this task no longer needed?" className={inputClass} />
       <SubmitButton variant="secondary">Waive task</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function CommentForm({ action, tasks }: { action: Action; tasks: { id: string; title: string }[] }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="space-y-2">
+      <Field label="Add to the discussion" hint="Mention someone on the project with @Full Name or @emailname to notify them.">
+        <textarea name="body" required maxLength={5000} rows={3} className={inputClass} />
+      </Field>
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="About a task (optional)">
+          <select name="taskId" defaultValue="" className={inputClass}>
+            <option value="">The whole project</option>
+            {tasks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <SubmitButton>Post comment</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+export function RepoForm({ action, current }: { action: Action; current: string | null }) {
+  return (
+    <ActionForm action={action} className="flex flex-wrap items-end gap-2">
+      <Field label="GitHub repository" hint="owner/name. Pull requests and issues mentioning a task key link to tasks automatically.">
+        <input name="githubRepo" defaultValue={current ?? ""} placeholder="ledgio-software/payroll" className={`${inputClass} w-72`} />
+      </Field>
+      <SubmitButton variant="secondary">Save</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function LinkGithubForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="flex flex-wrap items-end gap-2">
+      <input name="url" type="url" required placeholder="Paste a GitHub issue, PR, commit or branch link" className={`${inputClass} w-80`} />
+      <SubmitButton variant="secondary">Link</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function SmallButtonForm({ action, label, confirmMessage }: { action: Action; label: string; confirmMessage?: string }) {
+  return (
+    <ActionForm action={action} confirmMessage={confirmMessage} className="inline-block">
+      <SubmitButton variant="secondary">{label}</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function ProjectFinanceForm({ action, category, costBudget }: { action: Action; category: keyof typeof projectCategoryLabel; costBudget: string }) {
+  return (
+    <ActionForm action={action} className="flex flex-wrap items-end gap-2">
+      <Field label="Project type">
+        <select name="category" defaultValue={category} className={inputClass}>
+          {Object.entries(projectCategoryLabel).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Budget for other costs (GHS)">
+        <input name="costBudget" inputMode="decimal" defaultValue={costBudget} className={inputClass} />
+      </Field>
+      <SubmitButton variant="secondary">Save</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function CostForm({ action, today }: { action: Action; today: string }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="grid gap-2 sm:grid-cols-5 sm:items-end">
+      <Field label="Category">
+        <select name="category" defaultValue="SOFTWARE" className={inputClass}>
+          {Object.entries(costCategoryLabel).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Description">
+        <input name="description" required minLength={3} className={inputClass} />
+      </Field>
+      <Field label="Vendor (optional)">
+        <input name="vendor" className={inputClass} />
+      </Field>
+      <Field label="Amount (GHS)">
+        <input name="amount" required inputMode="decimal" className={inputClass} />
+      </Field>
+      <Field label="Date">
+        <input name="incurredOn" type="date" required max={today} defaultValue={today} className={inputClass} />
+      </Field>
+      <div className="sm:col-span-5">
+        <SubmitButton variant="secondary">Record cost</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+export function VoidCostForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} className="flex flex-wrap items-center gap-2">
+      <input name="reason" required minLength={3} placeholder="Why is this cost wrong?" className={`${inputClass} w-64 text-xs`} />
+      <SubmitButton variant="secondary">Void</SubmitButton>
     </ActionForm>
   );
 }

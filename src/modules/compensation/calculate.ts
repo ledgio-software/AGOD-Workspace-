@@ -2,8 +2,12 @@ import { FULL_BASIS_POINTS } from "@/lib/money";
 
 // Compensation calculation (design doc section 7). Pure and deterministic: the same plan always
 // produces the same amounts, so the Phase 3 approval snapshot reproduces this preview exactly.
+//
+// Version 2 adds the AGOD share: in percentage mode the company keeps a set percentage and the team
+// splits total the rest; any rounding remainder then stays with AGOD. In fixed-amount mode AGOD keeps
+// whatever the team amounts don't use. With a 0% share, version 2 gives the same amounts as version 1.
 
-export const CALCULATION_VERSION = 1;
+export const CALCULATION_VERSION = 2;
 
 export type SplitMode = "PERCENTAGE" | "FIXED_AMOUNT";
 
@@ -20,6 +24,8 @@ export type PlanInput = {
   totalValueMinor: number;
   currency: string;
   splitMode: SplitMode;
+  /** Percentage mode only: the share AGOD keeps, in basis points (default 0). */
+  agodShareBasisPoints?: number;
   /** Active assignments only, in display order. */
   lines: PlanLine[];
 };
@@ -34,7 +40,10 @@ export type PlanResult = {
   valid: boolean;
   errors: string[];
   lines: CalculatedLine[];
+  /** Paid out to the team. */
   allocatedMinor: number;
+  /** Kept by AGOD: the AGOD share (percentage mode) or what the fixed amounts leave (fixed mode). */
+  agodShareMinor: number;
   unallocatedMinor: number;
   roundingNote: string | null;
 };
@@ -51,6 +60,12 @@ export function calculateCompensation(plan: PlanInput): PlanResult {
     errors.push("Project value must be a non-negative amount.");
   }
   if (plan.lines.length === 0) errors.push("Add at least one team member to the compensation plan.");
+  const share = plan.agodShareBasisPoints ?? 0;
+  if (!Number.isInteger(share) || share < 0 || share > FULL_BASIS_POINTS) {
+    errors.push("The AGOD share must be between 0% and 100%.");
+  } else if (share > 0 && plan.splitMode !== "PERCENTAGE") {
+    errors.push("An AGOD share percentage only applies to percentage splits.");
+  }
 
   const seen = new Set<string>();
   for (const line of plan.lines) {
@@ -73,21 +88,28 @@ export function calculateCompensation(plan: PlanInput): PlanResult {
 
   const uniqueErrors = [...new Set(errors)];
   if (uniqueErrors.length > 0) {
-    return { valid: false, errors: uniqueErrors, lines: [], allocatedMinor: 0, unallocatedMinor: 0, roundingNote: null };
+    return { valid: false, errors: uniqueErrors, lines: [], allocatedMinor: 0, agodShareMinor: 0, unallocatedMinor: 0, roundingNote: null };
   }
 
   return plan.splitMode === "PERCENTAGE" ? calculatePercentage(plan) : calculateFixed(plan);
 }
 
 function calculatePercentage(plan: PlanInput): PlanResult {
+  const share = plan.agodShareBasisPoints ?? 0;
+  const teamBasisPoints = FULL_BASIS_POINTS - share;
   const totalBasisPoints = plan.lines.reduce((sum, line) => sum + (line.splitBasisPoints ?? 0), 0);
   const errors =
-    totalBasisPoints === FULL_BASIS_POINTS
+    totalBasisPoints === teamBasisPoints
       ? []
-      : [`Percentages must total exactly 100% (currently ${(totalBasisPoints / 100).toFixed(2)}%).`];
+      : share > 0
+        ? [
+            `Team percentages must total exactly ${(teamBasisPoints / 100).toFixed(2)}% (100% minus the ${(share / 100).toFixed(2)}% AGOD share; currently ${(totalBasisPoints / 100).toFixed(2)}%).`,
+          ]
+        : [`Percentages must total exactly 100% (currently ${(totalBasisPoints / 100).toFixed(2)}%).`];
 
-  // Floor each share with integer arithmetic, then give the remainder (always fewer pesewas than
-  // there are lines) to the largest share; ties go to the line listed first.
+  // Floor each share with integer arithmetic. The remainder (always fewer pesewas than there are
+  // lines) stays with AGOD when it keeps a share; otherwise it goes to the largest team share, with
+  // ties going to the line listed first.
   const total = BigInt(plan.totalValueMinor);
   const lines: CalculatedLine[] = plan.lines.map((line) => ({
     ...line,
@@ -96,17 +118,27 @@ function calculatePercentage(plan: PlanInput): PlanResult {
   }));
 
   let roundingNote: string | null = null;
+  let agodShareMinor = 0;
   if (errors.length === 0) {
     const floored = lines.reduce((sum, line) => sum + line.amountMinor, 0);
-    const remainder = plan.totalValueMinor - floored;
-    if (remainder > 0) {
-      const largest = lines.reduce(
-        (best, line, index) => ((line.splitBasisPoints ?? 0) > (lines[best].splitBasisPoints ?? 0) ? index : best),
-        0,
-      );
-      lines[largest].amountMinor += remainder;
-      lines[largest].roundingAdjustmentMinor = remainder;
-      roundingNote = `${remainder} pesewa${remainder === 1 ? "" : "s"} left over from rounding added to the largest share.`;
+    if (share > 0) {
+      agodShareMinor = plan.totalValueMinor - floored;
+      const exact = Number((total * BigInt(share)) / BigInt(FULL_BASIS_POINTS));
+      const remainder = agodShareMinor - exact;
+      if (remainder > 0) {
+        roundingNote = `${remainder} pesewa${remainder === 1 ? "" : "s"} left over from rounding kept in the AGOD share.`;
+      }
+    } else {
+      const remainder = plan.totalValueMinor - floored;
+      if (remainder > 0) {
+        const largest = lines.reduce(
+          (best, line, index) => ((line.splitBasisPoints ?? 0) > (lines[best].splitBasisPoints ?? 0) ? index : best),
+          0,
+        );
+        lines[largest].amountMinor += remainder;
+        lines[largest].roundingAdjustmentMinor = remainder;
+        roundingNote = `${remainder} pesewa${remainder === 1 ? "" : "s"} left over from rounding added to the largest share.`;
+      }
     }
   }
 
@@ -116,7 +148,8 @@ function calculatePercentage(plan: PlanInput): PlanResult {
     errors,
     lines,
     allocatedMinor,
-    unallocatedMinor: plan.totalValueMinor - allocatedMinor,
+    agodShareMinor,
+    unallocatedMinor: plan.totalValueMinor - allocatedMinor - agodShareMinor,
     roundingNote,
   };
 }
@@ -135,7 +168,9 @@ function calculateFixed(plan: PlanInput): PlanResult {
     errors,
     lines,
     allocatedMinor,
-    // Shown explicitly in the preview: it must not silently disappear (design doc section 7).
+    // AGOD keeps what the fixed amounts leave; still shown explicitly as unallocated in the preview
+    // so it never silently disappears (design doc section 7).
+    agodShareMinor: Math.max(0, plan.totalValueMinor - allocatedMinor),
     unallocatedMinor: plan.totalValueMinor - allocatedMinor,
     roundingNote: null,
   };

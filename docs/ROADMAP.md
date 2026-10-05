@@ -1,8 +1,8 @@
 # Roadmap status
 
 Source: [`Project doc/AGOD Project, Operations & Payout System - Roadmap.md`](../Project%20doc/AGOD%20Project%2C%20Operations%20%26%20Payout%20System%20-%20Roadmap.md).
-Its own rule applies: add a feature when the current process has proven the need. Stage 2 and later start only
-after the pilot sign-off in `docs/PILOT.md`.
+Its own rule applies: add a feature when the current process has proven the need. The roadmap recommends starting
+Stage 2 after the pilot sign-off in `docs/PILOT.md`; AGOD chose to start it in parallel with the pilot (2026-10-05).
 
 ## Section 2: additions to the current system
 
@@ -12,9 +12,9 @@ after the pilot sign-off in `docs/PILOT.md`.
 | 2.2 Project health | Done: calculated (Phase 2), PM override with reason (Phase 6) | Project page |
 | 2.3 Activity timeline and contribution history | Done: project activity, audit log (Phase 1–5); per-person history (Phase 6) | Project page, Audit, Team → person |
 | 2.4 In-app notifications | Done: assignment, blocked, returned, approved, payout, payment (Phase 2–4); due soon and overdue (Phase 6) | My work → Notifications |
-| 2.5 GitHub integration | Not started (Stage 2). Needs a GitHub App or token for the AGOD organisation and new task states (In review, Ready for QA). | |
-| 2.6 Workload and capacity | Partly: per-person open, blocked and overdue counts (Phase 6). A team-wide capacity view with estimates is Stage 2. | Team → person |
-| 2.7 Project and task templates | Not started (Stage 2) | |
+| 2.5 GitHub integration | Done (Phase 8): task keys, automatic PR/issue linking, In review / Ready for QA, reviews, deployments and releases, create issue from a task. Needs the GitHub App set up (`docs/GITHUB_APP.md`). | Project page, Team → GitHub integration |
+| 2.6 Workload and capacity | Done: per-person counts (Phase 6); estimates, weekly capacity and team load view (Phase 7) | Workload, Team → person |
+| 2.7 Project and task templates | Done (Phase 7): starter templates, apply to a project, save a project as a template | Projects → Templates, project page |
 | 2.8 Dispute and adjustment workflow | Done (Phase 6): member asks → PM reviews → Admin adjusts; original amount stays visible | Payout page, Questions |
 | 2.9 Period close | Done (Phase 6): checklist, export, Admin lock and reopen with reason | Month close |
 
@@ -26,12 +26,12 @@ snapshots; payout ledger; partial manual payments; audit trail; dashboard; CSV e
 
 Still to do before Stage 1 is "in production": the pilot sign-off (`docs/PILOT.md`) and go-live (`docs/GO-LIVE.md`).
 
-## Later stages (not started)
+## Later stages
 
 | Stage | Contents | Notes |
 |---|---|---|
-| 2. Team operations | GitHub issues/PRs and deployments, capacity, templates, comments and mentions, attachments, weekly summaries, reminders, release history | Recommended next: GitHub integration. Attachments need a file storage decision. |
-| 3. Profitability | Project costs, margins, revenue by client/type, utilisation, payout forecasting and aging | Needs "other project costs" to be recorded somewhere first. |
+| 2. Team operations | **Done (Phases 6–9):** comments and mentions, templates, workload and capacity, approval reminders, overdue alerts, weekly summary, contribution history, GitHub issues/PRs/reviews, deployment and release history, file attachments (incl. payment receipts, also section 14). Notifications are in-app only; email, Slack or WhatsApp would need a scheduled job and a provider. | |
+| 3. Profitability | **Done (Phase 10, backend-first):** project costs and cost budgets, estimated vs actual profit and margin, revenue and profit by client and by project type, payout forecast and aging, utilisation, CSV export. | Pages are plain tables until the frontend redesign (`docs/FRONTEND_CONTRACT.md`). |
 | 4. Ledgio integration | Export approved payouts, import payment confirmations, accounting period locking | The month close and CSV exports are the starting point. |
 | 5. Automated payments | MoMo/bank APIs, batches, multi-level authorisation, reconciliation | Separate project with its own security and reconciliation design. |
 | 6. Portals | Client and contractor access | Only after the internal workflow is stable. |
