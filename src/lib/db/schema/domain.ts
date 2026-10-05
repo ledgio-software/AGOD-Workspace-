@@ -72,6 +72,8 @@ export const adjustmentType = pgEnum("adjustment_type", [
   "WRITE_OFF",
   "VOID",
 ]);
+export const projectHealthStatus = pgEnum("project_health", ["ON_TRACK", "AT_RISK", "BLOCKED", "OVERDUE"]);
+export const payoutQuestionStatus = pgEnum("payout_question_status", ["OPEN", "AWAITING_ADMIN", "RESOLVED"]);
 
 export const projects = pgTable(
   "projects",
@@ -94,12 +96,22 @@ export const projects = pgTable(
     createdBy: userRef("created_by").notNull(),
     approvedBy: userRef("approved_by"),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
+    // A PM's manual health status, which replaces the calculated one until cleared (roadmap 2.2).
+    healthOverride: projectHealthStatus("health_override"),
+    healthOverrideReason: text("health_override_reason"),
+    healthOverrideBy: userRef("health_override_by"),
+    healthOverrideAt: timestamp("health_override_at", { withTimezone: true }),
     version: integer("version").notNull().default(1),
     createdAt,
     updatedAt,
   },
   (t) => [
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
+    check(
+      "projects_health_override_has_reason",
+      sql`(${t.healthOverride} IS NULL AND ${t.healthOverrideReason} IS NULL)
+       OR (${t.healthOverride} IS NOT NULL AND length(trim(coalesce(${t.healthOverrideReason}, ''))) >= 3 AND ${t.healthOverrideBy} IS NOT NULL)`,
+    ),
     index("projects_owner_idx").on(t.projectOwnerId),
     index("projects_status_idx").on(t.status),
   ],
@@ -349,8 +361,73 @@ export const notifications = pgTable(
     message: text("message").notNull(),
     entityType: text("entity_type"),
     entityId: uuid("entity_id"),
+    // Set for generated alerts (e.g. "task.overdue:<task>:<due date>") so each is sent once.
+    dedupeKey: text("dedupe_key"),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt,
   },
-  (t) => [index("notifications_recipient_idx").on(t.recipientId, t.readAt)],
+  (t) => [
+    index("notifications_recipient_idx").on(t.recipientId, t.readAt),
+    uniqueIndex("notifications_dedupe_idx").on(t.recipientId, t.dedupeKey).where(sql`${t.dedupeKey} IS NOT NULL`),
+  ],
+);
+
+// A member's question about one of their payouts (roadmap 2.8). The ledger is never edited:
+// a PM reviews it, and only an Admin records an adjustment, which is linked here.
+export const payoutQuestions = pgTable(
+  "payout_questions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ledgerEntryId: uuid("ledger_entry_id")
+      .notNull()
+      .references(() => payoutLedgerEntries.id, { onDelete: "restrict" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    raisedBy: userRef("raised_by").notNull(),
+    question: text("question").notNull(),
+    status: payoutQuestionStatus("status").notNull().default("OPEN"),
+    reviewNote: text("review_note"),
+    reviewedBy: userRef("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    resolution: text("resolution"),
+    resolvedBy: userRef("resolved_by"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    adjustmentId: uuid("adjustment_id").references(() => adjustments.id, { onDelete: "restrict" }),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    check("payout_questions_question_length", sql`length(trim(${t.question})) >= 3`),
+    check(
+      "payout_questions_resolved_has_resolution",
+      sql`${t.status} <> 'RESOLVED' OR (${t.resolution} IS NOT NULL AND ${t.resolvedBy} IS NOT NULL AND ${t.resolvedAt} IS NOT NULL)`,
+    ),
+    index("payout_questions_entry_idx").on(t.ledgerEntryId),
+    index("payout_questions_status_idx").on(t.status),
+  ],
+);
+
+// Period close (roadmap 2.9): a closed month refuses payments dated in it and adjustments made
+// while it is closed. Only an Admin closes or reopens a month, and reopening needs a reason.
+export const payoutPeriods = pgTable(
+  "payout_periods",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Calendar month in the operating timezone, YYYY-MM.
+    period: char("period", { length: 7 }).notNull().unique(),
+    locked: boolean("locked").notNull(),
+    lockedBy: userRef("locked_by"),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lockNote: text("lock_note"),
+    unlockedBy: userRef("unlocked_by"),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true }),
+    unlockReason: text("unlock_reason"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    check("payout_periods_format", sql`${t.period} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
+    check("payout_periods_locked_by", sql`NOT ${t.locked} OR (${t.lockedBy} IS NOT NULL AND ${t.lockedAt} IS NOT NULL)`),
+  ],
 );

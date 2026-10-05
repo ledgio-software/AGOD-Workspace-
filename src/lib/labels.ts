@@ -62,7 +62,20 @@ const auditActionLabel: Record<string, string> = {
   "user.deactivated": "deactivated an account",
   "user.reactivated": "reactivated an account",
   "user.password_reset": "reset a password",
+  "project.health_overridden": "overrode the project health",
+  "project.health_override_cleared": "cleared the health override",
+  "payout_question.raised": "asked a question about a payout",
+  "payout_question.reviewed": "reviewed a payout question",
+  "payout_question.resolved": "resolved a payout question",
+  "period.closed": "closed a payout month",
+  "period.reopened": "reopened a payout month",
 };
+
+export const payoutQuestionStatusLabel = {
+  OPEN: "Waiting for PM review",
+  AWAITING_ADMIN: "Waiting for Admin",
+  RESOLVED: "Resolved",
+} as const;
 
 export function describeAuditAction(action: string): string {
   return auditActionLabel[action] ?? action;

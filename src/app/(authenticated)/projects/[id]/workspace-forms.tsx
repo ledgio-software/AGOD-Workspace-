@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
 import type { ActionResult } from "@/lib/action-result";
-import { milestoneStatusLabel, projectStatusLabel } from "@/lib/labels";
-import type { ProjectStatus, TaskStatus } from "@/modules/projects/rules";
+import { healthLabel, milestoneStatusLabel, projectStatusLabel } from "@/lib/labels";
+import type { Health, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
 type Option = { id: string; name: string };
@@ -33,6 +33,32 @@ export function StatusControls({ action, allowed }: { action: Action; allowed: P
       )}
       <SubmitButton variant={to === "CANCELLED" ? "danger" : "primary"}>Update status</SubmitButton>
     </ActionForm>
+  );
+}
+
+export function HealthOverrideForm({ action, current }: { action: Action; current: Health | null }) {
+  return (
+    <details>
+      <summary className="cursor-pointer text-sm text-zinc-600 dark:text-zinc-400">
+        {current ? "Change or clear the health override" : "Override health"}
+      </summary>
+      <ActionForm action={action} resetOnSuccess className="mt-3 flex flex-wrap items-end gap-2">
+        <Field label="Health">
+          <select name="health" defaultValue={current ?? "AT_RISK"} className={inputClass}>
+            {(Object.keys(healthLabel) as Health[]).map((h) => (
+              <option key={h} value={h}>
+                {healthLabel[h]}
+              </option>
+            ))}
+            {current && <option value="">Clear override (use calculated)</option>}
+          </select>
+        </Field>
+        <Field label="Reason">
+          <input name="reason" required minLength={3} className={`${inputClass} w-72`} />
+        </Field>
+        <SubmitButton>Save</SubmitButton>
+      </ActionForm>
+    </details>
   );
 }
 

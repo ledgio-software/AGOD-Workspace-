@@ -80,3 +80,62 @@ export function AdjustmentForm({ action }: { action: Action }) {
     </ActionForm>
   );
 }
+
+export function QuestionForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="space-y-2">
+      <Field label="Ask about this payout" hint="The amount is not changed by asking. Your project manager reviews it.">
+        <textarea name="question" required minLength={10} rows={3} className={inputClass} />
+      </Field>
+      <SubmitButton>Send question</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function ReviewQuestionForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} className="grid gap-2 sm:grid-cols-3 sm:items-end">
+      <Field label="Outcome">
+        <select name="outcome" defaultValue="NO_CHANGE" className={inputClass}>
+          <option value="NO_CHANGE">Amount is correct (close)</option>
+          <option value="NEEDS_ADJUSTMENT">Needs an adjustment (send to Admin)</option>
+        </select>
+      </Field>
+      <Field label="Explanation">
+        <input name="note" required minLength={3} className={inputClass} />
+      </Field>
+      <SubmitButton>Save review</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function ResolveQuestionForm({ action }: { action: Action }) {
+  const [type, setType] = useState<"" | keyof typeof adjustmentTypeLabel>("");
+  return (
+    <ActionForm
+      action={action}
+      confirmMessage={type ? "Record this adjustment and resolve the question? Adjustments cannot be edited or deleted." : undefined}
+      className="grid gap-2 sm:grid-cols-4 sm:items-end"
+    >
+      <Field label="Settle with">
+        <select name="type" value={type} onChange={(e) => setType(e.target.value as typeof type)} className={inputClass}>
+          <option value="">No change</option>
+          {Object.entries(adjustmentTypeLabel).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {type && type !== "VOID" && (
+        <Field label="Amount (GHS)">
+          <input name="amount" required inputMode="decimal" className={inputClass} />
+        </Field>
+      )}
+      <Field label="Resolution (shown to the member)">
+        <input name="resolution" required minLength={3} className={inputClass} />
+      </Field>
+      <SubmitButton variant={type === "VOID" ? "danger" : "primary"}>Resolve</SubmitButton>
+    </ActionForm>
+  );
+}

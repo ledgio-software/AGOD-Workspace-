@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HealthBadge, ProgressBar, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
-import { describeAuditAction, milestoneStatusLabel, payoutStatusLabel } from "@/lib/labels";
+import { describeAuditAction, healthLabel, milestoneStatusLabel, payoutStatusLabel } from "@/lib/labels";
 import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
@@ -14,6 +14,7 @@ import {
   approveAction,
   changeStatusAction,
   createMilestoneAction,
+  healthOverrideAction,
   createTaskAction,
   milestoneStatusAction,
   rejectAction,
@@ -31,6 +32,7 @@ import { ApproveForm, RejectForm, ReopenForm, RequestApprovalForm } from "./appr
 import {
   AddAssignmentForm,
   AssignmentRowActions,
+  HealthOverrideForm,
   MilestoneForm,
   MilestoneStatusForm,
   StatusControls,
@@ -114,6 +116,16 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
           </div>
         </dl>
         {project.description && <p className="text-sm">{project.description}</p>}
+        {ws.healthOverride && (
+          <p className="rounded-md bg-zinc-50 p-2 text-sm dark:bg-zinc-900">
+            Health set to <strong>{healthLabel[ws.healthOverride.health]}</strong> by {ws.healthOverride.byName ?? "a manager"}
+            {ws.healthOverride.at && <> on {formatDateTime(ws.healthOverride.at)}</>}: “{ws.healthOverride.reason}”.
+            {ws.calculatedHealth && <> Calculated health: {healthLabel[ws.calculatedHealth]}.</>}
+          </p>
+        )}
+        {can(actor, "project.overrideHealth") && ws.calculatedHealth && (
+          <HealthOverrideForm action={healthOverrideAction.bind(null, project.id)} current={ws.healthOverride?.health ?? null} />
+        )}
         {isManager && (
           <StatusControls action={changeStatusAction.bind(null, project.id)} allowed={allowedManualTransitions(project.status)} />
         )}

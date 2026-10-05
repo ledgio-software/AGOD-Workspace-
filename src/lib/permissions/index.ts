@@ -24,7 +24,13 @@ export type Action =
   | "team.view"
   | "team.manage"
   | "audit.viewAll"
-  | "audit.viewProject";
+  | "audit.viewProject"
+  | "project.overrideHealth"
+  | "payoutQuestion.raise"
+  | "payoutQuestion.review"
+  | "payoutQuestion.resolve"
+  | "period.view"
+  | "period.close";
 
 /** Facts about the record being acted on, when the rule depends on it. */
 export type ResourceContext = {
@@ -59,6 +65,15 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   "team.manage": isAdmin,
   "audit.viewAll": isAdmin,
   "audit.viewProject": isManager,
+  // Roadmap 2.2: a PM may replace the calculated health, always with a written reason.
+  "project.overrideHealth": isManager,
+  // Roadmap 2.8: members question their own payouts; PMs review; Admins settle (adjustments are Admin-only).
+  "payoutQuestion.raise": () => true,
+  "payoutQuestion.review": isManager,
+  "payoutQuestion.resolve": isAdmin,
+  // Roadmap 2.9: period close.
+  "period.view": isManager,
+  "period.close": isAdmin,
 };
 
 export function can(actor: Actor, action: Action, resource: ResourceContext = {}): boolean {

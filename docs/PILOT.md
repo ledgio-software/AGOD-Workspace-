@@ -44,6 +44,8 @@ For each check, note anything confusing or wrong in the issues log below.
 | Dashboard totals | **Dashboard** owed/paid/outstanding equal the ledger totals. |
 | CSV export totals | **Ledger → Export CSV**; sum the columns in a spreadsheet. |
 | Every change explained | **Audit**: every status change has a who, when and before/after. |
+| Disputes | Ask a question on a payout as a member (**Ask a question** in My work), answer it as a PM, settle one with an adjustment as an Admin (**Questions**). |
+| Month close | **Month close** for last month: review the checklist, download the CSV, close the month, then try to record a payment dated in it (refused) and reopen it with a reason. |
 
 ## 4. Restore exercise
 

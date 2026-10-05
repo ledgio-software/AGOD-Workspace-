@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LedgerRow } from "@/modules/ledger";
-import { csvField, ledgerToCsv } from "./csv";
+import { csvField, ledgerToCsv, periodToCsv } from "./csv";
 
 const row: LedgerRow = {
   id: "1",
@@ -41,5 +41,19 @@ describe("ledgerToCsv", () => {
     expect(csvField("=1+1")).toBe("\"'=1+1\"");
     expect(csvField("-5")).toBe("\"'-5\"");
     expect(ledgerToCsv([row])).toContain("\"'=HYPERLINK(\"\"http://x\"\")\"");
+  });
+});
+
+describe("periodToCsv", () => {
+  it("lists payments and signed adjustments oldest first", () => {
+    const base = { projectCode: "AGOD-2026-001", memberName: "Ama", currency: "GHS", method: null, reference: null, note: null };
+    const csv = periodToCsv([
+      { ...base, date: new Date("2026-09-20T12:00:00Z"), kind: "DECREASE", amountMinor: -30_000, note: "Scope cut" },
+      { ...base, date: new Date("2026-09-02T12:00:00Z"), kind: "PAYMENT", amountMinor: 150_000, method: "CASH", reference: "R-1" },
+    ]);
+    const lines = csv.replace("﻿", "").trim().split("\r\n");
+    expect(lines[0]).toBe('"Date","Type","Project code","Recipient","Currency","Amount","Method","Reference","Reason or notes"');
+    expect(lines[1]).toBe('"2026-09-02","PAYMENT","AGOD-2026-001","Ama","GHS","1500.00","CASH","R-1",""');
+    expect(lines[2]).toBe('"2026-09-20","DECREASE","AGOD-2026-001","Ama","GHS","-300.00","","","Scope cut"');
   });
 });

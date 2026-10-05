@@ -4,7 +4,9 @@ import { adjustmentTypeLabel, describeAuditAction } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
+import { questionsWaitingOn } from "@/modules/questions";
 import { getDashboard } from "@/modules/reports";
+import { refreshDeadlineAlertsQuietly } from "@/modules/notifications/deadlines";
 import { getMyWork } from "@/modules/work";
 
 function Stat({ label, value, href }: { label: string; value: string | number; href?: string }) {
@@ -37,6 +39,7 @@ const empty = <p className="text-sm text-zinc-500">None.</p>;
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   const user = await requireUser();
+  await refreshDeadlineAlertsQuietly(user);
 
   if (!can(user, "payout.viewAll")) {
     const work = await getMyWork(user);
@@ -56,7 +59,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const d = await getDashboard(user, await searchParams);
+  const [d, questionsWaiting] = await Promise.all([getDashboard(user, await searchParams), questionsWaitingOn(user)]);
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -76,6 +79,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </button>
         </form>
       </div>
+
+      {questionsWaiting > 0 && (
+        <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          {questionsWaiting} payout question{questionsWaiting === 1 ? " is" : "s are"} waiting for you.{" "}
+          <Link href={`/questions?status=${user.role === "ADMIN" ? "" : "OPEN"}`} className="underline">
+            Review
+          </Link>
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Stat label="Total owed" value={formatMoney(d.totals.owedMinor)} href="/ledger" />

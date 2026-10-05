@@ -80,6 +80,18 @@ export type Health = "ON_TRACK" | "AT_RISK" | "BLOCKED" | "OVERDUE";
  * - At risk: a task is overdue, or the target is within 7 days with less than 80% done.
  */
 export function projectHealth(
+  project: { status: ProjectStatus; targetDate: string | null; healthOverride?: Health | null },
+  tasks: ProgressTask[],
+  today: string,
+): Health | null {
+  if (project.status === "COMPLETED" || project.status === "CANCELLED") return null;
+  // Roadmap 2.2: a PM's override (always with a reason) replaces the calculation until cleared.
+  if (project.healthOverride) return project.healthOverride;
+  return calculatedHealth(project, tasks, today);
+}
+
+/** The health the rules give, ignoring any override (shown next to an override). */
+export function calculatedHealth(
   project: { status: ProjectStatus; targetDate: string | null },
   tasks: ProgressTask[],
   today: string,
