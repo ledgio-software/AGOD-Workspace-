@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
 import type { ActionResult } from "@/lib/action-result";
-import { healthLabel, milestoneStatusLabel, projectStatusLabel } from "@/lib/labels";
+import { costCategoryLabel, healthLabel, milestoneStatusLabel, projectCategoryLabel, projectStatusLabel } from "@/lib/labels";
 import type { Health, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
@@ -332,6 +332,66 @@ export function SmallButtonForm({ action, label, confirmMessage }: { action: Act
   return (
     <ActionForm action={action} confirmMessage={confirmMessage} className="inline-block">
       <SubmitButton variant="secondary">{label}</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function ProjectFinanceForm({ action, category, costBudget }: { action: Action; category: keyof typeof projectCategoryLabel; costBudget: string }) {
+  return (
+    <ActionForm action={action} className="flex flex-wrap items-end gap-2">
+      <Field label="Project type">
+        <select name="category" defaultValue={category} className={inputClass}>
+          {Object.entries(projectCategoryLabel).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Budget for other costs (GHS)">
+        <input name="costBudget" inputMode="decimal" defaultValue={costBudget} className={inputClass} />
+      </Field>
+      <SubmitButton variant="secondary">Save</SubmitButton>
+    </ActionForm>
+  );
+}
+
+export function CostForm({ action, today }: { action: Action; today: string }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="grid gap-2 sm:grid-cols-5 sm:items-end">
+      <Field label="Category">
+        <select name="category" defaultValue="SOFTWARE" className={inputClass}>
+          {Object.entries(costCategoryLabel).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Description">
+        <input name="description" required minLength={3} className={inputClass} />
+      </Field>
+      <Field label="Vendor (optional)">
+        <input name="vendor" className={inputClass} />
+      </Field>
+      <Field label="Amount (GHS)">
+        <input name="amount" required inputMode="decimal" className={inputClass} />
+      </Field>
+      <Field label="Date">
+        <input name="incurredOn" type="date" required max={today} defaultValue={today} className={inputClass} />
+      </Field>
+      <div className="sm:col-span-5">
+        <SubmitButton variant="secondary">Record cost</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+export function VoidCostForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} className="flex flex-wrap items-center gap-2">
+      <input name="reason" required minLength={3} placeholder="Why is this cost wrong?" className={`${inputClass} w-64 text-xs`} />
+      <SubmitButton variant="secondary">Void</SubmitButton>
     </ActionForm>
   );
 }

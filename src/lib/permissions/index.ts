@@ -34,7 +34,9 @@ export type Action =
   | "comment.create"
   | "template.manage"
   | "workload.view"
-  | "report.weekly";
+  | "report.weekly"
+  | "finance.view"
+  | "finance.manage";
 
 /** Facts about the record being acted on, when the rule depends on it. */
 export type ResourceContext = {
@@ -83,6 +85,9 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   "template.manage": isManager,
   "workload.view": isManager,
   "report.weekly": isManager,
+  // Stage 3: profitability, costs and forecasts (PMs and Admins; see docs/DECISIONS.md).
+  "finance.view": isManager,
+  "finance.manage": isManager,
 };
 
 export function can(actor: Actor, action: Action, resource: ResourceContext = {}): boolean {

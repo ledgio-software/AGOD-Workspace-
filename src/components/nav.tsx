@@ -9,6 +9,7 @@ export function Nav({ actor }: { actor: Actor }) {
     { href: "/ledger", label: "Ledger", show: can(actor, "payout.viewAll") },
     { href: "/questions", label: "Questions", show: can(actor, "payoutQuestion.review") },
     { href: "/close", label: "Month close", show: can(actor, "period.view") },
+    { href: "/profitability", label: "Profitability", show: can(actor, "finance.view") },
     { href: "/team", label: "Team", show: can(actor, "team.view") },
     { href: "/workload", label: "Workload", show: can(actor, "workload.view") },
     { href: "/summary", label: "Weekly", show: can(actor, "report.weekly") },

@@ -75,6 +75,25 @@ export const adjustmentType = pgEnum("adjustment_type", [
   "WRITE_OFF",
   "VOID",
 ]);
+// Stage 3: project types for revenue/profit by type (matches the starter templates).
+export const projectCategory = pgEnum("project_category", [
+  "DISCOVERY",
+  "WEBSITE",
+  "MOBILE_APP",
+  "AI_INTEGRATION",
+  "INTERNAL_PRODUCT",
+  "MAINTENANCE",
+  "OTHER",
+]);
+export const costCategory = pgEnum("cost_category", [
+  "SOFTWARE",
+  "HOSTING",
+  "HARDWARE",
+  "SUBCONTRACTOR",
+  "TRAVEL",
+  "MARKETING",
+  "OTHER",
+]);
 export const projectHealthStatus = pgEnum("project_health", ["ON_TRACK", "AT_RISK", "BLOCKED", "OVERDUE"]);
 export const payoutQuestionStatus = pgEnum("payout_question_status", ["OPEN", "AWAITING_ADMIN", "RESOLVED"]);
 
@@ -106,12 +125,16 @@ export const projects = pgTable(
     healthOverrideAt: timestamp("health_override_at", { withTimezone: true }),
     // GitHub repository ("owner/name") whose issues, pull requests and deployments relate to this project.
     githubRepo: text("github_repo"),
+    // Stage 3 (profitability): the project type, and the budget for costs other than contributor payouts.
+    category: projectCategory("category").notNull().default("OTHER"),
+    costBudgetMinor: money("cost_budget_minor").notNull().default(0),
     version: integer("version").notNull().default(1),
     createdAt,
     updatedAt,
   },
   (t) => [
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
+    check("projects_cost_budget_non_negative", sql`${t.costBudgetMinor} >= 0`),
     check("projects_github_repo_format", sql`${t.githubRepo} IS NULL OR ${t.githubRepo} ~ '^[a-z0-9_.-]+/[a-z0-9_.-]+$'`),
     check(
       "projects_health_override_has_reason",
@@ -609,5 +632,39 @@ export const attachments = pgTable(
     index("attachments_project_idx").on(t.projectId),
     index("attachments_task_idx").on(t.taskId),
     index("attachments_payment_idx").on(t.paymentId),
+  ],
+);
+
+// Project costs other than contributor payouts (Stage 3): software, hosting, subcontractors...
+// Never edited or deleted; a wrong entry is voided with a reason and stays visible.
+export const projectCosts = pgTable(
+  "project_costs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    category: costCategory("category").notNull(),
+    description: text("description").notNull(),
+    vendor: text("vendor"),
+    amountMinor: money("amount_minor").notNull(),
+    currency: currency(),
+    incurredOn: date("incurred_on").notNull(),
+    createdBy: userRef("created_by").notNull(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: userRef("voided_by"),
+    voidReason: text("void_reason"),
+    createdAt,
+  },
+  (t) => [
+    check("project_costs_amount_positive", sql`${t.amountMinor} > 0`),
+    check("project_costs_description", sql`length(trim(${t.description})) >= 3`),
+    check(
+      "project_costs_void_complete",
+      sql`(${t.voidedAt} IS NULL AND ${t.voidedBy} IS NULL AND ${t.voidReason} IS NULL)
+       OR (${t.voidedAt} IS NOT NULL AND ${t.voidedBy} IS NOT NULL AND length(trim(coalesce(${t.voidReason}, ''))) >= 3)`,
+    ),
+    index("project_costs_project_idx").on(t.projectId),
+    index("project_costs_incurred_idx").on(t.incurredOn),
   ],
 );

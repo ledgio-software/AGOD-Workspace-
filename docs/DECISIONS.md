@@ -127,3 +127,18 @@ Phase 9 (file attachments in Vercel Blob).
 | Who sees them | Project and task files: anyone who can see the project. Receipts: managers and the person who was paid. Enforced by row-level security. |
 | Limits | 4 MB per file (Vercel request limit). PDF, images (PNG, JPEG, GIF, WebP), TXT, CSV, Markdown, Office (DOCX, XLSX, PPTX) and ZIP. The content must match the extension (signatures are checked); SVG and HTML are refused. Only images and PDFs open in the browser; everything else downloads. |
 | Removal | Task and project files: the uploader or a manager can remove them; removal is recorded and the stored file is kept. Payment receipts can never be removed. |
+
+## Phase 10 decisions (2026-10-05): profitability (roadmap Stage 3)
+
+| Decision | Choice |
+|---|---|
+| Revenue | The project's total value for external projects. Internal projects have no revenue: their payouts and costs show as a cost to AGOD (negative profit, no margin). |
+| Payouts in profit | Before approval: the **planned** payouts from the current compensation plan. After approval: the **committed** payouts from the ledger (approved amounts plus adjustments), whether or not they are paid yet. |
+| Costs | "Other project costs" (software, hosting, hardware, subcontractors, travel, marketing, other) are recorded per project with a date (not in the future) and amount. They can't be edited or deleted, only voided once with a reason, so the history stays visible. Not on cancelled projects. |
+| Estimated vs actual | Estimated profit = revenue − planned payouts − cost budget. Actual profit = revenue − payouts (planned or committed) − recorded costs. Margin = profit ÷ revenue. |
+| Project type | Each project has a category (Discovery, Website, Mobile app, AI integration, Internal product, Maintenance, Other) used for reporting by type. Existing projects were guessed from their names; the PM can change it. |
+| Who | Project Managers and Admins see and record finance data; Team Members never see it (row-level security on costs). |
+| Payout forecast | Owed now and awaiting approval fall in the current month; in-progress projects in the month of their target date (current month if past or unset); anything beyond the window is shown as "later". |
+| Payout aging | Unpaid balances grouped by days since the project was approved: 0–30, 31–60, 61–90, over 90. |
+| Utilisation | Estimated hours of tasks completed in the month ÷ (weekly capacity × weeks in the month). Tasks without an estimate are counted separately. |
+| Frontend | Backend-first: the pages are plain tables; the redesign builds on the services listed in `docs/FRONTEND_CONTRACT.md`. |

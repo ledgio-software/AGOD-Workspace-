@@ -100,3 +100,59 @@ export function periodToCsv(movements: PeriodMovement[]): string {
       ]),
   );
 }
+
+export type ProfitabilityCsvRow = {
+  code: string;
+  name: string;
+  status: string;
+  category: string;
+  clientName: string | null;
+  clientType: string;
+  revenueMinor: number;
+  plannedPayoutMinor: number;
+  committedPayoutMinor: number;
+  paidPayoutMinor: number;
+  costBudgetMinor: number;
+  actualCostMinor: number;
+  estimatedProfitMinor: number;
+  actualProfitMinor: number;
+  actualMarginPct: number | null;
+};
+
+/** Stage 3 profitability export: one row per project, amounts in GHS. */
+export function profitabilityToCsv(rows: ProfitabilityCsvRow[]): string {
+  return toCsv(
+    [
+      "Project code",
+      "Project name",
+      "Status",
+      "Type",
+      "Client",
+      "Revenue",
+      "Planned payouts",
+      "Committed payouts",
+      "Paid payouts",
+      "Cost budget",
+      "Recorded costs",
+      "Estimated profit",
+      "Actual profit",
+      "Actual margin %",
+    ],
+    rows.map((r) => [
+      r.code,
+      r.name,
+      r.status,
+      r.category,
+      r.clientType === "INTERNAL" ? "Internal" : (r.clientName ?? ""),
+      { amount: r.revenueMinor },
+      { amount: r.plannedPayoutMinor },
+      { amount: r.committedPayoutMinor },
+      { amount: r.paidPayoutMinor },
+      { amount: r.costBudgetMinor },
+      { amount: r.actualCostMinor },
+      { amount: r.estimatedProfitMinor },
+      { amount: r.actualProfitMinor },
+      r.actualMarginPct === null ? "" : String(r.actualMarginPct),
+    ]),
+  );
+}
