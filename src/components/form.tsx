@@ -99,7 +99,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
     <label className="block space-y-1 text-sm">
       <span className="font-medium">{label}</span>
       {children}
-      {hint && <span className="block text-xs text-zinc-500">{hint}</span>}
+      {hint && <span className="block whitespace-pre-line text-xs text-zinc-500">{hint}</span>}
     </label>
   );
 }

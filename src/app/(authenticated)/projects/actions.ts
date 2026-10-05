@@ -14,6 +14,7 @@ import {
   setMilestoneStatus,
   updateAssignment,
 } from "@/modules/projects/team";
+import { addComment } from "@/modules/comments";
 import { createTask, updateTaskDetails, updateTaskProgress, waiveTask } from "@/modules/tasks";
 
 type Result = ActionResult<undefined>;
@@ -180,6 +181,7 @@ function taskFields(form: FormData) {
     assignedTo: text(form, "assignedTo"),
     required: form.get("required") === "on",
     dueDate: text(form, "dueDate"),
+    estimateHours: text(form, "estimateHours"),
   };
 }
 
@@ -299,5 +301,15 @@ export async function reopenAction(projectId: string, _prev: Result | null, form
     refresh(projectId);
     revalidatePath("/ledger");
   }
+  return result;
+}
+
+export async function addCommentAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await addComment(actor, projectId, { body: text(form, "body"), taskId: text(form, "taskId") });
+    return undefined;
+  });
+  if (result.ok) refresh(projectId);
   return result;
 }

@@ -3,7 +3,7 @@
 import { ActionForm, SubmitButton, TemporaryPassword, inputClass } from "@/components/form";
 import { roleLabel } from "@/lib/labels";
 import type { Role } from "@/lib/permissions";
-import { changeRoleAction, createMemberAction, resetPasswordAction, setActiveAction } from "./actions";
+import { changeRoleAction, createMemberAction, resetPasswordAction, setActiveAction, setCapacityAction } from "./actions";
 
 const roles = Object.entries(roleLabel) as [Role, string][];
 
@@ -53,7 +53,7 @@ export function CreateMemberForm() {
   );
 }
 
-type Member = { id: string; email: string; role: Role; active: boolean };
+type Member = { id: string; email: string; role: Role; active: boolean; weeklyCapacityHours: number };
 
 export function MemberActions({ member }: { member: Member }) {
   return (
@@ -65,6 +65,15 @@ export function MemberActions({ member }: { member: Member }) {
           <RoleSelect defaultValue={member.role} />
           <input name="reason" required placeholder="Reason for the change" className={inputClass} />
           <SubmitButton>Change role</SubmitButton>
+        </ActionForm>
+
+        <ActionForm action={setCapacityAction} className="space-y-2">
+          <input type="hidden" name="userId" value={member.id} />
+          <label className="block space-y-1">
+            <span>Weekly capacity (hours for project work)</span>
+            <input name="hours" type="number" min={0} max={80} required defaultValue={member.weeklyCapacityHours} className={inputClass} />
+          </label>
+          <SubmitButton>Save capacity</SubmitButton>
         </ActionForm>
 
         <ActionForm action={setActiveAction} resetOnSuccess className="space-y-2">

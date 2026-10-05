@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, deadlineAlerts } from "./deadlines";
+import { addDays, approvalReminders, deadlineAlerts } from "./deadlines";
 
 const today = "2026-10-05";
 const t = (id: string, dueDate: string, assignedTo: string | null = "me") => ({
@@ -30,5 +30,31 @@ describe("deadline alerts", () => {
   it("tells the project owner about other people's overdue tasks only", () => {
     const alerts = deadlineAlerts("me", [], [t("x", "2026-10-01", "someone"), t("y", "2026-10-01", "me"), t("z", "2026-10-05", "someone")], today);
     expect(alerts.map((a) => a.dedupeKey)).toEqual(["task.overdue_owner:x:2026-10-01"]);
+  });
+});
+
+describe("approval reminders", () => {
+  const now = new Date("2026-10-10T09:00:00Z");
+  const pending = (ownerId: string, daysAgo: number) => ({
+    projectId: "p",
+    code: "AGOD-2026-009",
+    ownerId,
+    requestEventId: "e1",
+    requestedAt: new Date(now.getTime() - daysAgo * 86_400_000),
+  });
+
+  it("reminds the owner after 2 days and again after 7", () => {
+    expect(approvalReminders("pm", false, [pending("pm", 1)], now)).toEqual([]);
+    expect(approvalReminders("pm", false, [pending("pm", 2)], now).map((a) => a.dedupeKey)).toEqual(["approval.waiting:e1:2d"]);
+    expect(approvalReminders("pm", false, [pending("pm", 8)], now).map((a) => a.dedupeKey)).toEqual([
+      "approval.waiting:e1:2d",
+      "approval.waiting:e1:7d",
+    ]);
+  });
+
+  it("escalates to Admins after 7 days only", () => {
+    expect(approvalReminders("admin", true, [pending("pm", 3)], now)).toEqual([]);
+    expect(approvalReminders("admin", true, [pending("pm", 7)], now).map((a) => a.type)).toEqual(["approval.escalated"]);
+    expect(approvalReminders("other-pm", false, [pending("pm", 9)], now)).toEqual([]);
   });
 });

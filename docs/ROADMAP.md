@@ -1,8 +1,8 @@
 # Roadmap status
 
 Source: [`Project doc/AGOD Project, Operations & Payout System - Roadmap.md`](../Project%20doc/AGOD%20Project%2C%20Operations%20%26%20Payout%20System%20-%20Roadmap.md).
-Its own rule applies: add a feature when the current process has proven the need. Stage 2 and later start only
-after the pilot sign-off in `docs/PILOT.md`.
+Its own rule applies: add a feature when the current process has proven the need. The roadmap recommends starting
+Stage 2 after the pilot sign-off in `docs/PILOT.md`; AGOD chose to start it in parallel with the pilot (2026-10-05).
 
 ## Section 2: additions to the current system
 
@@ -12,9 +12,9 @@ after the pilot sign-off in `docs/PILOT.md`.
 | 2.2 Project health | Done: calculated (Phase 2), PM override with reason (Phase 6) | Project page |
 | 2.3 Activity timeline and contribution history | Done: project activity, audit log (Phase 1–5); per-person history (Phase 6) | Project page, Audit, Team → person |
 | 2.4 In-app notifications | Done: assignment, blocked, returned, approved, payout, payment (Phase 2–4); due soon and overdue (Phase 6) | My work → Notifications |
-| 2.5 GitHub integration | Not started (Stage 2). Needs a GitHub App or token for the AGOD organisation and new task states (In review, Ready for QA). | |
-| 2.6 Workload and capacity | Partly: per-person open, blocked and overdue counts (Phase 6). A team-wide capacity view with estimates is Stage 2. | Team → person |
-| 2.7 Project and task templates | Not started (Stage 2) | |
+| 2.5 GitHub integration | Next: Phase 8, through a GitHub App on the AGOD organisation, with new task states (In review, Ready for QA). | |
+| 2.6 Workload and capacity | Done: per-person counts (Phase 6); estimates, weekly capacity and team load view (Phase 7) | Workload, Team → person |
+| 2.7 Project and task templates | Done (Phase 7): starter templates, apply to a project, save a project as a template | Projects → Templates, project page |
 | 2.8 Dispute and adjustment workflow | Done (Phase 6): member asks → PM reviews → Admin adjusts; original amount stays visible | Payout page, Questions |
 | 2.9 Period close | Done (Phase 6): checklist, export, Admin lock and reopen with reason | Month close |
 
@@ -26,11 +26,11 @@ snapshots; payout ledger; partial manual payments; audit trail; dashboard; CSV e
 
 Still to do before Stage 1 is "in production": the pilot sign-off (`docs/PILOT.md`) and go-live (`docs/GO-LIVE.md`).
 
-## Later stages (not started)
+## Later stages
 
 | Stage | Contents | Notes |
 |---|---|---|
-| 2. Team operations | GitHub issues/PRs and deployments, capacity, templates, comments and mentions, attachments, weekly summaries, reminders, release history | Recommended next: GitHub integration. Attachments need a file storage decision. |
+| 2. Team operations | **In progress.** Phase 7 done: comments and mentions, templates, workload and capacity, approval reminders, weekly summary (overdue alerts and contribution history came in Phase 6). Next: Phase 8 GitHub issues/PRs, deployments and release history (GitHub App); Phase 9 attachments (Vercel Blob). | |
 | 3. Profitability | Project costs, margins, revenue by client/type, utilisation, payout forecasting and aging | Needs "other project costs" to be recorded somewhere first. |
 | 4. Ledgio integration | Export approved payouts, import payment confirmations, accounting period locking | The month close and CSV exports are the starting point. |
 | 5. Automated payments | MoMo/bank APIs, batches, multi-level authorisation, reconciliation | Separate project with its own security and reconciliation design. |

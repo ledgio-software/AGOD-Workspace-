@@ -7,10 +7,15 @@ import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getProjectPayouts } from "@/modules/approvals";
+import { listComments } from "@/modules/comments";
+import { listTemplates } from "@/modules/templates";
 import { getProjectWorkspace, listActiveMembers } from "@/modules/projects";
 import { acceptsTaskUpdates, allowedManualTransitions, isEditable, isTaskOverdue } from "@/modules/projects/rules";
+import { applyTemplateAction, saveAsTemplateAction } from "../../templates/actions";
+import { ApplyTemplateForm, SaveAsTemplateForm } from "../../templates/template-form";
 import {
   addAssignmentAction,
+  addCommentAction,
   approveAction,
   changeStatusAction,
   createMilestoneAction,
@@ -32,6 +37,7 @@ import { ApproveForm, RejectForm, ReopenForm, RequestApprovalForm } from "./appr
 import {
   AddAssignmentForm,
   AssignmentRowActions,
+  CommentForm,
   HealthOverrideForm,
   MilestoneForm,
   MilestoneStatusForm,
@@ -69,6 +75,8 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
   const pct = project.splitMode === "PERCENTAGE";
   const workOpen = acceptsTaskUpdates(project.status);
   const payouts = await getProjectPayouts(actor, project.id);
+  const discussion = await listComments(actor, project.id);
+  const templates = canManage && can(actor, "template.manage") ? await listTemplates(actor) : [];
   const lastReturn = ws.activity.find((a) => a.action === "project.changes_requested");
   const canRequest = project.status === "IN_PROGRESS" || project.status === "CHANGES_REQUESTED";
 
@@ -295,6 +303,7 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
                       {task.assigneeName ?? "Unassigned"}
                       {milestone && ` · ${milestone.title}`}
                       {task.dueDate && ` · due ${formatCalendarDate(task.dueDate)}`}
+                      {task.estimateHours && ` · ${task.estimateHours}h estimated`}
                     </div>
                     {task.description && <p>{task.description}</p>}
                     {task.status === "DONE" && (
@@ -354,6 +363,20 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
                 submitLabel="Add task"
                 reset
               />
+            </div>
+          </details>
+        )}
+        {canManage && can(actor, "template.manage") && (
+          <ApplyTemplateForm
+            action={applyTemplateAction.bind(null, project.id)}
+            templates={templates.map((t) => ({ id: t.id, name: t.name, tasks: t.counts.tasks }))}
+          />
+        )}
+        {can(actor, "template.manage") && ws.tasks.length > 0 && (
+          <details>
+            <summary className="cursor-pointer text-sm text-zinc-600 dark:text-zinc-400">Save as a template</summary>
+            <div className="mt-3">
+              <SaveAsTemplateForm action={saveAsTemplateAction.bind(null, project.id)} />
             </div>
           </details>
         )}
@@ -457,6 +480,26 @@ export default async function ProjectWorkspacePage({ params }: { params: Promise
         {project.status === "COMPLETED" && can(actor, "project.reopen") && (
           <ReopenForm action={reopenAction.bind(null, project.id)} />
         )}
+      </Section>
+
+      <Section title={`Discussion (${discussion.length})`}>
+        {discussion.length === 0 ? (
+          <p className="text-sm text-zinc-500">No comments yet.</p>
+        ) : (
+          <ul className="space-y-3 text-sm">
+            {discussion.map((c) => (
+              <li key={c.id} className="space-y-1">
+                <div className="text-zinc-500">
+                  <strong className="text-zinc-900 dark:text-zinc-100">{c.authorName}</strong> · {formatDateTime(c.createdAt)}
+                  {c.taskTitle && <> · on “{c.taskTitle}”</>}
+                  {c.mentionedNames.length > 0 && <> · mentioned {c.mentionedNames.join(", ")}</>}
+                </div>
+                <p className="whitespace-pre-line">{c.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <CommentForm action={addCommentAction.bind(null, project.id)} tasks={ws.tasks.map((t) => ({ id: t.id, title: t.title }))} />
       </Section>
 
       <Section title="Activity">

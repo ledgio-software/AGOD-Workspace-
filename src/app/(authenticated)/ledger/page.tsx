@@ -32,14 +32,19 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
             Created only by approving a project. Statuses follow the recorded payments and adjustments.
           </p>
         </div>
-        {can(actor, "ledger.export") && (
-          <a
-            href={`/ledger/export${exportQuery ? `?${exportQuery}` : ""}`}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
-          >
-            Export CSV
+        <div className="flex gap-2">
+          <a href="/reconcile" className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700">
+            Reconcile with a spreadsheet
           </a>
-        )}
+          {can(actor, "ledger.export") && (
+            <a
+              href={`/ledger/export${exportQuery ? `?${exportQuery}` : ""}`}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
+            >
+              Export CSV
+            </a>
+          )}
+        </div>
       </div>
 
       <form className="flex flex-wrap items-end gap-2">

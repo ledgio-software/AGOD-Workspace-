@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
-import { changeRole, createMember, resetPassword, setActive } from "@/modules/team";
+import { changeRole, createMember, resetPassword, setActive, setCapacity } from "@/modules/team";
 
 type Credentials = { email: string; temporaryPassword: string };
 
@@ -77,4 +77,17 @@ export async function resetPasswordAction(
     );
     return { email: String(form.get("email") ?? ""), temporaryPassword };
   });
+}
+
+export async function setCapacityAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await setCapacity(actor, { userId: String(form.get("userId")), hours: String(form.get("hours") ?? "") }, await getRequestMeta());
+    return undefined;
+  }, "Capacity updated.");
+  if (result.ok) {
+    revalidatePath("/team");
+    revalidatePath("/workload");
+  }
+  return result;
 }

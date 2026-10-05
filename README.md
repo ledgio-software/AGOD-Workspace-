@@ -171,6 +171,10 @@ src/
 - Contribution history per person; payout questions (member → PM → Admin adjustment)
 - Month close checklist, export and lock
 
+### Phase 7 — Stage 2, part 1 ✓
+- Project discussion with @mentions; project templates (starter set, apply, save as template)
+- Task estimates, weekly capacity and a workload view; approval reminders; weekly summary
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

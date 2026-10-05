@@ -64,6 +64,20 @@
       "when": 1791163841148,
       "tag": "20261005013041_roadmap_stage1_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791166001453,
+      "tag": "20261005020641_stage2_collaboration",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791166028596,
+      "tag": "20261005020708_stage2_collaboration_rules",
+      "breakpoints": true
     }
   ]
 }
