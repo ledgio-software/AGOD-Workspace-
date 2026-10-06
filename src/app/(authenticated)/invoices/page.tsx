@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, FilePen, FileText, Plus, Search, Settings, Wallet } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { InvoiceStateBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { ButtonLink, Card, EmptyState, PageHeader, StatCard, buttonClass, table } from "@/components/ui";
 import { addDays } from "@/modules/notifications/deadlines";
 import { formatCalendarDate, todayInOperatingZone } from "@/lib/dates";

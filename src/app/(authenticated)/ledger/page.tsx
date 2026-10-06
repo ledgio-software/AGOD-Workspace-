@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Banknote, Download, FileSpreadsheet, Hourglass, Scale, Wallet } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { PayoutStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, ButtonLink, Card, EmptyState, PageHeader, StatCard, buttonClass, cx, table } from "@/components/ui";
 import { formatDate } from "@/lib/dates";
 import { payoutStatusLabel } from "@/lib/labels";

@@ -13,7 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { RenewalBadge, TaskStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, ButtonLink, Callout, Card, EmptyState, List, ListRow, PageHeader, StatCard, buttonClass } from "@/components/ui";
 import { formatCalendarDate, formatDateTime, todayInOperatingZone } from "@/lib/dates";
 import { adjustmentTypeLabel, describeAuditAction, payoutStatusLabel } from "@/lib/labels";

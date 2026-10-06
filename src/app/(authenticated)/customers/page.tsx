@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Building2, Plus, Search } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { CustomerStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, ButtonLink, Card, EmptyState, PageHeader, buttonClass, table } from "@/components/ui";
 import { customerStatusLabel, customerTypeLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";

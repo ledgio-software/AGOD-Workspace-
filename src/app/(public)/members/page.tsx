@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { buttonClass } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";

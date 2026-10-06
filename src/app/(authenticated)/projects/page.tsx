@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FolderKanban, LayoutTemplate, Plus, Search } from "lucide-react";
 import { HealthBadge, ProgressBar, ProjectStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, ButtonLink, Card, EmptyState, PageHeader, buttonClass, table } from "@/components/ui";
 import { formatCalendarDate } from "@/lib/dates";
 import { projectStatusLabel } from "@/lib/labels";

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlarmClock, Plus, Repeat, Search, Wallet } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { RenewalBadge, SubscriptionStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { ButtonLink, Card, EmptyState, PageHeader, StatCard, buttonClass, table } from "@/components/ui";
 import { formatCalendarDate } from "@/lib/dates";
 import { billingCadenceSuffix, subscriptionStatusLabel } from "@/lib/labels";
