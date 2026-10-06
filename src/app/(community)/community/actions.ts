@@ -21,6 +21,16 @@ import {
   unhideShowcase,
   updatePost,
 } from "@/modules/community/showcase";
+import {
+  addRecording,
+  cancelSession,
+  createSession,
+  joinSession,
+  leaveSession,
+  reportSession,
+  unhideSession,
+  updateSession,
+} from "@/modules/community/sessions";
 import { ServiceError } from "@/modules/errors";
 import { createOrganization } from "@/modules/orgs";
 
@@ -270,5 +280,108 @@ export async function unhideShowcaseAction(postId: string, targetType: "POST" | 
     return undefined;
   }, "Visible again.");
   if (result.ok) refreshShowcase(postId);
+  return result;
+}
+
+// --- Phase 27: teaching sessions --------------------------------------------------------------
+
+function sessionFromForm(form: FormData) {
+  return {
+    title: text(form, "title"),
+    description: text(form, "description"),
+    level: (["BEGINNER", "INTERMEDIATE"].includes(text(form, "level")) ? text(form, "level") : "ALL") as "BEGINNER" | "INTERMEDIATE" | "ALL",
+    topics: text(form, "topics"),
+    date: text(form, "date"),
+    time: text(form, "time"),
+    durationMinutes: Number(text(form, "durationMinutes")),
+    callUrl: text(form, "callUrl"),
+    capacity: text(form, "capacity"),
+  };
+}
+
+function refreshSessions(sessionId?: string) {
+  revalidatePath("/sessions");
+  if (sessionId) revalidatePath(`/sessions/${sessionId}`);
+  refreshCommunity();
+}
+
+export async function createSessionAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const me = await member();
+  let sessionId = "";
+  const result = await runAction(async () => {
+    sessionId = (await createSession(me, sessionFromForm(form))).id;
+    return undefined;
+  });
+  if (!result.ok) return result;
+  refreshSessions(sessionId);
+  redirect(`/sessions/${sessionId}?scheduled=1`);
+}
+
+export async function updateSessionAction(sessionId: string, _prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const me = await member();
+  const result = await runAction(async () => {
+    await updateSession(me, sessionId, sessionFromForm(form));
+    return undefined;
+  });
+  if (!result.ok) return result;
+  refreshSessions(sessionId);
+  redirect(`/sessions/${sessionId}`);
+}
+
+export async function cancelSessionAction(sessionId: string, _prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const me = await member();
+  const result = await runAction(async () => {
+    await cancelSession(me, sessionId, { reason: text(form, "reason") });
+    return undefined;
+  }, "Session cancelled. Everyone who joined was told.");
+  if (result.ok) refreshSessions(sessionId);
+  return result;
+}
+
+export async function joinSessionAction(sessionId: string): Promise<ActionResult> {
+  const me = await member();
+  const result = await runAction(async () => {
+    await joinSession(me, sessionId);
+    return undefined;
+  }, "You're in! Check your email for the calendar invite.");
+  if (result.ok) refreshSessions(sessionId);
+  return result;
+}
+
+export async function leaveSessionAction(sessionId: string): Promise<ActionResult> {
+  const me = await member();
+  const result = await runAction(async () => {
+    await leaveSession(me, sessionId);
+    return undefined;
+  }, "You left the session.");
+  if (result.ok) refreshSessions(sessionId);
+  return result;
+}
+
+export async function addRecordingAction(sessionId: string, _prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const me = await member();
+  const result = await runAction(async () => {
+    await addRecording(me, sessionId, { recordingUrl: text(form, "recordingUrl"), notes: text(form, "notes") });
+    return undefined;
+  }, "Saved. Thank you for teaching!");
+  if (result.ok) refreshSessions(sessionId);
+  return result;
+}
+
+export async function reportSessionAction(sessionId: string, _prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const me = await member();
+  return runAction(async () => {
+    await reportSession(me, sessionId, { reason: text(form, "reason") });
+    return undefined;
+  }, "Thank you. The organizers will look at it.");
+}
+
+export async function unhideSessionAction(sessionId: string): Promise<ActionResult> {
+  const me = await member();
+  const result = await runAction(async () => {
+    await unhideSession(me, sessionId);
+    return undefined;
+  }, "Visible again.");
+  if (result.ok) refreshSessions(sessionId);
   return result;
 }

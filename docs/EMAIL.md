@@ -50,6 +50,9 @@ waiting. Until email works, adding a person or sending a password link shows a *
 for the Admin to pass on instead (Phase 26.2), and people who signed up themselves can't confirm their
 email.
 
+The same job also sends **session reminders** (Phase 27) to people who joined a community teaching
+session starting within the next 24 hours.
+
 Gmail sends up to about 500 emails a day (Google Workspace about 2,000), which is plenty for one summary
 per person per day. **Other providers** (Zoho Mail, Microsoft 365, your web host's mail server) work the
 same way with their SMTP host, port (587, or 465 with `SMTP_SECURE=true`), username and password. If the

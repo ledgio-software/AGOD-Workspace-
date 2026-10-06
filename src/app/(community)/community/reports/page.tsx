@@ -8,7 +8,7 @@ import { requireMember } from "@/lib/session";
 import { canModerate, listReports } from "@/modules/community";
 import { ResolveReportForm } from "../forms";
 
-const TARGET = { PROFILE: "Profile", POST: "Project", REVIEW: "Feedback" } as const;
+const TARGET = { PROFILE: "Profile", POST: "Project", REVIEW: "Feedback", SESSION: "Session" } as const;
 
 export default async function ReportsPage() {
   const { member } = await requireMember();
@@ -19,7 +19,7 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Community" title="Reports" description="Profiles, projects and feedback members reported. Hide it when it breaks the code of conduct; dismiss the report otherwise." />
+      <PageHeader eyebrow="Community" title="Reports" description="Profiles, projects, feedback and sessions members reported. Hide it when it breaks the code of conduct; dismiss the report otherwise." />
       <Card title={`Open (${open.length})`} bodyClassName={open.length ? "p-0" : undefined}>
         {open.length === 0 ? (
           <EmptyState icon={Flag} title="Nothing to review" />

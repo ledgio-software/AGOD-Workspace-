@@ -18,7 +18,7 @@ import {
   tasks,
   users,
 } from "@/lib/db/schema";
-import { todayInOperatingZone } from "@/lib/dates";
+import { todayInOperatingZone, zonedTime } from "@/lib/dates";
 import {
   type CalendarEventInput,
   calendarUrl,
@@ -473,17 +473,7 @@ export async function syncMyCalendarNow(actor: Actor): Promise<CalendarSyncSumma
 
 // --- Project meetings --------------------------------------------------------------------------
 
-/** "2026-10-08" + "14:30" in the operating time zone → the instant. */
-export function zonedTime(date: string, time: string, timeZone = TIME_ZONE): Date {
-  const guess = new Date(`${date}T${time}:00Z`);
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })
-      .formatToParts(guess)
-      .map((p) => [p.type, p.value]),
-  );
-  const asZone = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
-  return new Date(guess.getTime() - (asZone - guess.getTime()));
-}
+export { zonedTime } from "@/lib/dates";
 
 export const meetingInput = z.object({
   title: z.string().trim().min(2, "Give the meeting a title").max(200),

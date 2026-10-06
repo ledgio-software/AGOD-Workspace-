@@ -231,6 +231,9 @@ src/
 ### Phase 25 — Community foundation ✓
 - Public home page, member list and profiles, code of conduct; join without a company (workspace optional); Builder, Reviewer and Organizer roles; reports and moderation (`docs/COMMUNITY.md`)
 
+### Phase 27 — Teaching sessions ✓
+- Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
+
 ### Phase 26.1 — Storage savings ✓
 - Pictures made smaller in the browser before upload (WebP, 1600 px), fingerprints so identical screenshots are stored once, and an optional Cloudflare R2 (S3-compatible) storage switch (`docs/STORAGE.md`)
 

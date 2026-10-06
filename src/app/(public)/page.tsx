@@ -5,8 +5,10 @@ import { PRODUCT_NAME } from "@/lib/brand";
 import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { communityStats, listMembers } from "@/modules/community";
+import { listSessions } from "@/modules/community/sessions";
 import { listPosts } from "@/modules/community/showcase";
 import { MemberGrid } from "./members/member-grid";
+import { SessionList } from "./sessions/session-list";
 import { PostGrid } from "./showcase/post-grid";
 
 // Phase 25: the front door. The community first; the company workspace (projects and payouts)
@@ -22,7 +24,13 @@ const pillars = [
 const audience = ["Beginners and non-coders who build with AI tools", "Working developers who want a local peer group", "Students who want real projects and feedback", "Founders who need a prototype reviewed"];
 
 export default async function HomePage() {
-  const [signedIn, stats, recent, projects] = await Promise.all([getSignedIn(), communityStats(), listMembers(null), listPosts(null)]);
+  const [signedIn, stats, recent, projects, sessions] = await Promise.all([
+    getSignedIn(),
+    communityStats(),
+    listMembers(null),
+    listPosts(null),
+    listSessions("upcoming", { limit: 4 }),
+  ]);
   const open = signupOpen();
 
   return (
@@ -80,6 +88,18 @@ export default async function HomePage() {
             </Link>
           </div>
           <PostGrid posts={projects.posts.slice(0, 3)} />
+        </section>
+      )}
+
+      {sessions.sessions.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl font-semibold tracking-tight">Upcoming teaching sessions</h2>
+            <Link href="/sessions" className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
+              All sessions <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          </div>
+          <SessionList sessions={sessions.sessions} />
         </section>
       )}
 

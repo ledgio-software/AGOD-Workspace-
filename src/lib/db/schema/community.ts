@@ -82,7 +82,7 @@ export const communityReports = pgTable(
     index("community_reports_status_idx").on(t.status, t.createdAt),
     // One open report per person and thing.
     uniqueIndex("community_reports_one_open").on(t.reporterId, t.targetType, t.targetId).where(sql`${t.status} = 'OPEN'`),
-    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW')`),
+    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION')`),
     check("community_reports_reason", sql`length(btrim(${t.reason})) BETWEEN 10 AND 1000`),
     check("community_reports_status", sql`${t.status} IN ('OPEN', 'RESOLVED', 'DISMISSED')`),
     check("community_reports_resolved", sql`(${t.status} = 'OPEN') = (${t.resolvedAt} IS NULL) AND (${t.resolvedAt} IS NULL) = (${t.resolvedBy} IS NULL)`),
@@ -201,4 +201,67 @@ export const showcaseReviews = pgTable(
     check("showcase_reviews_reply", sql`(${t.authorReply} IS NULL) = (${t.repliedAt} IS NULL) AND (${t.authorReply} IS NULL OR length(${t.authorReply}) BETWEEN 2 AND 1000)`),
     check("showcase_reviews_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
   ],
+);
+
+// --- Phase 27: teaching sessions ------------------------------------------------------------
+
+/**
+ * A live group session a member hosts (handbook: teaching sessions). The call itself runs on
+ * Google Meet, Zoom or Discord; its link is shown only to the host, people who joined and organizers.
+ */
+export const communitySessions = pgTable(
+  "community_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    hostId: userRef("host_id").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    // BEGINNER, INTERMEDIATE, ALL
+    level: text("level").notNull().default("ALL"),
+    topics: text("topics").array().notNull().default(sql`'{}'::text[]`),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    callUrl: text("call_url").notNull(),
+    // Most people who can join (null: no limit).
+    capacity: integer("capacity"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    // After the session: the recording and key notes (handbook: post them for people who missed it).
+    recordingUrl: text("recording_url"),
+    notes: text("notes"),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    hiddenReason: text("hidden_reason"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("community_sessions_starts_idx").on(t.startsAt),
+    index("community_sessions_host_idx").on(t.hostId),
+    check("community_sessions_title", sql`length(btrim(${t.title})) BETWEEN 3 AND 120`),
+    check("community_sessions_description", sql`length(btrim(${t.description})) BETWEEN 10 AND 3000`),
+    check("community_sessions_level", sql`${t.level} IN ('BEGINNER', 'INTERMEDIATE', 'ALL')`),
+    check("community_sessions_topics", sql`cardinality(${t.topics}) <= 8`),
+    check("community_sessions_times", sql`${t.endsAt} > ${t.startsAt} AND ${t.endsAt} <= ${t.startsAt} + interval '6 hours'`),
+    check("community_sessions_capacity", sql`${t.capacity} IS NULL OR ${t.capacity} BETWEEN 2 AND 1000`),
+    check("community_sessions_urls", sql`(${t.callUrl} ~ '^https://[^\s]+$') AND (${httpsUrl(t.recordingUrl)})`),
+    check("community_sessions_notes", sql`${t.notes} IS NULL OR length(${t.notes}) <= 5000`),
+    check("community_sessions_cancelled", sql`(${t.cancelledAt} IS NULL) = (${t.cancelReason} IS NULL)`),
+    check("community_sessions_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+/** Who joined a session (and whether they got the reminder email). */
+export const communitySessionAttendees = pgTable(
+  "community_session_attendees",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => communitySessions.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    remindedAt: timestamp("reminded_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [uniqueIndex("community_session_attendees_one").on(t.sessionId, t.userId), index("community_session_attendees_user_idx").on(t.userId)],
 );

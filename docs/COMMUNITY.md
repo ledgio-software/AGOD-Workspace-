@@ -20,6 +20,9 @@ The website is now two things in one place:
 | `/showcase` | everyone | Projects members share (Phase 26), newest first; tabs *Needs review* (fewest reviews first) and *Shipped*; search by name, pitch or tool. |
 | `/showcase/<id>` | everyone (see below) | A project: screenshots, *Try it*, *Watch the demo*, code link, what they want feedback on, and the feedback. Signed-in members give feedback, report, and (the author) reply, edit, mark shipped, add screenshots or take it down. |
 | `/community/showcase/new` | signed in | *Share a project*: the handbook template with a live preview card. |
+| `/sessions` | everyone | Teaching sessions (Phase 27): upcoming (soonest first) and *Past sessions & recordings*. |
+| `/sessions/<id>` | everyone (call link: see below) | A session: time (Accra), length, level, topics, host, who's coming (signed in), *Join*, *Add to calendar*, recording and notes. |
+| `/community/sessions/new` | Reviewers and organizers | *Host a session*, with the handbook's session ideas. |
 | `/community` | signed in | Community home: getting-started checklist, chat links, new members, and the company workspace card (open yours, or create one). |
 | `/community/profile` | signed in | Edit your profile (and, without a company, change your password). |
 | `/community/reports` | organizers | Reported profiles: hide (with a note) or dismiss. |
@@ -71,9 +74,29 @@ Community roles are separate from company roles (Admin, Project Manager, Team Me
   lists projects waiting for feedback (fewest reviews first, not yours or ones you reviewed).
 - **Limits**: five projects a day per member.
 
+## Teaching sessions (Phase 27)
+
+- **Hosting**: members who agreed to the code of conduct and have the **Reviewer** badge (tick *I can
+  review work and mentor* on their profile), and organizers. A session has a title, what people will
+  learn, level (beginners, some experience, everyone), topics, date and start time (Accra), length
+  (15 minutes to 6 hours), optional seats and the **call link** (Google Meet, Zoom or a Discord
+  voice/stage channel: the call itself runs there). At most five upcoming sessions per host.
+- **The call link is private**: only the host, people who joined and organizers see it (on the page, in
+  emails and in the calendar file). Visitors see everything else and are asked to sign in.
+- **Joining** takes a seat (sessions with seats show *Full* when taken) and emails a confirmation with
+  the link and an **.ics calendar file** (Google Calendar, Outlook, Apple Calendar). *Add to calendar*
+  downloads the same file. *Leave* gives the seat back.
+- **Reminders**: the daily job (06:00 Accra) emails everyone who joined a session starting within the next
+  24 hours, once.
+- **Changes**: if the host changes the time or link, people who joined get an email with the new details
+  and calendar file (and a fresh reminder). Cancelling (host or organizer) emails everyone with a
+  calendar cancellation.
+- **Afterwards** the host adds the recording link (YouTube unlisted, Loom, Drive) and key notes; past
+  sessions form the recordings archive.
+
 ## Moderation
 
-Members can report profiles, projects and feedback. A member reports something with a reason (once per profile while it is open). Organizers see who
+Members can report profiles, projects, feedback and sessions. A member reports something with a reason (once per profile while it is open). Organizers see who
 reported it and why. **Hide it** makes it invisible to everyone but its owner and the
 organizers (who see the reason) and closes every open report about it; **dismiss** closes them without
 changes. Hidden things can be shown again from their page. Authors can take down their own projects. Deactivated logins disappear from the
@@ -91,8 +114,8 @@ Redeploy after changing them.
 
 ## For developers
 
-- Tables `member_profiles`, `community_reports`, `showcase_posts`, `showcase_images` and
-  `showcase_reviews` are shared by the whole platform (no
+- Tables `member_profiles`, `community_reports`, `showcase_posts`, `showcase_images`,
+  `showcase_reviews`, `community_sessions` and `community_session_attendees` are shared by the whole platform (no
   `organization_id`). The app role has no access; `src/modules/community` reads and writes them
   through the owner connection after its own checks (like the Google tables).
 - Public pages are listed in `src/proxy.ts`; they read the session when there is one
@@ -100,5 +123,4 @@ Redeploy after changing them.
 
 ## Next
 
-Teaching sessions with Google Meet (Phase 27), mentorship
-matching, the tools and prompts library and project of the month (Phase 28).
+Mentorship matching, the tools and prompts library and project of the month (Phase 28).

@@ -100,3 +100,40 @@ export function newReviewMessage(o: { name: string; reviewer: string; title: str
     footer: "You get this email when someone reviews one of your projects.",
   });
 }
+
+/** Phase 27: someone joined a teaching session (the .ics file is attached by the sender). */
+export function sessionJoinedMessage(o: { name: string; title: string; when: string; host: string; callUrl: string; url: string }) {
+  return message({
+    subject: `You're in: ${o.title}`,
+    name: o.name,
+    lines: [
+      `You joined "${o.title}" with ${o.host}, ${o.when} (Accra time).`,
+      `Join the call here when it starts: ${o.callUrl}`,
+      "The attached file adds it to your calendar. We'll also remind you on the day.",
+    ],
+    button: { label: "See the session", url: o.url },
+    footer: "Can't come after all? Leave the session on its page so someone else can take your place.",
+  });
+}
+
+export function sessionReminderMessage(o: { name: string; title: string; when: string; callUrl: string; url: string }) {
+  return message({
+    subject: `Today: ${o.title}`,
+    name: o.name,
+    lines: [`Reminder: "${o.title}" is ${o.when} (Accra time).`, `Join the call here: ${o.callUrl}`],
+    button: { label: "See the session", url: o.url },
+    footer: "You get this because you joined the session.",
+  });
+}
+
+export function sessionChangedMessage(o: { name: string; title: string; when: string; callUrl: string | null; url: string; cancelled: boolean; reason?: string | null }) {
+  return message({
+    subject: o.cancelled ? `Cancelled: ${o.title}` : `Changed: ${o.title}`,
+    name: o.name,
+    lines: o.cancelled
+      ? [`"${o.title}" (${o.when}) was cancelled${o.reason ? `: ${o.reason}` : "."}`, "The attached file removes it from your calendar."]
+      : [`"${o.title}" changed. It is now ${o.when} (Accra time).`, ...(o.callUrl ? [`Call link: ${o.callUrl}`] : []), "The attached file updates your calendar."],
+    button: { label: "See the session", url: o.url },
+    footer: "You get this because you joined the session.",
+  });
+}
