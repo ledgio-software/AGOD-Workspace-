@@ -126,6 +126,7 @@ export function AppShell({
   user,
   company,
   switcher,
+  messages,
   homeHref = "/dashboard",
   subtitle = "Projects & Payouts",
   children,
@@ -138,6 +139,8 @@ export function AppShell({
   subtitle?: string;
   /** Shown under the company name when the person belongs to several companies. */
   switcher?: React.ReactNode;
+  /** Phase 30: the message icon, next to the company name and in the phone's top bar. */
+  messages?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -159,7 +162,10 @@ export function AppShell({
   const sidebar = (
     <div className="flex h-full flex-col gap-6 px-3 py-5">
       <div className="space-y-3">
-        <Brand company={company} href={homeHref} subtitle={subtitle} />
+        <div className="flex items-center justify-between gap-2">
+          <Brand company={company} href={homeHref} subtitle={subtitle} />
+          {messages && <div className="hidden lg:block">{messages}</div>}
+        </div>
         {switcher}
       </div>
       <div className="flex-1 overflow-y-auto">
@@ -201,6 +207,7 @@ export function AppShell({
             <Menu className="size-5" aria-hidden />
           </button>
           <Brand company={company} href={homeHref} subtitle={subtitle} />
+          {messages && <div className="ml-auto">{messages}</div>}
         </header>
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>

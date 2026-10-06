@@ -65,6 +65,8 @@ rules, audit) lives behind these functions, not in the pages.
 | `/profitability` (+ `/profitability/export`) | `finance.view` | `getProfitability({ scope, category })`, `getRecurringRevenue` (`?view=recurring`), `getPayoutForecast`, `getPayoutAging`, `getUtilisation(month)` | |
 | `/team`, `/team/[id]` | `team.view` | `listTeam`, `getContributionHistory` | `team/actions` (`team.manage`) |
 | `/projects/[id]?tab=billing` | client project and `project.edit` or `invoice.view` | `getBilling` | `projects/[id]/billing-actions` (`project.edit`; invoicing `invoice.manage`) |
+| `/messages` (`?c=`, `?new=1`, `?to=`) | signed in to a company | `listConversations`, `openConversation`, `messageablePeople` | `messages/actions` (members of the conversation) |
+| `/api/messages/unread` | signed in to a company | `unreadMessageCount` | (GET, polled by the message icon) |
 | `/team/roles` | `team.view` | `listRoles`, `listJobTitles`, `needsTeamSetup` | `team/roles/actions` (`team.manage`; team type also `company.manage`) |
 | `/workload` | `workload.view` | `getWorkload` | |
 | `/summary` | `report.weekly` | `getWeeklySummary`, `summaryText` | |

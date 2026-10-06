@@ -1281,3 +1281,54 @@ export const billingStages = pgTable(
     check("billing_stages_signoff", sql`(${t.signedOffOn} IS NULL) = (${t.signedOffBy} IS NULL)`),
   ],
 );
+
+// Phase 30: in-app messages between people of the same company: one-to-one and small group
+// conversations. Only the people in a conversation can read it (row-level security); Admins
+// can't read other people's messages.
+
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    // Group conversations may have a name; one-to-one conversations don't.
+    title: text("title"),
+    createdBy: userRef("created_by").notNull(),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt,
+  },
+  (t) => [check("conversations_title", sql`${t.title} IS NULL OR length(btrim(${t.title})) BETWEEN 2 AND 80`)],
+);
+
+export const conversationMembers = pgTable(
+  "conversation_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("conversation_members_unique").on(t.conversationId, t.userId), index("conversation_members_user_idx").on(t.userId)],
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "restrict" }),
+    authorId: userRef("author_id").notNull(),
+    body: text("body").notNull(),
+    createdAt,
+  },
+  (t) => [
+    index("messages_conversation_idx").on(t.conversationId, t.createdAt),
+    check("messages_body", sql`length(btrim(${t.body})) BETWEEN 1 AND 4000`),
+  ],
+);

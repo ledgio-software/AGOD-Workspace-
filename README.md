@@ -234,6 +234,9 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 30 — Messages ✓
+- Private one-to-one and group conversations (up to 10 people) inside a company, a message icon with the unread count (sidebar and phone top bar), "Message" buttons on the Team pages, new messages appearing without reloading, and a daily reminder for messages unread over an hour (in My work and the daily email) (`docs/DECISIONS.md`)
+
 ### Phase 29 — Client money flow ✓
 - Client projects get a Billing tab: a payment plan (deposit, milestone and final payments; presets like 50/50 and 40/30/30), one invoice per payment with its status, client sign-off with a review deadline in working days, and change requests that add to the project's value once the client approves. Company settings: "no deposit, no work" and paying the team in step with what the client has paid (both also enforced by the database) (`docs/BILLING.md`)
 
