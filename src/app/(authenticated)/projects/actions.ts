@@ -19,6 +19,8 @@ import { removeAttachment, uploadAttachment } from "@/modules/attachments";
 import { addComment } from "@/modules/comments";
 import { recordCost, setProjectFinance, voidCost } from "@/modules/finance";
 import { createIssueForTask, linkTaskUrl, setProjectRepo, unlinkTask } from "@/modules/github";
+import { createProjectFolder } from "@/modules/google";
+import { addProjectLink, removeProjectLink } from "@/modules/links";
 import { createTask, updateTaskDetails, updateTaskProgress, waiveTask } from "@/modules/tasks";
 
 type Result = ActionResult<undefined>;
@@ -393,6 +395,36 @@ export async function removeFileAction(projectId: string, attachmentId: string):
     await removeAttachment(actor, attachmentId, await getRequestMeta());
     return undefined;
   }, "File removed.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function addLinkAction(projectId: string, taskId: string | null, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await addProjectLink(actor, { projectId, taskId, url: text(form, "url"), title: text(form, "title") }, await getRequestMeta());
+    return undefined;
+  }, "Link added.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function removeLinkAction(projectId: string, linkId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await removeProjectLink(actor, linkId, await getRequestMeta());
+    return undefined;
+  }, "Link removed.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function createDriveFolderAction(projectId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await createProjectFolder(actor, projectId);
+    return undefined;
+  }, "Drive folder ready and shared with the project team.");
   if (result.ok) refresh(projectId);
   return result;
 }

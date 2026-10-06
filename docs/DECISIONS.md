@@ -216,3 +216,15 @@ Phase 9 (file attachments in Vercel Blob).
 | Settings | Business name, address, contact details, tax ID, payment instructions (bank, MoMo), footer and default payment terms (14 days), printed on every PDF, including invoices issued earlier. |
 | Reminders | Overdue invoices remind the customer's account owner (once per due date); Admins are told after 14 days. In the app, the daily email and a Dashboard warning. |
 | Not included | Tax/VAT lines, discounts, credit notes, online card or MoMo collection, multi-currency invoices, recurring auto-issue. |
+
+## Phase 21 decisions (2026-10-06): Google Drive
+
+| Decision | Choice |
+|---|---|
+| Account | The team uses personal Gmail, which has no shared drives, so an **Admin connects one team Google account** (OAuth, offline access, PKCE). The app keeps an **AGOD** folder there with a folder per customer (with *Invoices*), per project (internal projects under *Internal projects*) and *Payment receipts*. One company account at a time; reconnecting the same account keeps its folders and files. |
+| Permission scope | `drive.file` only: the app sees nothing in that Drive except what it created. `calendar` is requested at the same time for Phases 22–23. |
+| Sharing | AGOD: Editor for every active PM and Admin. Project folders: Editor for the project's team members (owner, assigned people, task assignees), as the app's own project visibility rule. Synced daily and on demand; the app removes only access it granted. Shared with the email people sign in with (later: their connected Google account). No notification emails from Drive. |
+| Files | When Drive is connected, new uploads go to Drive (`gdrive:<connection>:<file>` storage key) and are still served through `/files/<id>` with the same access checks; earlier files stay in Blob. If Drive refuses, the upload falls back to Blob when it is configured. Issued invoice PDFs are saved to the customer's *Invoices* folder (best effort; retry button). |
+| Links | Links (https only) to Google Docs/Sheets/Slides/Drive or other pages on a project (managers) or a task (managers and the assignee); removed softly by whoever added them or a manager; visible with the project. |
+| Security | The refresh token is encrypted (AES-256-GCM, key derived from `BETTER_AUTH_SECRET`). Tokens and folder ids live in tables the app role cannot read at all; the server reads them through the owner connection after its own permission checks. The OAuth attempt (state, PKCE verifier, who started it) is kept in an encrypted, httpOnly, 10-minute cookie. |
+| Not included | Shared drives (Google Workspace), browsing Drive from the app, two-way sync of files added in Drive, per-person Drive accounts (Phase 22 adds personal Google connections for calendars). |

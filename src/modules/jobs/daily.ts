@@ -7,6 +7,7 @@ import { withActor } from "@/lib/db/actor";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { ServiceError } from "@/modules/errors";
 import { buildDigest } from "@/modules/email/digest";
+import { syncDrive } from "@/modules/google";
 import { refreshDeadlineAlerts } from "@/modules/notifications/deadlines";
 import { refreshInvoiceAlerts } from "@/modules/invoices";
 import { refreshRenewalAlerts } from "@/modules/subscriptions";
@@ -15,7 +16,7 @@ import { refreshRenewalAlerts } from "@/modules/subscriptions";
 // approval and renewal reminders (the same ones the app creates when they open it), then emails
 // each person who wants it one summary of their unread notifications not emailed before.
 // Runs through the owner connection like the GitHub webhook; reminders are created as each person,
-// under their own permissions.
+// under their own permissions. Phase 21: then it creates and shares the Google Drive folders.
 
 export const DAILY_JOB = "daily-reminders";
 /** Only recent notifications are emailed, so turning email on doesn't send a long backlog. */
@@ -30,10 +31,12 @@ export type DailySummary = {
   emailsSent: number;
   emailFailures: number;
   emailsSkipped: number;
+  /** Phase 21: Drive folder and sharing sync; absent when Google isn't connected. */
+  drive?: { folders: number; shared: number; unshared: number; failures: number } | { error: string };
 };
 
 export async function runDailyReminders(
-  options: { now?: Date; email?: EmailConfig | null; /** Limits the run to these people (tests). */ userIds?: string[] } = {},
+  options: { now?: Date; email?: EmailConfig | null; /** Limits the run to these people (tests). */ userIds?: string[]; drive?: boolean } = {},
 ): Promise<DailySummary> {
   const now = options.now ?? new Date();
   const email = options.email === undefined ? emailConfig() : options.email;
@@ -79,9 +82,19 @@ export async function runDailyReminders(
       }
     }
 
+    if (options.drive !== false) {
+      try {
+        const drive = await syncDrive();
+        if (drive) summary.drive = { folders: drive.folders, shared: drive.shared, unshared: drive.unshared, failures: drive.failures.length };
+      } catch (error) {
+        summary.drive = { error: error instanceof Error ? error.message.slice(0, 300) : String(error) };
+        console.error("Drive sync failed", summary.drive.error);
+      }
+    }
+
     await db
       .update(jobRuns)
-      .set({ finishedAt: new Date(), ok: summary.reminderFailures === 0 && summary.emailFailures === 0, summary })
+      .set({ finishedAt: new Date(), ok: summary.reminderFailures === 0 && summary.emailFailures === 0 && !(summary.drive && "error" in summary.drive), summary })
       .where(eq(jobRuns.id, run.id));
     return summary;
   } catch (error) {

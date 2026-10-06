@@ -46,6 +46,7 @@ const matrix: Record<Action, [boolean, boolean, boolean]> = {
   "invoice.manage": [false, true, true],
   "invoice.recordPayment": [false, false, true],
   "invoice.settings": [false, false, true],
+  "google.manage": [false, false, true],
 };
 
 describe("can: role matrix", () => {

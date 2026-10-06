@@ -30,7 +30,7 @@ rules, audit) lives behind these functions, not in the pages.
 | `/my-work` | everyone | `getMyWork` (tasks, payouts, notifications) | `my-work/actions`: `markNotificationsReadAction`; task progress uses `projects/actions` |
 | `/projects` | everyone (own projects for members) | `listProjects` | |
 | `/projects/new` (`?customer=<id>` presets the customer) | `project.create` | `listActiveMembers`, `listCustomerOptions` | `createProjectAction` (`customerId`, or `clientName` for a new customer) |
-| `/projects/[id]` | anyone who can see the project | `getProjectWorkspace`, `getProjectPayouts`, `listComments`, `listProjectAttachments`, `getProjectGithub`, `getProjectFinance` (`finance.view`), `listTemplates` | `projects/actions`: project edit/status/health, team (`addAssignmentAction`, ...), milestones, tasks, approvals, comments, GitHub, files, finance (`projectFinanceAction`, `recordCostAction`, `voidCostAction`) |
+| `/projects/[id]` | anyone who can see the project | `getProjectWorkspace`, `getProjectPayouts`, `listComments`, `listProjectAttachments`, `getProjectGithub`, `getProjectFinance` (`finance.view`), `listTemplates`, `listProjectLinks`, `driveFolderLink` | `projects/actions`: project edit/status/health, team (`addAssignmentAction`, ...), milestones, tasks, approvals, comments, GitHub, files, links (`addLinkAction`, `removeLinkAction`), Drive (`createDriveFolderAction`), finance (`projectFinanceAction`, `recordCostAction`, `voidCostAction`) |
 | `/customers` | `customer.view` | `listCustomers({ q, status })` | |
 | `/customers/new`, `/customers/[id]` | `customer.view` | `getCustomer` | `customers/actions` (`customer.manage`): customer create/edit/archive/restore, contacts add/edit/deactivate |
 | `/subscriptions` | `subscription.view` | `listSubscriptions({ q, status, attention, within, customerId })`, `recurringTotals` | |
@@ -38,10 +38,10 @@ rules, audit) lives behind these functions, not in the pages.
 | `/subscriptions/[id]` | `subscription.view` | `getSubscription`, `renewalSuggestion` | `subscriptions/actions`: `changeStatusAction`, `updateDraftAction`, `amendAction`, `renewAction`, `updateDetailsAction` |
 | `/services` | `subscription.view` | `listServices` | `createServiceAction`, `updateServiceAction`, `setServiceActiveAction` |
 | `/account` | everyone | `getDailyEmail` | `account/actions`: `setDailyEmailAction` |
-| `/integrations` | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction` |
+| `/integrations` (`?google=<result>`) | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig`, `googleStatus` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction`, `syncDriveAction`, `disconnectGoogleAction` (`google.manage`); `/api/google/connect` → Google → `/api/google/callback` |
 | `/invoices` | `invoice.view` | `listInvoices({ q, state, customerId })`, `invoiceTotals` | `invoices/actions`: `prepareAction` |
 | `/invoices/new` (`?customer=<id>`) | `invoice.manage` | `listCustomerOptions` | `createDraftAction` |
-| `/invoices/[id]` (+ `/invoices/[id]/pdf`) | `invoice.view` | `getInvoice`, `invoiceSources` (drafts) | `addLineAction`, `addPeriodAction`, `removeLineAction`, `notesAction`, `issueAction`, `deleteDraftAction`, `sendAction`, `voidAction`; `paymentAction`, `voidPaymentAction` (`invoice.recordPayment`) |
+| `/invoices/[id]` (+ `/invoices/[id]/pdf`) | `invoice.view` | `getInvoice`, `invoiceSources` (drafts) | `addLineAction`, `addPeriodAction`, `removeLineAction`, `notesAction`, `issueAction`, `deleteDraftAction`, `sendAction`, `voidAction`, `saveToDriveAction`; `paymentAction`, `voidPaymentAction` (`invoice.recordPayment`) |
 | `/invoices/settings` | `invoice.settings` | `getInvoiceSettings` | `settingsAction` |
 | `/projects/[id]/statement` | anyone who can see the project | `getProjectStatement` | |
 | `/payouts/[id]` | the payee, managers | `getPayout`, `questionsForPayout`, `listPaymentReceipts` | `payouts/actions`: payments, adjustments, questions, receipts |

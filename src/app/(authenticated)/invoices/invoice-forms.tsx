@@ -299,3 +299,13 @@ export function SettingsForm({ action, defaults }: { action: Action; defaults: S
     </ActionForm>
   );
 }
+
+export function SaveToDriveButton({ action }: { action: Plain }) {
+  return (
+    <ActionForm action={wrapPlain(action)}>
+      <SubmitButton variant="secondary" pendingText="Saving…">
+        Save to Drive
+      </SubmitButton>
+    </ActionForm>
+  );
+}

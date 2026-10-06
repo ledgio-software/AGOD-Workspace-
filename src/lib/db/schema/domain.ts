@@ -910,6 +910,8 @@ export const invoices = pgTable(
     voidReason: text("void_reason"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     sentTo: text("sent_to"),
+    // Phase 21: the PDF saved in the customer's Drive "Invoices" folder when issued.
+    driveFileId: text("drive_file_id"),
     version: integer("version").notNull().default(1),
     createdAt,
     updatedAt,
@@ -1020,4 +1022,85 @@ export const invoiceSettings = pgTable(
     updatedAt,
   },
   (t) => [check("invoice_settings_singleton", sql`${t.id} = 1`), check("invoice_settings_due_days", sql`${t.defaultDueDays} BETWEEN 0 AND 120`)],
+);
+
+// Phase 21: Google (Drive now, Calendar next). One COMPANY connection (the AGOD Google account an
+// Admin connects) and, later, PERSONAL ones. Tokens are encrypted and only read by the server
+// through the owner connection: the app role has no access to these tables at all.
+export const googleConnectionKind = pgEnum("google_connection_kind", ["COMPANY", "PERSONAL"]);
+
+export const googleConnections = pgTable(
+  "google_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: googleConnectionKind("kind").notNull(),
+    // COMPANY: the Admin who connected it. PERSONAL: whose calendar it is.
+    userId: userRef("user_id").notNull(),
+    googleEmail: text("google_email").notNull(),
+    // AES-256-GCM, key derived from BETTER_AUTH_SECRET.
+    refreshTokenEnc: text("refresh_token_enc").notNull(),
+    scopes: text("scopes").notNull(),
+    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
+    // The last folder and sharing sync (COMPANY): when, and what it did.
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    lastSync: jsonb("last_sync"),
+  },
+  (t) => [
+    uniqueIndex("google_connections_one_company").on(t.kind).where(sql`${t.kind} = 'COMPANY' AND ${t.disconnectedAt} IS NULL`),
+    uniqueIndex("google_connections_one_personal").on(t.userId).where(sql`${t.kind} = 'PERSONAL' AND ${t.disconnectedAt} IS NULL`),
+  ],
+);
+
+/** Drive folders the app created, by what they hold. */
+export const driveFolders = pgTable(
+  "drive_folders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => googleConnections.id, { onDelete: "restrict" }),
+    // ROOT (the "AGOD" folder), CUSTOMER, CUSTOMER_INVOICES, PROJECT, INTERNAL (internal projects),
+    // RECEIPTS (payment receipts).
+    purpose: text("purpose").notNull(),
+    entityId: uuid("entity_id"),
+    folderId: text("folder_id").notNull(),
+    webViewLink: text("web_view_link"),
+    // Google accounts the folder is shared with (as the app last set it).
+    sharedWith: jsonb("shared_with").notNull().default(sql`'[]'::jsonb`),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("drive_folders_purpose_entity").on(t.connectionId, t.purpose, sql`coalesce(${t.entityId}, '00000000-0000-0000-0000-000000000000'::uuid)`),
+    check("drive_folders_purpose", sql`${t.purpose} IN ('ROOT', 'CUSTOMER', 'CUSTOMER_INVOICES', 'PROJECT', 'INTERNAL', 'RECEIPTS')`),
+  ],
+);
+
+/** Phase 21: links to files elsewhere (Google Drive, or any https URL) on a project or task. */
+export const projectLinks = pgTable(
+  "project_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "restrict" }),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    // GOOGLE_DRIVE when the URL is a Google Docs/Sheets/Slides/Drive link.
+    provider: text("provider").notNull(),
+    addedBy: userRef("added_by").notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: userRef("removed_by"),
+    createdAt,
+  },
+  (t) => [
+    index("project_links_project_idx").on(t.projectId),
+    check("project_links_https", sql`${t.url} ~ '^https://'`),
+    check("project_links_title", sql`length(btrim(${t.title})) >= 1`),
+    check("project_links_provider", sql`${t.provider} IN ('GOOGLE_DRIVE', 'WEB')`),
+    check("project_links_removed_pair", sql`(${t.removedAt} IS NULL) = (${t.removedBy} IS NULL)`),
+  ],
 );
