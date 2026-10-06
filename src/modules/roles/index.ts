@@ -283,7 +283,11 @@ export async function applyTeamType(actor: Actor, raw: TeamType, request?: Reque
   assertCan(actor, "company.manage");
   const teamType = teamTypeInput.parse(raw);
   return withActor(actor, async (tx) => {
-    await tx.update(organizations).set({ teamType }).where(eq(organizations.id, actor.orgId));
+    // Phase 32: fintech teams get release approvals switched on (they can switch them off on the Company page).
+    await tx
+      .update(organizations)
+      .set({ teamType, ...(teamType === "FINTECH" ? { releaseControl: true } : {}) })
+      .where(eq(organizations.id, actor.orgId));
     const haveTitles = new Set((await tx.select({ name: jobTitles.name }).from(jobTitles)).map((r) => r.name.toLowerCase()));
     const titles = JOB_TITLE_PRESETS[teamType].filter((n) => !haveTitles.has(n.toLowerCase()));
     if (titles.length > 0) await tx.insert(jobTitles).values(titles.map((name) => ({ name })));

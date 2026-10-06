@@ -87,7 +87,7 @@ titles** by copying a role and switching permission groups off. The groups (`PER
 | Group | Actions | Lowest built-in role with it |
 |---|---|---|
 | Create and edit projects | `project.create`, `project.edit`, `project.configureCompensation`, `project.overrideHealth`, `template.manage`, `task.update` (any task) | Project Manager |
-| Approve finished projects | `project.approve`, `project.reject` | Project Manager |
+| Approve finished projects | `project.approve`, `project.reject`, `release.approve` | Project Manager |
 | Reopen approved projects | `project.reopen` | Admin |
 | See everyone's payouts | `payout.viewAll`, `ledger.export`, `period.view`, `payoutQuestion.review` | Project Manager |
 | Pay the team | `payment.record`, `adjustment.create`, `payoutQuestion.resolve`, `period.close` | Admin |
@@ -135,6 +135,20 @@ company pays the team in step with the client).
 Row-level security: `app_in_conversation()` limits `conversations`, `conversation_members` and
 `messages` to the people in each conversation; messages are written only as yourself and never
 updated or deleted by the app role.
+
+### Release approvals (Phase 32)
+
+| Action | Team Member | Project Manager | Admin |
+|---|:---:|:---:|:---:|
+| Write, submit, security-check, deploy and roll back releases on projects they can see (`release.manage`) | own projects | ✓ | ✓ |
+| Approve or reject releases (`release.approve`, group "Approve finished projects") | | ✓ | ✓ |
+| Switch release approvals on or off (`company.manage`) | | | ✓ |
+| Download the release evidence CSV (`audit.viewAll`) | | | ✓ |
+
+Nobody security-checks, approves or deploys a release they wrote (unless the company allows one
+person to approve and pay their own work). Row-level security: `releases` follow the project
+(`app_can_view_project`); the trigger `releases_guard` enforces the order of steps and the
+"not the author" rules.
 
 ### Community (Phase 25)
 

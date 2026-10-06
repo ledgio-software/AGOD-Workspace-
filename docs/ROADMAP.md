@@ -53,6 +53,6 @@ Later: jobs board, team finder, badges, events calendar, partners page and metri
 From the workflow research (software and fintech teams, October 2026). Done: company-made roles,
 job titles, "what kind of team are you?" set-up, two people for money (Phase 28); client money
 flow: payment plans, deposit rule, client sign-off, change requests, paying the team in step with
-the client (Phase 29); in-app messages with an unread icon (Phase 30). Later: fintech extras
-(security check, release approval, evidence export), tax rates as settings (withholding tax on
-client payments), and a client portal for online sign-off.
+the client (Phase 29); in-app messages with an unread icon (Phase 30); release approvals with a security
+check, an emergency path and evidence export for auditors (Phase 32). Later: tax rates as settings
+(withholding tax on client payments), and a client portal for online sign-off.

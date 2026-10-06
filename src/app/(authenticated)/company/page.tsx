@@ -4,8 +4,8 @@ import { Card, PageHeader } from "@/components/ui";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getOrganization } from "@/modules/orgs";
-import { moneyFlowAction, selfApprovalAction, updateCompanyAction } from "./actions";
-import { CompanyForm, MoneyFlowForm, SelfApprovalForm } from "./company-form";
+import { moneyFlowAction, releaseControlAction, selfApprovalAction, updateCompanyAction } from "./actions";
+import { CompanyForm, MoneyFlowForm, ReleaseControlForm, SelfApprovalForm } from "./company-form";
 
 export default async function CompanyPage() {
   const actor = await requireUser();
@@ -48,6 +48,16 @@ export default async function CompanyPage() {
             </p>
           )}
           <SelfApprovalForm action={selfApprovalAction} allow={org.allowSelfApproval} />
+        </div>
+      </Card>
+      <Card title="Release approvals" aside={org.releaseControl ? <Badge tone="green">On</Badge> : <Badge tone="gray">Off</Badge>}>
+        <div className="space-y-4 text-sm">
+          <p className="text-muted">
+            For teams that must show who changed what, such as fintech teams. Before a change goes live, someone writes down what changes, why, how it
+            was tested and how to undo it. Someone else checks security, a manager approves, and someone other than the author marks it deployed.
+            Admins can download the record for auditors from the Releases page.
+          </p>
+          <ReleaseControlForm action={releaseControlAction} on={org.releaseControl} />
         </div>
       </Card>
     </div>

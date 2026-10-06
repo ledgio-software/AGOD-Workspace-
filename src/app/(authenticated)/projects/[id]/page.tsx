@@ -30,9 +30,11 @@ import { approvalBlockFor, getProjectPayouts } from "@/modules/approvals";
 import { activeJobTitleNames } from "@/modules/roles";
 import { canSeeBilling, getBilling } from "@/modules/billing";
 import { BillingTab } from "./billing-tab";
+import { ReleasesTab } from "./releases-tab";
 import { type AttachmentView, attachmentsAvailable, listProjectAttachments } from "@/modules/attachments";
 import { listComments } from "@/modules/comments";
 import { getProjectFinance } from "@/modules/finance";
+import { listProjectReleases, releaseControlOn } from "@/modules/releases";
 import { getProjectGithub, isGithubConfigured } from "@/modules/github";
 import { companyConnection, driveFolderLink, isGoogleConfigured } from "@/modules/google";
 import { listMeetings, meetingsAvailable } from "@/modules/google/calendar";
@@ -97,7 +99,7 @@ import {
   WaiveForm,
 } from "./workspace-forms";
 
-const TABS = ["overview", "tasks", "team", "billing", "discussion", "files", "activity"] as const;
+const TABS = ["overview", "tasks", "team", "billing", "releases", "discussion", "files", "activity"] as const;
 type Tab = (typeof TABS)[number];
 
 function Meta({ label, children }: { label: string; children: React.ReactNode }) {
@@ -165,6 +167,9 @@ export default async function ProjectWorkspacePage({
   // Phase 29: client projects have a Billing tab (payment plan, sign-off, change requests).
   const billing = project.clientType === "EXTERNAL" && canSeeBilling(actor) ? await getBilling(actor, project.id) : null;
   const depositPending = !!billing?.settings.requireDeposit && billing.depositPaid !== true;
+  // Phase 32: release approvals (a company setting); the tab stays while the project has releases.
+  const [releaseControl, projectReleases] = await Promise.all([releaseControlOn(actor), listProjectReleases(actor, project.id)]);
+  const showReleases = releaseControl || projectReleases.length > 0;
   const toLinks = (list: LinkView[]): LinkItem[] =>
     list.map((l) => ({
       id: l.id,
@@ -198,6 +203,7 @@ export default async function ProjectWorkspacePage({
     { key: "tasks", label: "Tasks", count: ws.tasks.length },
     { key: "team", label: isManager ? "Team & money" : "Team" },
     ...(billing ? [{ key: "billing" as const, label: "Billing", count: billing.stages.length }] : []),
+    ...(showReleases ? [{ key: "releases" as const, label: "Releases", count: projectReleases.length }] : []),
     { key: "discussion", label: "Discussion", count: discussion.length },
     { key: "files", label: "Files", count: files.project.length + taskFileCount + links.project.length + taskLinkCount },
     { key: "activity", label: "Activity" },
@@ -954,6 +960,10 @@ export default async function ProjectWorkspacePage({
       )}
 
       {/* Discussion */}
+      {tab === "releases" && showReleases && (
+        <ReleasesTab projectId={project.id} releases={projectReleases} canCreate={releaseControl && can(actor, "release.manage", { isProjectMember: true }) && project.status !== "CANCELLED"} />
+      )}
+
       {tab === "billing" && billing && <BillingTab actor={actor} billing={billing} milestones={ws.milestones.map((m) => ({ id: m.id, title: m.title }))} />}
 
       {tab === "discussion" && (

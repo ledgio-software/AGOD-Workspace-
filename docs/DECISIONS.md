@@ -371,3 +371,19 @@ Phase 9 (file attachments in Vercel Blob).
 | Library | Tools and guides need a link; prompts need the text (no passwords or personal data, the form says). Tags, "works on slow internet", "free". "Useful" marks (one per member, not on your own). Organizers feature and hide; 10 new items a day per member. Public, so visitors learn too. |
 | Project of the month | One vote per member per month (Accra time), movable until the month ends, never for your own project. The month's leader wins; ties go to whoever reached the count first. Organizers can override with a note (shown). Settled by the daily job, and lazily by the first page that shows it. |
 | Not included | Mentorship sessions tracking, ratings of mentors, comments on library items, prizes. |
+
+## Phase 32 decisions (2026-10-06): release approvals (fintech extras)
+
+| Decision | Choice |
+|---|---|
+| What | Change control for teams that must show who changed what (fintech, banks' suppliers): every change going live is a release on its project with what changes, why, how it was tested, how to undo it and its security impact (low, medium, high). Details in `docs/RELEASES.md`. |
+| Switch | Company setting "Release approvals", off by default and on for fintech teams (sign-up or "What kind of team are you?"). Changing it needs a reason and is audited. With it off, existing releases stay visible. |
+| Steps | Draft → submitted → approved or rejected → deployed → (rolled back). A submitted release can't be edited; it can go back to draft only before the security check. |
+| Not the author | The security check, the approval and the deployment are each done by someone other than the author (the approver also not the person who submitted it). A company that allows one person to approve and pay their own work (Phase 28) also allows this, so one-manager teams aren't stuck. |
+| Security check | Anyone on the project other than the author, with a note on what they checked. Needed before a high-impact release can be approved; optional otherwise. |
+| Who approves | Managers with "Approve finished projects" (`release.approve`). Anyone on the project writes releases, does the security check, deploys and records rollbacks (`release.manage`). |
+| Emergency | A release marked emergency can be deployed once submitted, before approval, by someone other than the author with a written reason; managers are told and approve or reject it afterwards. Rejecting a deployed release asks for a rollback. |
+| Enforced by | The release service and the database (`releases_guard`: order of steps, no edits after submitting, each step recorded once, not the author, managers decide, the security check first for high impact). |
+| Evidence | Admins with "Company settings" (`audit.viewAll`) download a CSV of every release written in a date range with each step, who did it (name and email) and when, and two yes/no columns saying the approval and deployment were by someone other than the author. Each download is audited. |
+| Not included | Links to a deployment pipeline (CI/CD gates), automatic release notes, four-eyes on infrastructure changes outside the app, tax settings. |
+

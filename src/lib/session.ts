@@ -12,7 +12,7 @@ import type { PermissionKey, Role } from "@/lib/permissions";
 /** The company a person is working in, remembered per browser (Phase 22). */
 export const COMPANY_COOKIE = "gvcd_company";
 
-export type Company = { id: string; name: string; role: Role; companyRoleId: string | null; joinedAt: Date };
+export type Company = { id: string; name: string; releaseControl: boolean; role: Role; companyRoleId: string | null; joinedAt: Date };
 
 export type CurrentUser = {
   id: string;
@@ -26,6 +26,8 @@ export type CurrentUser = {
   roleName: string;
   orgId: string;
   orgName: string;
+  /** Phase 32: whether the current company has release approvals switched on (for the menu). */
+  releaseControl: boolean;
   /** Every company this person is an active member of (for the switcher). */
   companies: Company[];
 };
@@ -43,7 +45,7 @@ export const getSignedIn = cache(async (): Promise<SignedIn | null> => {
 /** The companies a person is an active member of, by name. */
 export async function companiesOf(userId: string): Promise<Company[]> {
   return db
-    .select({ id: organizations.id, name: organizations.name, role: memberships.role, companyRoleId: memberships.companyRoleId, joinedAt: memberships.createdAt })
+    .select({ id: organizations.id, name: organizations.name, releaseControl: organizations.releaseControl, role: memberships.role, companyRoleId: memberships.companyRoleId, joinedAt: memberships.createdAt })
     .from(memberships)
     .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
     .where(and(eq(memberships.userId, userId), eq(memberships.active, true)))
@@ -74,7 +76,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     permissions = (custom?.permissions ?? []) as PermissionKey[];
     roleName = custom?.name ?? roleName;
   }
-  return { ...user, role: current.role, permissions, roleName, orgId: current.id, orgName: current.name, companies };
+  return { ...user, role: current.role, permissions, roleName, orgId: current.id, orgName: current.name, releaseControl: current.releaseControl, companies };
 });
 
 /**

@@ -1332,3 +1332,62 @@ export const messages = pgTable(
     check("messages_body", sql`length(btrim(${t.body})) BETWEEN 1 AND 4000`),
   ],
 );
+
+// Phase 32: change control for regulated (fintech) teams. Each release of a project's software is
+// recorded with what changed, why, its security impact, how it was tested and how to undo it, and
+// goes through approval by someone who didn't write it before it is deployed. Urgent fixes may be
+// deployed first and approved afterwards (emergency path).
+
+export const releases = pgTable(
+  "releases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    versionLabel: text("version_label"),
+    changeSummary: text("change_summary").notNull(),
+    reason: text("reason").notNull(),
+    // LOW, MEDIUM, HIGH; HIGH needs a security review by someone other than the author.
+    securityImpact: text("security_impact").notNull(),
+    testEvidence: text("test_evidence").notNull(),
+    rollbackPlan: text("rollback_plan").notNull(),
+    emergency: boolean("emergency").notNull().default(false),
+    // DRAFT → SUBMITTED → APPROVED → DEPLOYED (→ ROLLED_BACK); or REJECTED. Emergency: SUBMITTED →
+    // DEPLOYED, approved afterwards (decided_* set while DEPLOYED).
+    status: text("status").notNull().default("DRAFT"),
+    createdBy: userRef("created_by").notNull(),
+    submittedBy: userRef("submitted_by"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    securityReviewedBy: userRef("security_reviewed_by"),
+    securityReviewedAt: timestamp("security_reviewed_at", { withTimezone: true }),
+    securityNote: text("security_note"),
+    decidedBy: userRef("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decision: text("decision"),
+    decisionNote: text("decision_note"),
+    deployedBy: userRef("deployed_by"),
+    deployedAt: timestamp("deployed_at", { withTimezone: true }),
+    deployNote: text("deploy_note"),
+    rolledBackBy: userRef("rolled_back_by"),
+    rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+    rollbackNote: text("rollback_note"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("releases_project_idx").on(t.projectId),
+    index("releases_status_idx").on(t.status),
+    check("releases_status", sql`${t.status} IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'DEPLOYED', 'ROLLED_BACK')`),
+    check("releases_impact", sql`${t.securityImpact} IN ('LOW', 'MEDIUM', 'HIGH')`),
+    check("releases_decision", sql`${t.decision} IS NULL OR ${t.decision} IN ('APPROVED', 'REJECTED')`),
+    check("releases_title", sql`length(btrim(${t.title})) BETWEEN 3 AND 200`),
+    check(
+      "releases_texts",
+      sql`length(btrim(${t.changeSummary})) BETWEEN 10 AND 4000 AND length(btrim(${t.reason})) BETWEEN 3 AND 2000
+        AND length(btrim(${t.testEvidence})) BETWEEN 3 AND 4000 AND length(btrim(${t.rollbackPlan})) BETWEEN 3 AND 2000`,
+    ),
+  ],
+);
