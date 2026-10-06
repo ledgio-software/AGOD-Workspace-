@@ -260,6 +260,20 @@
       "when": 1791282583661,
       "tag": "20261006102943_community_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791284493971,
+      "tag": "20261006110133_showcase",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791284494964,
+      "tag": "20261006110134_showcase_rules",
+      "breakpoints": true
     }
   ]
 }

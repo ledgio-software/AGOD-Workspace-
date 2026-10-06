@@ -59,6 +59,7 @@ export function navGroups(actor: Actor): NavGroup[] {
 export function communityGroup(o: { organizer: boolean }): NavGroup {
   const items: NavItem[] = [
     { href: "/community", label: "Community home", icon: "community" },
+    { href: "/showcase", label: "Showcase", icon: "showcase" },
     { href: "/members", label: "Members", icon: "members" },
     { href: "/community/profile", label: "My profile", icon: "profile" },
   ];

@@ -89,7 +89,11 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | See members-only profiles | | ✓ | ✓ |
 | Edit own profile; create a company workspace (while sign-up is open) | | ✓ | ✓ |
 | Report a profile | | ✓ | ✓ |
-| See reports; hide or show profiles; make or remove organizers | | | ✓ |
+| See public projects and their feedback and screenshots | ✓ | ✓ | ✓ |
+| See members-only projects | | ✓ | ✓ |
+| Share a project (after agreeing to the code of conduct); edit, mark shipped, add screenshots, take down own projects; reply to feedback on them | | ✓ | ✓ |
+| Give feedback (not on own projects); report projects and feedback | | ✓ | ✓ |
+| See reports; hide or show profiles, projects and feedback; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
 another, and no role ever reaches another company's data. An Admin sets a temporary password only for

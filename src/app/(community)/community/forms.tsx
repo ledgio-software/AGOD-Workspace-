@@ -136,7 +136,7 @@ export function ResolveReportForm({ reportId }: { reportId: string }) {
       </Field>
       <div className="flex flex-wrap gap-2">
         <button type="submit" name="action" value="HIDE" className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">
-          Hide the profile
+          Hide it
         </button>
         <button type="submit" name="action" value="DISMISS" className="rounded-lg border border-line-strong px-3 py-1.5 text-sm font-medium hover:bg-surface-muted">
           Nothing wrong: dismiss

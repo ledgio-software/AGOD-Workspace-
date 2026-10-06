@@ -26,6 +26,9 @@ export default async function PublicLayout({ children }: { children: React.React
             <span className="hidden truncate text-sm font-semibold sm:block">{PRODUCT_NAME}</span>
           </Link>
           <nav aria-label="Community" className="ml-2 flex items-center gap-1 text-sm">
+            <Link href="/showcase" className="rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+              Showcase
+            </Link>
             <Link href="/members" className="rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
               Members
             </Link>
