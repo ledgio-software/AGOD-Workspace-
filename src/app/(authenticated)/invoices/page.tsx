@@ -29,7 +29,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <PageHeader
         eyebrow="Money"
         title="Invoices"
-        description="What customers owe AGOD: drafts, issued invoices and payments received."
+        description="What customers owe the company: drafts, issued invoices and payments received."
         actions={
           <>
             {can(actor, "invoice.settings") && (

@@ -44,6 +44,16 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       await sendAccountEmail(user.email, resetPasswordMessage({ name: user.name, url }));
     },
+    // Phase 28: opening a reset link proves the person owns the address, so it also confirms it
+    // (otherwise someone who never confirmed is still stopped at sign-in after choosing a password).
+    onPasswordReset: async ({ user }) => {
+      if (user.emailVerified) return;
+      await db.update(schema.users).set({ emailVerified: true }).where(eq(schema.users.id, user.id));
+      await welcomeNewMember({ id: user.id, name: user.name, email: user.email }).catch((error) =>
+        console.error("Creating the member profile failed", user.id, error instanceof Error ? error.message : error),
+      );
+      await finishSignUp(user.id);
+    },
     // Signing up with an address that already has a login reveals nothing; its owner is told.
     onExistingUserSignUp: async ({ user }) => {
       await sendAccountEmail(user.email, existingSignUpMessage({ name: user.name, signInUrl: appUrl("/sign-in"), resetUrl: appUrl("/forgot-password") }));

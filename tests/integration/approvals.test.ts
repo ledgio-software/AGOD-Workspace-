@@ -372,7 +372,7 @@ describe("AGOD share", () => {
 
     const [snapshot] = await db.select().from(compensationSnapshots).where(eq(compensationSnapshots.projectId, project.id));
     expect(snapshot).toMatchObject({ agodShareBasisPoints: 3_000, agodShareMinor: 3_001, calculationVersion: 2 });
-    expect(snapshot.calculationNotes).toMatch(/AGOD share \(30%\): GHS 30.01/);
+    expect(snapshot.calculationNotes).toMatch(/Company share \(30%\): GHS 30.01/);
     const ledger = await db.select().from(payoutLedgerEntries).where(eq(payoutLedgerEntries.projectId, project.id));
     expect(Object.fromEntries(ledger.map((e) => [e.memberId, e.amountOwedMinor]))).toEqual({ [a.id]: 3_500, [b.id]: 3_500 });
 
@@ -380,7 +380,7 @@ describe("AGOD share", () => {
     expect(finance.financials).toMatchObject({ revenueMinor: 10_001, committedPayoutMinor: 7_000, actualProfitMinor: 3_001 });
     const statement = (await getProjectStatement(pm, project.id))!;
     expect(statement.checks.every((c) => c.ok)).toBe(true);
-    expect(statement.checks.map((c) => c.label).join()).toMatch(/plus the AGOD share equal/);
+    expect(statement.checks.map((c) => c.label).join()).toMatch(/plus the company share equal/);
   });
 
   it("fixed-amount projects keep no share percentage, and the database refuses one", async () => {
@@ -395,6 +395,6 @@ describe("AGOD share", () => {
     });
     expect(project.agodShareBasisPoints).toBe(0);
     await expectDbError(db.update(projects).set({ agodShareBasisPoints: 1_000 }).where(eq(projects.id, project.id)), /projects_agod_share_valid/);
-    await expect(updateProject(pm, project.id, { ...project, totalValue: "100", splitMode: "PERCENTAGE", agodShare: "120", clientName: null, version: project.version })).rejects.toThrow(/AGOD share/);
+    await expect(updateProject(pm, project.id, { ...project, totalValue: "100", splitMode: "PERCENTAGE", agodShare: "120", clientName: null, version: project.version })).rejects.toThrow(/company share/);
   });
 });

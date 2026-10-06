@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { adjustments, paymentTransactions, payoutLedgerEntries, projects, users } from "@/lib/db/schema";
+import { adjustments, organizations, paymentTransactions, payoutLedgerEntries, projects, users } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { formatMoney, parseMoney } from "@/lib/money";
 import { type Actor, assertCan } from "@/lib/permissions";
@@ -65,6 +65,15 @@ function rethrowGuard(error: unknown): never {
   throw error;
 }
 
+/** Phase 28, two people for money (the database refuses it too). */
+async function assertNotOwnPayout(tx: Tx, actor: Actor, payeeId: string) {
+  if (payeeId !== actor.id) return;
+  const [org] = await tx.select({ allow: organizations.allowSelfApproval }).from(organizations).where(eq(organizations.id, actor.orgId));
+  if (!org?.allow) {
+    throw new ServiceError("This is your own payout, so someone else must record it. A company with only one Admin can allow this on the Company page.");
+  }
+}
+
 async function loadEntry(tx: Tx, entryId: string) {
   const [row] = await tx
     .select({ entry: payoutLedgerEntries, projectCode: projects.code, projectName: projects.name })
@@ -100,6 +109,7 @@ export async function recordPayment(
   if (input.paidOn > todayInOperatingZone()) throw new ServiceError("The payment date cannot be in the future.");
   return withActor(actor, async (tx) => {
     const { entry, projectCode, projectName } = await loadEntry(tx, entryId);
+    await assertNotOwnPayout(tx, actor, entry.memberId);
     let payment;
     try {
       [payment] = await tx
@@ -173,6 +183,7 @@ export async function createAdjustmentTx(
 ) {
   assertCan(actor, "adjustment.create");
   const { entry, projectCode } = await loadEntry(tx, entryId);
+  await assertNotOwnPayout(tx, actor, entry.memberId);
   let adjustment;
   try {
     [adjustment] = await tx

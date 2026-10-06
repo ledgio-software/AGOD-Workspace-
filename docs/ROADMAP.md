@@ -46,5 +46,13 @@ Done: member sign-up without a company, profiles and member list, roles, code of
 (Phase 25); showcase with screenshots and video demo links, review requests and feedback (Phase 26).
 Teaching sessions with join, calendar files, reminders and a recordings archive (Phase 27).
 Next: mentorship matching,
-tools and prompts library, project of the month (28); later jobs board, team finder, badges, events
+tools and prompts library, project of the month; later jobs board, team finder, badges, events
 calendar, partners page and metrics.
+
+## Company workflow (Phase 28 onwards)
+
+From the workflow research (software and fintech teams, October 2026). Done: company-made roles,
+job titles, "what kind of team are you?" set-up, two people for money (Phase 28). Next: client
+money flow (deposit setting, milestone invoices, client sign-off, when the team is paid, change
+requests) (29); in-app messages with an unread icon (30); later fintech extras (security check,
+release approval, evidence export) and tax rates as settings.

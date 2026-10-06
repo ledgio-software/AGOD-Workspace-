@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { COMPANY_COOKIE, companiesOf, getSignedIn, requireUser } from "@/lib/session";
-import { updateOrganization } from "@/modules/orgs";
+import { setSelfApproval, updateOrganization } from "@/modules/orgs";
 
 /** Remembers the chosen company for this browser (only one the person is an active member of). */
 export async function switchCompanyAction(form: FormData): Promise<void> {
@@ -27,5 +27,17 @@ export async function updateCompanyAction(_prev: ActionResult | null, form: Form
     return undefined;
   }, "Company details saved.");
   if (result.ok) revalidatePath("/", "layout");
+  return result;
+}
+
+/** Phase 28: two people for money (on), or one person may approve and pay themselves (off). */
+export async function selfApprovalAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const allow = form.get("allow") === "true";
+  const result = await runAction(async () => {
+    await setSelfApproval(actor, { allow, reason: String(form.get("reason") ?? "") }, await getRequestMeta());
+    return undefined;
+  }, allow ? "Done. One person may now approve and pay their own work." : "Done. Money now always needs two people.");
+  if (result.ok) revalidatePath("/company");
   return result;
 }

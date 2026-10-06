@@ -26,7 +26,8 @@ import { costCategoryLabel, describeAuditAction, healthLabel, milestoneStatusLab
 import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
-import { getProjectPayouts } from "@/modules/approvals";
+import { approvalBlockFor, getProjectPayouts } from "@/modules/approvals";
+import { activeJobTitleNames } from "@/modules/roles";
 import { type AttachmentView, attachmentsAvailable, listProjectAttachments } from "@/modules/attachments";
 import { listComments } from "@/modules/comments";
 import { getProjectFinance } from "@/modules/finance";
@@ -138,9 +139,9 @@ export default async function ProjectWorkspacePage({
   const isManager = can(actor, "project.edit");
   const editable = isEditable(project.status);
   const canManage = isManager && editable;
-  const members = isManager ? await listActiveMembers(actor) : [];
+  const [members, titles] = isManager ? await Promise.all([listActiveMembers(actor), activeJobTitleNames(actor)]) : [[], []];
   const invoicing = project.customerId ? await projectInvoicing(actor, project.id) : null;
-  const customerOptions = canManage ? await listCustomerOptions(actor, project.customerId) : [];
+  const customerOptions = canManage && can(actor, "customer.view") ? await listCustomerOptions(actor, project.customerId) : [];
   const teamOptions = Array.from(new Map(ws.team.map((t) => [t.memberId, { id: t.memberId, name: t.memberName }])).values());
   const pct = project.splitMode === "PERCENTAGE";
   const workOpen = acceptsTaskUpdates(project.status);
@@ -156,6 +157,9 @@ export default async function ProjectWorkspacePage({
     isManager && workOpen ? meetingsAvailable(actor.orgId) : Promise.resolve(false),
   ]);
   const driveFolder = driveConnected ? await driveFolderLink(actor.orgId, "PROJECT", project.id) : null;
+  // Phase 28: who may approve (a company role can switch it off), and two people for money.
+  const canApprove = can(actor, "project.approve");
+  const approvalBlock = canApprove && project.status === "PENDING_APPROVAL" ? await approvalBlockFor(actor, project.id) : null;
   const toLinks = (list: LinkView[]): LinkItem[] =>
     list.map((l) => ({
       id: l.id,
@@ -240,7 +244,7 @@ export default async function ProjectWorkspacePage({
           )}
           <Meta label="Split">
             {pct ? "Percentages" : "Fixed amounts"}
-            {pct && project.agodShareBasisPoints > 0 && <span className="text-muted"> · AGOD {formatPercent(project.agodShareBasisPoints)}</span>}
+            {pct && project.agodShareBasisPoints > 0 && <span className="text-muted"> · company {formatPercent(project.agodShareBasisPoints)}</span>}
           </Meta>
           <Meta label="Tasks done">
             <span className="tabular-nums">
@@ -330,7 +334,12 @@ export default async function ProjectWorkspacePage({
                 )}
 
                 {project.status === "PENDING_APPROVAL" &&
-                  (isManager ? (
+                  (canApprove && approvalBlock ? (
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <p className="text-amber-700 dark:text-amber-400">{approvalBlock}</p>
+                      <RejectForm action={rejectAction.bind(null, project.id)} />
+                    </div>
+                  ) : canApprove ? (
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-3">
                         <p className="text-muted">
@@ -368,7 +377,7 @@ export default async function ProjectWorkspacePage({
                       <RejectForm action={rejectAction.bind(null, project.id)} />
                     </div>
                   ) : (
-                    <p className="text-muted">Waiting for a project manager to review and approve.</p>
+                    <p className="text-muted">Waiting for someone who can approve projects to review it.</p>
                   ))}
 
                 {payouts.length === 0 && !canRequest && project.status !== "PENDING_APPROVAL" && (
@@ -804,7 +813,7 @@ export default async function ProjectWorkspacePage({
                       <dd className="font-semibold tabular-nums">{formatMoney(ws.compensation.allocatedMinor, project.currency)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-muted">Kept by AGOD</dt>
+                      <dt className="text-xs text-muted">Kept by the company</dt>
                       <dd className="font-semibold tabular-nums text-brand-700 dark:text-brand-300">
                         {formatMoney(ws.compensation.agodShareMinor, project.currency)}
                         {pct && project.agodShareBasisPoints > 0 && (
@@ -824,7 +833,7 @@ export default async function ProjectWorkspacePage({
                   {/* Plain sentence kept for screen readers and tests. */}
                   <p className="sr-only">
                     Project value {formatMoney(project.totalValueMinor, project.currency)} · to the team {formatMoney(ws.compensation.allocatedMinor, project.currency)} ·
-                    kept by AGOD {formatMoney(ws.compensation.agodShareMinor, project.currency)}
+                    kept by the company {formatMoney(ws.compensation.agodShareMinor, project.currency)}
                     {pct && project.agodShareBasisPoints > 0 && <> ({formatPercent(project.agodShareBasisPoints)})</>}
                   </p>
                   {ws.compensation.roundingNote && <p className="text-muted">{ws.compensation.roundingNote}</p>}
@@ -845,7 +854,7 @@ export default async function ProjectWorkspacePage({
 
               {canManage && (
                 <Disclosure summary="Add someone to the team">
-                  <AddAssignmentForm action={addAssignmentAction.bind(null, project.id)} members={members} splitMode={project.splitMode} />
+                  <AddAssignmentForm action={addAssignmentAction.bind(null, project.id)} members={members} splitMode={project.splitMode} titles={titles} />
                 </Disclosure>
               )}
             </div>

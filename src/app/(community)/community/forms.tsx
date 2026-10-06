@@ -110,6 +110,13 @@ export function CreateCompanyForm() {
       <Field label="Company or team name">
         <input name="name" required minLength={2} maxLength={120} autoComplete="organization" className={inputClass} />
       </Field>
+      <Field label="What kind of team are you?" hint="We add the usual job titles and roles. You can change them later.">
+        <select name="teamType" defaultValue="SOFTWARE" className={inputClass}>
+          <option value="SOFTWARE">Software or app development</option>
+          <option value="FINTECH">Fintech or payments</option>
+          <option value="OTHER">Something else</option>
+        </select>
+      </Field>
       <SubmitButton pendingText="Creating…">Create workspace</SubmitButton>
     </ActionForm>
   );

@@ -25,3 +25,17 @@ export function CompanyForm({ action, defaults }: { action: Action; defaults: { 
     </ActionForm>
   );
 }
+
+export function SelfApprovalForm({ action, allow }: { action: Action; allow: boolean }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="space-y-3">
+      <input type="hidden" name="allow" value={String(!allow)} />
+      <Field label="Reason for the change">
+        <input name="reason" required minLength={3} maxLength={500} placeholder={allow ? "e.g. We now have a second manager" : "e.g. I'm the only manager for now"} className={inputClass} />
+      </Field>
+      <SubmitButton variant={allow ? "primary" : "danger"} pendingText="Saving…">
+        {allow ? "Require two people" : "Allow one person (small team)"}
+      </SubmitButton>
+    </ActionForm>
+  );
+}

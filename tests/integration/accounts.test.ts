@@ -112,6 +112,23 @@ describe("invitations by email", () => {
   });
 });
 
+describe("Phase 28: a password reset confirms the email", () => {
+  it("someone who never confirmed can sign in after choosing a password from the link, and gets their company", async () => {
+    const id = randomUUID();
+    const email = `${id}@agod.test`;
+    await db.insert(users).values({ id, name: "Sandra Owusu", email, emailVerified: false, pendingCompany: `Sandra Studio ${id.slice(0, 4)}` });
+    const token = (await createPasswordLink(id, 1)).match(/reset-password\/([A-Za-z0-9_-]+)/)![1];
+    const { auth } = await import("@/lib/auth");
+    await auth.api.resetPassword({ body: { newPassword: "A-new-password-123", token } });
+    const [user] = await db.select({ verified: users.emailVerified }).from(users).where(eq(users.id, id));
+    expect(user.verified).toBe(true);
+    const [membership] = await db.select().from(memberships).where(eq(memberships.userId, id));
+    expect(membership?.role).toBe("ADMIN");
+    const session = await auth.api.signInEmail({ body: { email, password: "A-new-password-123" } });
+    expect(session.user.id).toBe(id);
+  });
+});
+
 describe("when the mail server refuses (e.g. a wrong Gmail password)", () => {
   // A closed port: every send fails straight away, like a refused login.
   const brokenMail = () => {

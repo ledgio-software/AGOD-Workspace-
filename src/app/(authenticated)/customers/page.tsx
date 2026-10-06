@@ -22,7 +22,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <PageHeader
         eyebrow="Work"
         title="Customers"
-        description="Who AGOD works for, their contacts and their projects."
+        description="Who the company works for, their contacts and their projects."
         actions={
           can(actor, "customer.manage") && (
             <ButtonLink href="/customers/new" variant="primary">

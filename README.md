@@ -234,6 +234,9 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 28 — Roles, job titles and two people for money ✓
+- Each company makes its own roles (copy Team Member, Project Manager or Admin, then switch permission groups off) and its own job titles; "What kind of team are you?" (software, fintech, other) adds suggested titles and roles; nobody approves or pays their own work unless a one-manager company allows it; a password reset also confirms the email (`docs/PERMISSIONS.md`)
+
 ### Phase 26.1 — Storage savings ✓
 - Pictures made smaller in the browser before upload (WebP, 1600 px), fingerprints so identical screenshots are stored once, and an optional Cloudflare R2 (S3-compatible) storage switch (`docs/STORAGE.md`)
 

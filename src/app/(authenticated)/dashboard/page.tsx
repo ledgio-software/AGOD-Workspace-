@@ -9,6 +9,7 @@ import {
   Inbox,
   ListChecks,
   Repeat,
+  Sparkles,
   Wallet,
 } from "lucide-react";
 import { RenewalBadge, TaskStatusBadge } from "@/components/badges";
@@ -24,6 +25,7 @@ import { getDashboard } from "@/modules/reports";
 import { refreshDeadlineAlertsQuietly } from "@/modules/notifications/deadlines";
 import { invoiceTotals, listInvoices, refreshInvoiceAlertsQuietly } from "@/modules/invoices";
 import { listSubscriptions, refreshRenewalAlertsQuietly } from "@/modules/subscriptions";
+import { needsTeamSetup } from "@/modules/roles";
 import { getMyWork } from "@/modules/work";
 
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
@@ -122,11 +124,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   if (!can(user, "payout.viewAll")) return <MemberDashboard user={user} />;
 
-  const [d, questionsWaiting, renewals, invoiceList] = await Promise.all([
+  const [d, questionsWaiting, renewals, invoiceList, setUp] = await Promise.all([
     getDashboard(user, await searchParams),
     questionsWaitingOn(user),
     can(user, "subscription.view") ? listSubscriptions(user, { within: 60 }) : Promise.resolve(null),
     can(user, "invoice.view") ? listInvoices(user, { state: "UNPAID" }) : Promise.resolve(null),
+    can(user, "team.manage") && can(user, "company.manage") ? needsTeamSetup(user) : Promise.resolve(false),
   ]);
   const invoiceStats = invoiceList ? invoiceTotals(invoiceList, todayInOperatingZone()) : null;
   const maxOutstanding = Math.max(1, ...d.outstandingByMember.map((m) => m.remainingMinor));
@@ -154,6 +157,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </form>
         }
       />
+
+      {setUp && (
+        <Callout tone="info" icon={Sparkles} action={<ButtonLink href="/team/roles" size="sm">Set up</ButtonLink>}>
+          Tell us what kind of team you are (software, fintech or other) to get the usual job titles and roles. Takes one click; you can change
+          everything later.
+        </Callout>
+      )}
 
       {questionsWaiting > 0 && (
         <Callout

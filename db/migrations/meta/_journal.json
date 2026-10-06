@@ -295,6 +295,20 @@
       "when": 1791302456737,
       "tag": "20261006160056_sessions_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791315136880,
+      "tag": "20261006193216_roles_and_titles",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791315169684,
+      "tag": "20261006193249_roles_and_titles_rules",
+      "breakpoints": true
     }
   ]
 }

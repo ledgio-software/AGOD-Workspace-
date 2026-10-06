@@ -1,18 +1,19 @@
 "use client";
 
 import { ActionForm, SubmitButton, TemporaryPassword, inputClass } from "@/components/form";
-import { roleLabel } from "@/lib/labels";
 import type { Role } from "@/lib/permissions";
-import { changeRoleAction, createMemberAction, resetPasswordAction, setActiveAction, setCapacityAction } from "./actions";
+import { changeRoleAction, createMemberAction, resetPasswordAction, setActiveAction, setCapacityAction, setJobTitleAction } from "./actions";
 
-const roles = Object.entries(roleLabel) as [Role, string][];
+/** Phase 28: built-in roles ("ADMIN") and the company's own (by id). */
+export type RoleChoice = { ref: string; name: string };
+export type TitleChoice = { id: string; name: string };
 
-function RoleSelect({ defaultValue }: { defaultValue: Role }) {
+function RoleSelect({ roles, defaultValue }: { roles: RoleChoice[]; defaultValue: string }) {
   return (
     <select name="role" defaultValue={defaultValue} className={inputClass}>
-      {roles.map(([value, label]) => (
-        <option key={value} value={value}>
-          {label}
+      {roles.map((r) => (
+        <option key={r.ref} value={r.ref}>
+          {r.name}
         </option>
       ))}
     </select>
@@ -30,7 +31,7 @@ function EmailFailed({ error, fallback }: { error: string; fallback: boolean }) 
   );
 }
 
-export function CreateMemberForm() {
+export function CreateMemberForm({ roles }: { roles: RoleChoice[] }) {
   return (
     <section>
       <ActionForm
@@ -68,7 +69,7 @@ export function CreateMemberForm() {
         </label>
         <label className="space-y-1.5 text-sm">
           <span className="font-medium">Role</span>
-          <RoleSelect defaultValue="TEAM_MEMBER" />
+          <RoleSelect roles={roles} defaultValue="TEAM_MEMBER" />
         </label>
         <SubmitButton pendingText="Adding…">Add member</SubmitButton>
       </ActionForm>
@@ -76,18 +77,34 @@ export function CreateMemberForm() {
   );
 }
 
-type Member = { id: string; email: string; role: Role; active: boolean; weeklyCapacityHours: number };
+type Member = { id: string; email: string; role: Role; companyRoleId: string | null; jobTitleId: string | null; active: boolean; weeklyCapacityHours: number };
 
-export function MemberActions({ member, viaEmail }: { member: Member; viaEmail: boolean }) {
+export function MemberActions({ member, viaEmail, roles, titles }: { member: Member; viaEmail: boolean; roles: RoleChoice[]; titles: TitleChoice[] }) {
   return (
     <details className="text-sm">
       <summary className="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">Manage</summary>
       <div className="ml-auto mt-3 w-72 space-y-4 rounded-lg border border-line bg-surface p-3 text-left shadow-sm">
         <ActionForm action={changeRoleAction} resetOnSuccess className="space-y-2">
           <input type="hidden" name="userId" value={member.id} />
-          <RoleSelect defaultValue={member.role} />
+          <RoleSelect roles={roles} defaultValue={member.companyRoleId ?? member.role} />
           <input name="reason" required placeholder="Reason for the change" className={inputClass} />
           <SubmitButton size="sm">Change role</SubmitButton>
+        </ActionForm>
+
+        <ActionForm action={setJobTitleAction} className="space-y-2">
+          <input type="hidden" name="userId" value={member.id} />
+          <label className="block space-y-1 text-xs">
+            <span className="font-medium">Job title</span>
+            <select name="jobTitleId" defaultValue={member.jobTitleId ?? ""} className={inputClass}>
+              <option value="">None</option>
+              {titles.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <SubmitButton size="sm" variant="secondary">Save job title</SubmitButton>
         </ActionForm>
 
         <ActionForm action={setCapacityAction} className="space-y-2">

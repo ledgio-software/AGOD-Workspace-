@@ -219,7 +219,7 @@ export async function getProfitability(actor: Actor, raw: z.input<typeof profita
       filters,
       projects: projectsOut,
       totals: sumFinancials(projectsOut),
-      byClient: groupTotals(projectsOut, (p) => (p.clientType === "INTERNAL" ? "Internal (AGOD)" : (p.clientName ?? "Unnamed client")), (p) => p),
+      byClient: groupTotals(projectsOut, (p) => (p.clientType === "INTERNAL" ? "Internal (own work)" : (p.clientName ?? "Unnamed client")), (p) => p),
       byCategory: groupTotals(projectsOut, (p) => p.category, (p) => p),
     };
   });

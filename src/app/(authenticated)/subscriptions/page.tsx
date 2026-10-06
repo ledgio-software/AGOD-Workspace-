@@ -101,7 +101,7 @@ export default async function SubscriptionsPage({
         {rows.length === 0 ? (
           <div className="p-5">
             <EmptyState icon={Repeat} title={filtered ? "No subscriptions match these filters" : "No subscriptions yet"}>
-              {filtered ? undefined : "Add the services AGOD sells on the Services page, then create a subscription for a customer."}
+              {filtered ? undefined : "Add the services you sell on the Services page, then create a subscription for a customer."}
             </EmptyState>
           </div>
         ) : (

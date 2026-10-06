@@ -26,7 +26,7 @@ export default async function ProjectsPage({
       <PageHeader
         eyebrow="Work"
         title="Projects"
-        description={canCreate ? "All AGOD projects, their progress and health." : "Projects you are part of."}
+        description={canCreate ? "All the company's projects, their progress and health." : "Projects you are part of."}
         actions={
           canCreate && (
             <>

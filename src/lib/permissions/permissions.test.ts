@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Action, type Actor, PermissionError, assertCan, can } from ".";
+import { type Action, type Actor, PERMISSION_GROUPS, PermissionError, assertCan, can, effectiveGroups, groupsOf } from ".";
 
 const member: Actor = { id: "m", role: "TEAM_MEMBER", orgId: "o" };
 const pm: Actor = { id: "p", role: "PROJECT_MANAGER", orgId: "o" };
@@ -86,5 +86,68 @@ describe("assertCan", () => {
 
   it("returns silently when allowed", () => {
     expect(() => assertCan(admin, "payment.record")).not.toThrow();
+  });
+});
+
+describe("Phase 28: permission groups and company-made roles", () => {
+  const rank = { TEAM_MEMBER: 0, PROJECT_MANAGER: 1, ADMIN: 2 } as const;
+
+  it("every action that needs more than a Team Member is in exactly one group", () => {
+    for (const action of Object.keys(matrix) as Action[]) {
+      const groups = PERMISSION_GROUPS.filter((g) => g.actions.includes(action));
+      const [, pmCan, adminCan] = matrix[action];
+      const memberAlways = matrix[action][0];
+      const scoped = ["project.view", "project.requestApproval", "comment.create", "audit.viewProject"].includes(action);
+      if (memberAlways || scoped) expect(groups, action).toHaveLength(0);
+      else expect(groups, action).toHaveLength(1);
+      if (groups.length === 1) {
+        // The group's level is the lowest built-in role that has the action.
+        expect(groups[0].base, action).toBe(pmCan ? "PROJECT_MANAGER" : adminCan ? "ADMIN" : "?");
+      }
+    }
+  });
+
+  it("built-in roles have every group up to their level", () => {
+    expect(groupsOf("TEAM_MEMBER")).toEqual([]);
+    expect(groupsOf("ADMIN")).toHaveLength(PERMISSION_GROUPS.length);
+    for (const key of groupsOf("PROJECT_MANAGER")) {
+      expect(rank[PERMISSION_GROUPS.find((g) => g.key === key)!.base]).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("a role made from Admin without 'Pay the team' can't record payments, but keeps the rest", () => {
+    const finance: Actor = { ...admin, permissions: ["payouts.view", "projects.approve"] };
+    expect(can(finance, "payment.record")).toBe(false);
+    expect(can(finance, "adjustment.create")).toBe(false);
+    expect(can(finance, "payout.viewAll")).toBe(true);
+    expect(can(finance, "project.approve")).toBe(true);
+    expect(can(finance, "project.edit")).toBe(false);
+    // Things no group controls stay as for the base role.
+    expect(can(finance, "project.view")).toBe(true);
+    expect(can(finance, "payout.viewOwn")).toBe(true);
+  });
+
+  it("a role never widens its base: a Project Manager role listing 'Pay the team' still can't pay", () => {
+    const pmPlus: Actor = { ...pm, permissions: ["payouts.pay", "team.manage", "company"] };
+    expect(can(pmPlus, "payment.record")).toBe(false);
+    expect(can(pmPlus, "team.manage")).toBe(false);
+    expect(effectiveGroups(pmPlus)).toEqual([]);
+  });
+
+  it("without 'Create and edit projects' people still update their own tasks", () => {
+    const lead: Actor = { ...pm, permissions: ["team.view"] };
+    expect(can(lead, "task.update", { isTaskAssignee: true })).toBe(true);
+    expect(can(lead, "task.update", { isTaskAssignee: false })).toBe(false);
+    expect(can(lead, "project.create")).toBe(false);
+  });
+
+  it("an empty list leaves only what every member has", () => {
+    const nothing: Actor = { ...admin, permissions: [] };
+    for (const group of PERMISSION_GROUPS) for (const action of group.actions) expect(can(nothing, action), action).toBe(false);
+    expect(can(nothing, "payoutQuestion.raise")).toBe(true);
+  });
+
+  it("null permissions mean the full built-in role", () => {
+    expect(effectiveGroups({ ...pm, permissions: null })).toEqual(groupsOf("PROJECT_MANAGER"));
   });
 });
