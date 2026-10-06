@@ -1,34 +1,113 @@
-import { CircleCheck, CircleX, Plug, TriangleAlert, Webhook } from "lucide-react";
+import { CalendarClock, CircleCheck, CircleX, Mail, Plug, TriangleAlert, Webhook } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
+import { Badge } from "@/components/badges";
 import { Callout, Card, EmptyState, PageHeader, compactTable as ct, table } from "@/components/ui";
 import { formatDateTime } from "@/lib/dates";
+import { describeEmail, emailConfig } from "@/lib/email";
 import { resolveBaseUrl } from "@/lib/env";
 import { checkGithubApp, githubConfig } from "@/lib/github/app";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { recentDeliveries } from "@/modules/github";
+import { type DailySummary, recentJobRuns } from "@/modules/jobs/daily";
+import { EmailActions } from "./email-actions";
 
 export default async function IntegrationsPage() {
   const actor = await requireUser();
   if (!can(actor, "audit.viewAll")) return <AccessDenied what="integration settings" />;
   const config = githubConfig();
-  const [check, deliveries] = await Promise.all([config ? checkGithubApp() : null, recentDeliveries(actor)]);
+  const [check, deliveries, runs] = await Promise.all([config ? checkGithubApp() : null, recentDeliveries(actor), recentJobRuns(actor)]);
+  const email = emailConfig();
+  const cronReady = (process.env.CRON_SECRET?.length ?? 0) >= 16;
   const webhookUrl = `${resolveBaseUrl(process.env) ?? ""}/api/github/webhook`;
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Team & admin"
-        title="GitHub integration"
+        title="Integrations"
         description={
           <>
-            Links tasks to issues and pull requests, moves tasks to In review and Ready for QA, and records deployments and releases. Setup steps:{" "}
+            Daily email reminders, and GitHub (links tasks to issues and pull requests and records deployments). Setup guides:{" "}
+            <code className="rounded bg-surface-muted px-1 text-xs">docs/EMAIL.md</code> and{" "}
             <code className="rounded bg-surface-muted px-1 text-xs">docs/GITHUB_APP.md</code>.
           </>
         }
       />
 
-      <Card title="Status" aside={<Plug className="size-4 text-muted" aria-hidden />}>
+      <Card title="Email reminders" aside={<Mail className="size-4 text-muted" aria-hidden />}>
+        <div className="space-y-4 text-sm">
+          {email?.provider === "smtp" ? (
+            <Callout tone="good" icon={CircleCheck}>
+              Sending through {describeEmail(email)} as {email.from}.
+            </Callout>
+          ) : email?.provider === "outbox" ? (
+            <Callout tone="info" icon={Mail}>
+              Local test mode: emails are written to {email.dir} instead of being sent.
+            </Callout>
+          ) : (
+            <Callout tone="warn" icon={TriangleAlert}>
+              Not set up. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and EMAIL_FROM (your mail provider&apos;s SMTP settings) to this environment in Vercel, then redeploy. Setup steps: <code className="text-xs">docs/EMAIL.md</code>.
+            </Callout>
+          )}
+          {!cronReady && (
+            <Callout tone="warn" icon={CalendarClock}>
+              The daily schedule needs CRON_SECRET (at least 16 random characters) in Vercel. Until then, reminders are only created when people open the app.
+            </Callout>
+          )}
+          <p className="text-muted">
+            Every morning at 06:00 (Accra), the app creates everyone&apos;s task, approval and renewal reminders and emails each person one summary of what is new. People can turn the email off on their Account page.
+          </p>
+          <EmailActions canSend={email !== null} />
+        </div>
+      </Card>
+
+      <Card title="Recent daily runs" aside={<CalendarClock className="size-4 text-muted" aria-hidden />} bodyClassName={runs.length ? "p-0" : undefined}>
+        {runs.length === 0 ? (
+          <EmptyState icon={CalendarClock} title="No runs yet" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className={table.table}>
+              <thead className={table.head}>
+                <tr>
+                  <th className={ct.th}>Started</th>
+                  <th className={ct.th}>Result</th>
+                  <th className={`${ct.th} text-right`}>Reminders</th>
+                  <th className={`${ct.th} text-right`}>Emails sent</th>
+                  <th className={ct.th}>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((r) => {
+                  const s = r.summary as DailySummary | null;
+                  return (
+                    <tr key={r.id} className={`${table.row} align-top`}>
+                      <td className={`${ct.td} whitespace-nowrap text-muted`}>{formatDateTime(r.startedAt)}</td>
+                      <td className={ct.td}>
+                        {r.ok === null ? <Badge>Running</Badge> : r.ok ? <Badge tone="green">OK</Badge> : <Badge tone="red">Problems</Badge>}
+                      </td>
+                      <td className={ct.num}>{s?.remindersCreated ?? "—"}</td>
+                      <td className={ct.num}>{s ? (s.email === "off" ? "Email off" : s.emailsSent) : "—"}</td>
+                      <td className={`${ct.td} text-muted`}>
+                        {r.error ??
+                          [
+                            s?.reminderFailures ? `${s.reminderFailures} reminder failures` : null,
+                            s?.emailFailures ? `${s.emailFailures} emails failed (they will be retried)` : null,
+                            s?.emailsSkipped ? `${s.emailsSkipped} people turned email off` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card title="GitHub integration" aside={<Plug className="size-4 text-muted" aria-hidden />}>
         <div className="space-y-4 text-sm">
           {!config ? (
             <Callout tone="warn" icon={TriangleAlert}>

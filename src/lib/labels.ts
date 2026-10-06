@@ -100,6 +100,8 @@ const auditActionLabel: Record<string, string> = {
   "subscription.updated": "edited the subscription",
   "subscription.amended": "amended the terms",
   "subscription.renewed": "renewed the subscription",
+  "user.daily_email_on": "turned the daily email on",
+  "user.daily_email_off": "turned the daily email off",
   "subscription.status_changed": "changed the status",
 };
 

@@ -470,6 +470,8 @@ export const notifications = pgTable(
     // Set for generated alerts (e.g. "task.overdue:<task>:<due date>") so each is sent once.
     dedupeKey: text("dedupe_key"),
     readAt: timestamp("read_at", { withTimezone: true }),
+    // Phase 19: when it went out in the daily email (each notification is emailed at most once).
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
     createdAt,
   },
   (t) => [
@@ -850,4 +852,28 @@ export const subscriptionAmendments = pgTable(
     index("subscription_amendments_subscription_idx").on(t.subscriptionId),
     check("subscription_amendments_reason", sql`length(btrim(${t.reason})) >= 3`),
   ],
+);
+
+// Phase 19: each person's email choices. No row means the defaults (daily email on).
+export const notificationPreferences = pgTable("notification_preferences", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "restrict" }),
+  dailyEmail: boolean("daily_email").notNull().default(true),
+  updatedAt,
+});
+
+// Phase 19: a record of each scheduled job run (the daily reminders), shown to Admins.
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    job: text("job").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    ok: boolean("ok"),
+    summary: jsonb("summary"),
+    error: text("error"),
+  },
+  (t) => [index("job_runs_job_started_idx").on(t.job, t.startedAt)],
 );
