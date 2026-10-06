@@ -54,3 +54,14 @@ export function navGroups(actor: Actor): NavGroup[] {
     .map((g) => ({ label: g.label, items: g.items.filter((i) => i.show).map(({ href, label, icon }) => ({ href, label, icon })) }))
     .filter((g) => g.items.length > 0);
 }
+
+/** Phase 25: the community, for every signed-in person (organizers also see reports). */
+export function communityGroup(o: { organizer: boolean }): NavGroup {
+  const items: NavItem[] = [
+    { href: "/community", label: "Community home", icon: "community" },
+    { href: "/members", label: "Members", icon: "members" },
+    { href: "/community/profile", label: "My profile", icon: "profile" },
+  ];
+  if (o.organizer) items.push({ href: "/community/reports", label: "Reports", icon: "reports" });
+  return { label: "Community", items };
+}

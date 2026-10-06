@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { CompanySwitcher } from "@/components/company-switcher";
-import { navGroups } from "@/components/nav";
+import { communityGroup, navGroups } from "@/components/nav";
 import { AppShell } from "@/components/shell";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Avatar } from "@/components/ui";
 import { roleLabel } from "@/lib/labels";
 import { requireUser } from "@/lib/session";
+import { canModerate } from "@/modules/community";
 import { switchCompanyAction } from "./company/actions";
 
 export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const organizer = await canModerate(user);
 
   return (
     <AppShell
-      groups={navGroups(user)}
+      groups={[...navGroups(user), communityGroup({ organizer })]}
       company={user.orgName}
       switcher={user.companies.length > 1 ? <CompanySwitcher companies={user.companies} current={user.orgId} action={switchCompanyAction} /> : undefined}
       user={

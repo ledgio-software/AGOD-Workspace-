@@ -246,6 +246,20 @@
       "when": 1791279490612,
       "tag": "20261006093810_google_calendar_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791282582600,
+      "tag": "20261006102942_community",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791282583661,
+      "tag": "20261006102943_community_rules",
+      "breakpoints": true
     }
   ]
 }

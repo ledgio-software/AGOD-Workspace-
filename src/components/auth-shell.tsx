@@ -1,13 +1,13 @@
-import { BadgeCheck, ShieldCheck, Wallet } from "lucide-react";
+import { Briefcase, MessageSquareHeart, Rocket } from "lucide-react";
 import { PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
 
 // Phase 23: the frame of the public pages (sign in, sign up, password reset): the product on the
 // left (large screens), the form on the right.
 
 const points = [
-  { icon: BadgeCheck, title: "Every amount explained", text: "Approved splits are frozen, and every change has a reason." },
-  { icon: Wallet, title: "Payouts you can trust", text: "See what is owed, paid and outstanding, per person and project." },
-  { icon: ShieldCheck, title: "Private by design", text: "Each company sees only its own data, and each person only what their role allows." },
+  { icon: Rocket, title: "Show your work", text: "Share what you build, by hand or with AI tools, and get honest, kind feedback." },
+  { icon: MessageSquareHeart, title: "Help one another", text: "Find reviewers, mentors and people to build with across Ghana." },
+  { icon: Briefcase, title: "Run your projects", text: "A private workspace for projects, invoices and team payouts, when you need one." },
 ];
 
 const initials = PRODUCT_NAME.split(/\s+/)
@@ -32,7 +32,7 @@ export function AuthShell({ title, description, children, footer }: { title: str
           </span>
         </div>
         <div className="relative max-w-md space-y-8">
-          <h2 className="text-3xl font-semibold leading-tight tracking-tight">Track the work. Know who is owed. Pay with confidence.</h2>
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight">Build, share and grow together.</h2>
           <ul className="space-y-5">
             {points.map(({ icon: Icon, title, text }) => (
               <li key={title} className="flex gap-3">
@@ -45,7 +45,7 @@ export function AuthShell({ title, description, children, footer }: { title: str
             ))}
           </ul>
         </div>
-        <p className="relative text-xs text-brand-300">Projects, tasks, invoices and team payouts for software teams.</p>
+        <p className="relative text-xs text-brand-300">The community for people in Ghana who build software.</p>
       </section>
 
       <section className="flex items-center justify-center px-6 py-12">

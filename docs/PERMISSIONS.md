@@ -78,6 +78,19 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Schedule or cancel a project meeting (`project.edit`) | | ✓ | ✓ |
 | Company name and project code prefix (`company.manage`) | | | ✓ |
 
+### Community (Phase 25)
+
+Community roles are separate from company roles: everyone signed in is a Builder; Reviewer is a
+badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are appointed by organizers.
+
+| Action | Visitor | Member | Organizer |
+|---|:-:|:-:|:-:|
+| See the home page, code of conduct and public profiles | ✓ | ✓ | ✓ |
+| See members-only profiles | | ✓ | ✓ |
+| Edit own profile; create a company workspace (while sign-up is open) | | ✓ | ✓ |
+| Report a profile | | ✓ | ✓ |
+| See reports; hide or show profiles; make or remove organizers | | | ✓ |
+
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
 another, and no role ever reaches another company's data. An Admin sets a temporary password only for
 people who belong to no other company; with email set up (Phase 23) they instead email a password link

@@ -7,7 +7,24 @@ import { db } from "@/lib/db";
 import { resolveBaseUrl } from "@/lib/env";
 import * as schema from "@/lib/db/schema";
 import { appUrl, finishSignUp, sendAccountEmail } from "@/modules/accounts";
+import { welcomeNewMember } from "@/modules/community";
 import { existingSignUpMessage, resetPasswordMessage, verifyEmailMessage } from "@/modules/email/account";
+
+/**
+ * Phase 25: "/" is the public community home, so a confirmation link without a destination (the
+ * new link sent when someone signs in before confirming) opens the app instead; people without a
+ * company continue to the community from there.
+ */
+export function intoTheApp(url: string): string {
+  try {
+    const link = new URL(url);
+    const back = link.searchParams.get("callbackURL");
+    if (!back || back === "/") link.searchParams.set("callbackURL", "/dashboard");
+    return link.toString();
+  } catch {
+    return url;
+  }
+}
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
@@ -38,9 +55,13 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     expiresIn: 24 * 60 * 60,
     sendVerificationEmail: async ({ user, url }) => {
-      await sendAccountEmail(user.email, verifyEmailMessage({ name: user.name, url }));
+      await sendAccountEmail(user.email, verifyEmailMessage({ name: user.name, url: intoTheApp(url) }));
     },
     afterEmailVerification: async (user) => {
+      // Phase 25: everyone who signs up is a community member; a company is optional.
+      await welcomeNewMember({ id: user.id, name: user.name, email: user.email }).catch((error) =>
+        console.error("Creating the member profile failed", user.id, error instanceof Error ? error.message : error),
+      );
       await finishSignUp(user.id);
     },
   },

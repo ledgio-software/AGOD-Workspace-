@@ -20,16 +20,18 @@ its own data. AGOD is the first company; everything that existed before Phase 22
   - Already have a login (in another company): they are added to this company and keep their own
     password. They pick the company from the company menu.
 - **Deactivating** someone on the Team page ends their access to *this* company only. Their login and
-  their other companies are unaffected. Someone with no active company sees "You're not in a company yet".
+  their other companies are unaffected. Someone with no active company is taken to the community.
 - **Passwords.** An Admin can reset the password only of people who belong to no other company.
   Otherwise one company could take over an account that another company relies on.
 - Every company keeps at least one active Admin (the database refuses to demote or deactivate the last one).
 
 ## Signing up (Phase 23)
 
-With `ALLOW_SIGNUP=true` (and email set up), anyone can create a company at **/sign-up**:
+Phase 25: sign-up now makes a **community member** (`docs/COMMUNITY.md`); creating a company is optional
+(*Also create a company workspace* on the form, or later from the community home). With
+`ALLOW_SIGNUP=true` (and email set up), anyone can create a company at **/sign-up**:
 
-1. They enter their name, the company name, their email and a password.
+1. They enter their name, their email and a password, tick the company option and name the company.
 2. The app emails a confirmation link. Until it is opened they can't sign in; trying sends a new
    link.
 3. Opening the link confirms the email, **creates the company** with them as its Admin (starter
@@ -37,7 +39,7 @@ With `ALLOW_SIGNUP=true` (and email set up), anyone can create a company at **/s
 
 Signing up with an email that already has an account looks the same on screen (so nobody can find out
 which emails are registered); the account owner gets an email saying someone tried. Signed-in people
-with no company can create one on the "not in a company" page while sign-up is open. Turn sign-up off by
+with no company land on the community home, where they can create one while sign-up is open. Turn sign-up off by
 removing `ALLOW_SIGNUP` (and redeploying): the page then says sign-up is closed, and the sign-up endpoint
 refuses requests.
 
