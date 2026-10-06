@@ -323,6 +323,20 @@
       "when": 1791318965401,
       "tag": "20261006203605_client_money_flow_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1791320983673,
+      "tag": "20261006210943_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791320985155,
+      "tag": "20261006210945_messages_rules",
+      "breakpoints": true
     }
   ]
 }

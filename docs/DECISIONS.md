@@ -348,3 +348,14 @@ Phase 9 (file attachments in Vercel Blob).
 | Paying the team | Company setting: on approval (default, as before) or in step with the client. In step: for a client project, a payout can be paid up to owed × (client paid ÷ project value), whole pesewas rounded down; internal projects are paid on approval. Client paid = each issued invoice's payments shared across its lines in proportion. Enforced in the app and by a database trigger (`app_payout_releasable`). |
 | Who | Plans, sign-off and change requests: "Create and edit projects". Invoices: "Invoices". Settings: "Company settings". Team members never see a project's billing. |
 | Not included | Withholding tax and VAT on client payments (tax rates as settings come later, after advice), online client sign-off links, automatic reminders to clients. |
+
+## Phase 30 decisions (2026-10-06): messages
+
+| Decision | Choice |
+|---|---|
+| What | Private conversations inside a company: one-to-one (one per pair, reused) and groups of up to 10 people with an optional name. Project discussion stays on the project's Discussion tab. The community keeps Discord and WhatsApp (Phase 25); this is for a company's own team. |
+| Privacy | Only the people in a conversation can read or write in it, whatever their role: Admins can't read other people's messages (row-level security). Messages can't be edited or deleted. The page reminds people not to share passwords or payout amounts. |
+| Who | Anyone active in the company can message anyone active in it. People added later can't join an existing conversation (start a new group). Nobody can write into a conversation whose other people have all left. |
+| Unread | Per person and conversation, from their last read time. The icon (sidebar and phone top bar) checks every 30 seconds while the page is visible; an open conversation refreshes every 10 seconds. No WebSockets or paid real-time service. |
+| Reminders | The daily job adds one notification a day when someone has messages unread for over an hour; it shows in My work and goes out in the daily email (which people can turn off), linking to the conversation. |
+| Not included | Attachments, reactions, editing, read receipts, typing indicators, push notifications, adding people to existing conversations, clients in conversations. |

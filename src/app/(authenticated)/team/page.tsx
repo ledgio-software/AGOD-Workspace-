@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KeyRound, Plug, ShieldCheck, UserCheck, UserPlus, Users } from "lucide-react";
+import { KeyRound, MessageCircle, Plug, ShieldCheck, UserCheck, UserPlus, Users } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge } from "@/components/badges";
 import { Avatar, ButtonLink, Card, Disclosure, PageHeader, StatCard, cx, table } from "@/components/ui";
@@ -87,13 +87,20 @@ export default async function TeamPage() {
               {members.map((member) => (
                 <tr key={member.id} className={cx(table.row, "align-top", !member.active && "text-muted")}>
                   <td className={table.td}>
-                    <Link href={`/team/${member.id}`} className="flex items-center gap-3 hover:text-brand-600">
-                      <Avatar name={member.name} />
-                      <span className="min-w-0">
-                        <span className="block font-medium">{member.name}</span>
-                        <span className="block text-xs text-muted">{member.email}</span>
-                      </span>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/team/${member.id}`} className="flex min-w-0 items-center gap-3 hover:text-brand-600">
+                        <Avatar name={member.name} />
+                        <span className="min-w-0">
+                          <span className="block font-medium">{member.name}</span>
+                          <span className="block text-xs text-muted">{member.email}</span>
+                        </span>
+                      </Link>
+                      {member.active && member.id !== actor.id && (
+                        <Link href={`/messages?to=${member.id}`} aria-label={`Message ${member.name}`} title={`Message ${member.name}`} className="ml-auto rounded-lg p-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+                          <MessageCircle className="size-4" aria-hidden />
+                        </Link>
+                      )}
+                    </div>
                   </td>
                   <td className={table.td}>
                     <Badge tone={roleTone[member.role]}>{roleName.get(member.companyRoleId ?? member.role) ?? member.role}</Badge>

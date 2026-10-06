@@ -5,17 +5,20 @@ import { AppShell } from "@/components/shell";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Avatar } from "@/components/ui";
 import { requireUser } from "@/lib/session";
+import { MessagesLink } from "@/components/messages-link";
 import { canModerate } from "@/modules/community";
+import { unreadMessageCount } from "@/modules/messages";
 import { switchCompanyAction } from "./company/actions";
 
 export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const organizer = await canModerate(user);
+  const [organizer, unread] = await Promise.all([canModerate(user), unreadMessageCount(user)]);
 
   return (
     <AppShell
       groups={[...navGroups(user), communityGroup({ organizer })]}
       company={user.orgName}
+      messages={<MessagesLink initial={unread} />}
       switcher={user.companies.length > 1 ? <CompanySwitcher companies={user.companies} current={user.orgId} action={switchCompanyAction} /> : undefined}
       user={
         <div className="flex items-center gap-2.5 px-2">

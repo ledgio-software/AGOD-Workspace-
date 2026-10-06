@@ -124,6 +124,18 @@ guards keep invoiced stages and decided change requests unchanged, and the trigg
 `payment_transactions_release` refuses payouts above what the client has paid for (when the
 company pays the team in step with the client).
 
+### Messages (Phase 30)
+
+| Action | Team Member | Project Manager | Admin |
+|---|:---:|:---:|:---:|
+| Start a conversation with active people in the company | ✓ | ✓ | ✓ |
+| Read and write in conversations they are in | ✓ | ✓ | ✓ |
+| Read anyone else's conversation | | | |
+
+Row-level security: `app_in_conversation()` limits `conversations`, `conversation_members` and
+`messages` to the people in each conversation; messages are written only as yourself and never
+updated or deleted by the app role.
+
 ### Community (Phase 25)
 
 Community roles are separate from company roles: everyone signed in is a Builder; Reviewer is a
