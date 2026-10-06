@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  Building2,
   CalendarCheck,
   CircleHelp,
   FolderKanban,
@@ -26,6 +27,7 @@ const icons = {
   dashboard: LayoutDashboard,
   myWork: ListChecks,
   projects: FolderKanban,
+  customers: Building2,
   workload: Gauge,
   weekly: Newspaper,
   ledger: Wallet,

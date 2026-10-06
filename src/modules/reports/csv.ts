@@ -40,7 +40,7 @@ function toCsv(headers: string[], rows: Cell[][]): string {
   return `\uFEFF${headers.map(csvField).join(",")}\r\n${lines.join("\r\n")}${lines.length ? "\r\n" : ""}`;
 }
 
-/** Ledger export for bookkeeping/Ledgio review (design doc section 10). Amounts in major units, 2 decimals. */
+/** Ledger export for bookkeeping review (design doc section 10). Amounts in major units, 2 decimals. */
 export function ledgerToCsv(rows: LedgerRow[]): string {
   return toCsv(
     HEADERS,

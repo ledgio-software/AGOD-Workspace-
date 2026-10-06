@@ -38,6 +38,8 @@ const matrix: Record<Action, [boolean, boolean, boolean]> = {
   "report.weekly": [false, true, true],
   "finance.view": [false, true, true],
   "finance.manage": [false, true, true],
+  "customer.view": [false, true, true],
+  "customer.manage": [false, true, true],
 };
 
 describe("can: role matrix", () => {

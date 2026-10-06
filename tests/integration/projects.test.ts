@@ -49,7 +49,7 @@ describe("creating projects", () => {
     await expect(
       createProject(pm, input(pm.id, { startDate: "2026-10-10", targetDate: "2026-10-01" })),
     ).rejects.toThrow(/target date/);
-    await expect(createProject(pm, input(pm.id, { clientType: "EXTERNAL" }))).rejects.toThrow(/client name/);
+    await expect(createProject(pm, input(pm.id, { clientType: "EXTERNAL" }))).rejects.toThrow(/customer for an external project/);
   });
 
   it("rejects an inactive project owner", async () => {

@@ -7,7 +7,7 @@ Changing any of these later needs a PR that updates this file.
 | # | Decision | Choice |
 |---|---|---|
 | 1 | Currency | **GHS only** for the MVP. Money is stored as integer minor units (pesewas) with an ISO currency code column, so other currencies can be added later without a data migration. No currency conversion. |
-| 2 | Authentication | **Better Auth, separate from Ledgio.** Email + password, users/sessions stored in our own Neon database. Self sign-up is disabled: accounts are created by an Admin. Login is rate limited (5 attempts/minute per client). Inactive members cannot sign in. |
+| 2 | Authentication | **Better Auth, our own login.** Email + password, users/sessions stored in our own Neon database. Self sign-up is disabled: accounts are created by an Admin. Login is rate limited (5 attempts/minute per client). Inactive members cannot sign in. |
 | 3 | Compensation split mode | **One mode per project:** either all percentage splits totalling exactly 100%, or all fixed amounts totalling no more than the project value. No mixed plans. |
 | 4 | Who records manual payments | **Admin only.** PMs can view the ledger but cannot record payments. |
 | 5 | Reopening approved projects | **Allowed, Admin only,** with a required reason and an audit event. |
@@ -153,3 +153,17 @@ Phase 9 (file attachments in Vercel Blob).
 | Rounding | With an AGOD share, team members get their exact floored amounts and any leftover pesewas stay with AGOD. With 0%, the old rule applies (remainder to the largest share). |
 | Record | The approval snapshot stores the share percentage and amount (calculation version 2) and its notes say what AGOD kept. The project statement checks team lines + AGOD share = project value. |
 | Profit | No change to the profit rules: the AGOD share is simply what is left after payouts, so profit = AGOD share − other costs. |
+
+## Phase 16 decisions (2026-10-05): customers and contacts
+
+| Decision | Choice |
+|---|---|
+| What | A **customer** record per client: name, type (company, individual, partner, other), status (prospect, active, paused, churned, archived), account owner (a PM or Admin), optional reference in another system, and notes. Each customer has **contacts** with email and/or phone, a preferred channel, and primary/billing flags. |
+| Projects | Every external project links to a customer; internal projects have none (enforced by the database). `client_name` stays on the project as a copy of the customer's name and is updated when the customer is renamed, so reports, statements and exports are unchanged. |
+| Picking a customer | The project form offers the existing customers or "+ New customer…" with a name. A typed name that matches an existing customer (case and spaces ignored) links to it instead of creating a duplicate. |
+| Existing projects | The migration created one customer per distinct client name of external projects (owner: the owner of that client's first project) and linked the projects. |
+| Duplicates | Customer names are unique, ignoring case and surrounding spaces. |
+| Nothing is deleted | Customers are archived (with a reason, only once their projects are completed or cancelled) and can be restored; contacts are deactivated. Archived customers take no new projects or contact changes. The database refuses deletes. |
+| Primary contact | At most one active primary contact per customer; the first contact becomes primary, and marking another one primary moves the flag. |
+| Who | Project Managers and Admins see and manage customers and contacts (row-level security). Team Members only see the client name on their own projects. |
+| History | Customer and contact changes are in the audit log and on the customer page; PMs can read them as well as Admins. |

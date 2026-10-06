@@ -29,8 +29,10 @@ rules, audit) lives behind these functions, not in the pages.
 | `/dashboard` | everyone | `getDashboard`, `getMyWork`, `questionsWaitingOn` | |
 | `/my-work` | everyone | `getMyWork` (tasks, payouts, notifications) | `my-work/actions`: `markNotificationsReadAction`; task progress uses `projects/actions` |
 | `/projects` | everyone (own projects for members) | `listProjects` | |
-| `/projects/new` | `project.create` | `listActiveMembers` | `createProjectAction` |
+| `/projects/new` (`?customer=<id>` presets the customer) | `project.create` | `listActiveMembers`, `listCustomerOptions` | `createProjectAction` (`customerId`, or `clientName` for a new customer) |
 | `/projects/[id]` | anyone who can see the project | `getProjectWorkspace`, `getProjectPayouts`, `listComments`, `listProjectAttachments`, `getProjectGithub`, `getProjectFinance` (`finance.view`), `listTemplates` | `projects/actions`: project edit/status/health, team (`addAssignmentAction`, ...), milestones, tasks, approvals, comments, GitHub, files, finance (`projectFinanceAction`, `recordCostAction`, `voidCostAction`) |
+| `/customers` | `customer.view` | `listCustomers({ q, status })` | |
+| `/customers/new`, `/customers/[id]` | `customer.view` | `getCustomer` | `customers/actions` (`customer.manage`): customer create/edit/archive/restore, contacts add/edit/deactivate |
 | `/projects/[id]/statement` | anyone who can see the project | `getProjectStatement` | |
 | `/payouts/[id]` | the payee, managers | `getPayout`, `questionsForPayout`, `listPaymentReceipts` | `payouts/actions`: payments, adjustments, questions, receipts |
 | `/ledger` (+ `/ledger/export`) | `payout.viewAll` | `listLedger` | |

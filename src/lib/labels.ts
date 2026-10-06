@@ -84,7 +84,37 @@ const auditActionLabel: Record<string, string> = {
   "project.finance_updated": "changed the project type or cost budget",
   "cost.recorded": "recorded a project cost",
   "cost.voided": "voided a project cost",
+  "customer.created": "added the customer",
+  "customer.updated": "edited the customer",
+  "customer.archived": "archived the customer",
+  "customer.restored": "restored the customer",
+  "contact.added": "added a contact",
+  "contact.updated": "edited a contact",
+  "contact.deactivated": "deactivated a contact",
+  "contact.reactivated": "reactivated a contact",
 };
+
+export const customerTypeLabel = {
+  COMPANY: "Company",
+  PERSON: "Individual",
+  PARTNER: "Partner",
+  OTHER: "Other",
+} as const;
+
+export const customerStatusLabel = {
+  PROSPECT: "Prospect",
+  ACTIVE: "Active",
+  PAUSED: "Paused",
+  CHURNED: "Churned",
+  ARCHIVED: "Archived",
+} as const;
+
+export const contactChannelLabel = {
+  EMAIL: "Email",
+  PHONE: "Phone",
+  WHATSAPP: "WhatsApp",
+  OTHER: "Other",
+} as const;
 
 export const projectCategoryLabel = {
   DISCOVERY: "Discovery / research",

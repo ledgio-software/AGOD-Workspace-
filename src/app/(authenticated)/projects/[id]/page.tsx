@@ -27,6 +27,7 @@ import { listComments } from "@/modules/comments";
 import { getProjectFinance } from "@/modules/finance";
 import { getProjectGithub, isGithubConfigured } from "@/modules/github";
 import { listTemplates } from "@/modules/templates";
+import { listCustomerOptions } from "@/modules/customers";
 import { getProjectWorkspace, listActiveMembers } from "@/modules/projects";
 import { acceptsTaskUpdates, allowedManualTransitions, isEditable, isTaskOverdue } from "@/modules/projects/rules";
 import { applyTemplateAction, saveAsTemplateAction } from "../../templates/actions";
@@ -122,6 +123,7 @@ export default async function ProjectWorkspacePage({
   const editable = isEditable(project.status);
   const canManage = isManager && editable;
   const members = isManager ? await listActiveMembers(actor) : [];
+  const customerOptions = canManage ? await listCustomerOptions(actor, project.customerId) : [];
   const teamOptions = Array.from(new Map(ws.team.map((t) => [t.memberId, { id: t.memberId, name: t.memberName }])).values());
   const pct = project.splitMode === "PERCENTAGE";
   const workOpen = acceptsTaskUpdates(project.status);
@@ -173,7 +175,16 @@ export default async function ProjectWorkspacePage({
               <HealthBadge health={ws.health} />
             </div>
             <p className="text-sm text-muted">
-              <span className="font-mono text-xs">{project.code}</span> · {project.clientType === "INTERNAL" ? "Internal project" : project.clientName} ·
+              <span className="font-mono text-xs">{project.code}</span> · {project.clientType === "INTERNAL" ? (
+                "Internal project"
+              ) : isManager && project.customerId ? (
+                <Link href={`/customers/${project.customerId}`} className="hover:text-fg hover:underline">
+                  {project.clientName}
+                </Link>
+              ) : (
+                project.clientName
+              )}{" "}
+              ·
               Owner {ws.ownerName}
             </p>
           </div>
@@ -438,13 +449,14 @@ export default async function ProjectWorkspacePage({
                 <ProjectForm
                   action={updateProjectAction.bind(null, project.id)}
                   members={members}
+                  customers={customerOptions}
                   submitLabel="Save changes"
                   splitModeLocked={ws.team.length > 0}
                   defaults={{
                     name: project.name,
                     description: project.description,
                     clientType: project.clientType,
-                    clientName: project.clientName,
+                    customerId: project.customerId,
                     totalValue: minorToInput(project.totalValueMinor),
                     splitMode: project.splitMode,
                     agodShare: String(project.agodShareBasisPoints / 100),

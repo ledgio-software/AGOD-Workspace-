@@ -201,6 +201,9 @@ src/
 ### Phase 15 — Frontend redesign, part 4 ✓
 - Team (with the add/manage panels), contribution history, Workload (load meters), Weekly summary, Audit log, Templates, Integrations and Account; every page now uses the design system
 
+### Phase 16 — Customers and contacts ✓
+- Customer records (type, status, account owner, reference, notes) with contacts; external projects link to a customer; archive instead of delete
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

@@ -29,8 +29,8 @@ describe("project financials", () => {
     const a = projectFinancials(base);
     const b = projectFinancials({ ...base, revenueMinor: 1_000_000, plannedPayoutMinor: 900_000, actualCostMinor: 200_000 });
     expect(sumFinancials([a, b])).toEqual({ revenueMinor: 5_000_000, payoutMinor: 2_700_000, costMinor: 200_000, profitMinor: 2_100_000, marginPct: 42, projects: 2 });
-    const groups = groupTotals([{ c: "Ledgio", f: a }, { c: "Acme", f: b }, { c: "Ledgio", f: b }], (r) => r.c, (r) => r.f);
-    expect(groups.map((g) => [g.name, g.revenueMinor, g.projects])).toEqual([["Ledgio", 5_000_000, 2], ["Acme", 1_000_000, 1]]);
+    const groups = groupTotals([{ c: "Northwind", f: a }, { c: "Acme", f: b }, { c: "Northwind", f: b }], (r) => r.c, (r) => r.f);
+    expect(groups.map((g) => [g.name, g.revenueMinor, g.projects])).toEqual([["Northwind", 5_000_000, 2], ["Acme", 1_000_000, 1]]);
   });
 });
 
