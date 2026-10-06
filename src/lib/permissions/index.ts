@@ -40,7 +40,12 @@ export type Action =
   | "customer.view"
   | "customer.manage"
   | "subscription.view"
-  | "subscription.manage";
+  | "subscription.manage"
+  | "invoice.view"
+  | "invoice.manage"
+  | "invoice.recordPayment"
+  | "invoice.settings"
+  | "google.manage";
 
 /** Facts about the record being acted on, when the rule depends on it. */
 export type ResourceContext = {
@@ -98,6 +103,14 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   // Phase 17: the service catalogue and customer subscriptions (PMs and Admins).
   "subscription.view": isManager,
   "subscription.manage": isManager,
+  // Phase 20: PMs and Admins prepare, issue, send and void invoices; money received from customers
+  // and the business details printed on invoices are Admin-only (like decision 4 for payouts).
+  "invoice.view": isManager,
+  "invoice.manage": isManager,
+  "invoice.recordPayment": isAdmin,
+  "invoice.settings": isAdmin,
+  // Phase 21: connecting or disconnecting the company Google account.
+  "google.manage": isAdmin,
 };
 
 export function can(actor: Actor, action: Action, resource: ResourceContext = {}): boolean {

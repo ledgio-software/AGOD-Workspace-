@@ -202,3 +202,29 @@ Phase 9 (file attachments in Vercel Blob).
 | Reliability | Notifications are claimed (marked emailed) before sending and released if sending fails, so a retried or overlapping run never double-sends and a failure is retried next day. Each run is recorded (`job_runs`) and shown to Admins. |
 | Opt-out | Each person turns the daily email off or on from Account (their own preference row, protected by row-level security). On by default. |
 | Not included | Instant (per-event) emails, SMS/WhatsApp, per-type email settings. |
+
+## Phase 20 decisions (2026-10-06): invoices
+
+| Decision | Choice |
+|---|---|
+| Lifecycle | **Draft** (edited freely, can be deleted; no number yet) → **Issued** (gets the next number `INV-<year>-<nnnn>`, copies the bill-to name and email, and is frozen) → optionally **Void** (with a reason, only while no payments are recorded). Open, partly paid, paid and overdue are worked out from payments and the due date. A correction is a void plus a new invoice; there are no credit notes yet. |
+| Lines | Manual lines (description × quantity × unit price), the next unbilled **period of a subscription** (one billing period at the subscription's price; one-time billed once; custom billing as a manual line), or an amount for a **project** of that customer (deposit, milestone, balance). The database refuses billing the same subscription period twice, and the service refuses billing more than a project's value. Voiding frees what the invoice billed. |
+| Subscription billing | "Prepare subscription invoices" creates one draft per customer with every active subscription's next period starting by a chosen date (default: in 7 days). Nothing is sent until each draft is issued. |
+| Who | PMs and Admins create, issue, email and void invoices. Only **Admins** record or void customer payments and edit the invoice settings (like decision 4 for payouts). Team Members see nothing. Row-level security and triggers enforce the same. |
+| Payments | Recorded manually (amount, date not in the future, method, reference), never more than the balance; partial payments allowed. Payments are voided with a reason, never deleted or edited. |
+| PDF and email | The PDF is generated on the server (pdf-lib, built-in Helvetica; characters outside its set print as "?"). "Send by email" attaches it and goes to the billing contact copied at issue (or another address), over the SMTP settings from Phase 19; it records when and to whom. |
+| Settings | Business name, address, contact details, tax ID, payment instructions (bank, MoMo), footer and default payment terms (14 days), printed on every PDF, including invoices issued earlier. |
+| Reminders | Overdue invoices remind the customer's account owner (once per due date); Admins are told after 14 days. In the app, the daily email and a Dashboard warning. |
+| Not included | Tax/VAT lines, discounts, credit notes, online card or MoMo collection, multi-currency invoices, recurring auto-issue. |
+
+## Phase 21 decisions (2026-10-06): Google Drive
+
+| Decision | Choice |
+|---|---|
+| Account | The team uses personal Gmail, which has no shared drives, so an **Admin connects one team Google account** (OAuth, offline access, PKCE). The app keeps an **AGOD** folder there with a folder per customer (with *Invoices*), per project (internal projects under *Internal projects*) and *Payment receipts*. One company account at a time; reconnecting the same account keeps its folders and files. |
+| Permission scope | `drive.file` only: the app sees nothing in that Drive except what it created. `calendar` is requested at the same time for Phases 22–23. |
+| Sharing | AGOD: Editor for every active PM and Admin. Project folders: Editor for the project's team members (owner, assigned people, task assignees), as the app's own project visibility rule. Synced daily and on demand; the app removes only access it granted. Shared with the email people sign in with (later: their connected Google account). No notification emails from Drive. |
+| Files | When Drive is connected, new uploads go to Drive (`gdrive:<connection>:<file>` storage key) and are still served through `/files/<id>` with the same access checks; earlier files stay in Blob. If Drive refuses, the upload falls back to Blob when it is configured. Issued invoice PDFs are saved to the customer's *Invoices* folder (best effort; retry button). |
+| Links | Links (https only) to Google Docs/Sheets/Slides/Drive or other pages on a project (managers) or a task (managers and the assignee); removed softly by whoever added them or a manager; visible with the project. |
+| Security | The refresh token is encrypted (AES-256-GCM, key derived from `BETTER_AUTH_SECRET`). Tokens and folder ids live in tables the app role cannot read at all; the server reads them through the owner connection after its own permission checks. The OAuth attempt (state, PKCE verifier, who started it) is kept in an encrypted, httpOnly, 10-minute cookie. |
+| Not included | Shared drives (Google Workspace), browsing Drive from the app, two-way sync of files added in Drive, per-person Drive accounts (Phase 22 adds personal Google connections for calendars). |

@@ -20,6 +20,7 @@ import { requireUser } from "@/lib/session";
 import { acceptsTaskUpdates } from "@/modules/projects/rules";
 import { refreshDeadlineAlertsQuietly } from "@/modules/notifications/deadlines";
 import { notificationPath } from "@/modules/notifications/links";
+import { refreshInvoiceAlertsQuietly } from "@/modules/invoices";
 import { refreshRenewalAlertsQuietly } from "@/modules/subscriptions";
 import { getMyWork } from "@/modules/work";
 import { taskProgressAction } from "../projects/actions";
@@ -34,7 +35,7 @@ const payoutTone = { OWED: "amber", PARTIALLY_PAID: "blue", PAID: "green", DISPU
 
 export default async function MyWorkPage() {
   const actor = await requireUser();
-  await Promise.all([refreshDeadlineAlertsQuietly(actor), refreshRenewalAlertsQuietly(actor)]);
+  await Promise.all([refreshDeadlineAlertsQuietly(actor), refreshRenewalAlertsQuietly(actor), refreshInvoiceAlertsQuietly(actor)]);
   const work = await getMyWork(actor);
   const openTasks = work.tasks.filter((t) => t.status !== "DONE" && t.status !== "WAIVED");
 

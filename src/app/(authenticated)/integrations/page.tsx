@@ -1,7 +1,7 @@
-import { CalendarClock, CircleCheck, CircleX, Mail, Plug, TriangleAlert, Webhook } from "lucide-react";
+import { CalendarClock, CircleCheck, CircleX, ExternalLink, FolderOpen, HardDrive, Mail, Plug, TriangleAlert, Webhook } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge } from "@/components/badges";
-import { Callout, Card, EmptyState, PageHeader, compactTable as ct, table } from "@/components/ui";
+import { Callout, Card, EmptyState, PageHeader, buttonClass, compactTable as ct, table } from "@/components/ui";
 import { formatDateTime } from "@/lib/dates";
 import { describeEmail, emailConfig } from "@/lib/email";
 import { resolveBaseUrl } from "@/lib/env";
@@ -9,14 +9,27 @@ import { checkGithubApp, githubConfig } from "@/lib/github/app";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { recentDeliveries } from "@/modules/github";
+import { googleStatus } from "@/modules/google";
 import { type DailySummary, recentJobRuns } from "@/modules/jobs/daily";
 import { EmailActions } from "./email-actions";
+import { GoogleActions } from "./google-actions";
 
-export default async function IntegrationsPage() {
+const googleResult: Record<string, { tone: "good" | "warn" | "bad"; text: string }> = {
+  connected: { tone: "good", text: "Google connected. The AGOD folder was created in its Drive and shared with the managers." },
+  cancelled: { tone: "warn", text: "Connecting Google was cancelled on Google's screen. Nothing changed." },
+  expired: { tone: "bad", text: "That sign-in took too long or was started in another browser. Try again." },
+  "no-drive": { tone: "bad", text: "Google Drive access was not allowed. Try again and leave the Drive box ticked on Google's screen." },
+  failed: { tone: "bad", text: "Google refused the connection. Try again; if it keeps failing, check the redirect URI and enabled APIs (docs/GOOGLE.md)." },
+  "not-configured": { tone: "warn", text: "Google is not set up on this environment yet (see below)." },
+};
+
+export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
   const actor = await requireUser();
   if (!can(actor, "audit.viewAll")) return <AccessDenied what="integration settings" />;
   const config = githubConfig();
-  const [check, deliveries, runs] = await Promise.all([config ? checkGithubApp() : null, recentDeliveries(actor), recentJobRuns(actor)]);
+  const [check, deliveries, runs, google] = await Promise.all([config ? checkGithubApp() : null, recentDeliveries(actor), recentJobRuns(actor), googleStatus(actor)]);
+  const result = googleResult[(await searchParams).google ?? ""];
+  const g = google.connection;
   const email = emailConfig();
   const cronReady = (process.env.CRON_SECRET?.length ?? 0) >= 16;
   const webhookUrl = `${resolveBaseUrl(process.env) ?? ""}/api/github/webhook`;
@@ -28,8 +41,9 @@ export default async function IntegrationsPage() {
         title="Integrations"
         description={
           <>
-            Daily email reminders, and GitHub (links tasks to issues and pull requests and records deployments). Setup guides:{" "}
-            <code className="rounded bg-surface-muted px-1 text-xs">docs/EMAIL.md</code> and{" "}
+            Daily email reminders, Google Drive, and GitHub (links tasks to issues and pull requests and records deployments). Setup guides:{" "}
+            <code className="rounded bg-surface-muted px-1 text-xs">docs/EMAIL.md</code>,{" "}
+            <code className="rounded bg-surface-muted px-1 text-xs">docs/GOOGLE.md</code> and{" "}
             <code className="rounded bg-surface-muted px-1 text-xs">docs/GITHUB_APP.md</code>.
           </>
         }
@@ -59,6 +73,91 @@ export default async function IntegrationsPage() {
             Every morning at 06:00 (Accra), the app creates everyone&apos;s task, approval and renewal reminders and emails each person one summary of what is new. People can turn the email off on their Account page.
           </p>
           <EmailActions canSend={email !== null} />
+        </div>
+      </Card>
+
+      <Card title="Google Drive" aside={<HardDrive className="size-4 text-muted" aria-hidden />}>
+        <div className="space-y-4 text-sm">
+          {result && (
+            <Callout tone={result.tone} icon={result.tone === "good" ? CircleCheck : TriangleAlert}>
+              {result.text}
+            </Callout>
+          )}
+          {!google.configured ? (
+            <Callout tone="warn" icon={TriangleAlert}>
+              Not set up. Create a Google OAuth client, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to this environment in Vercel, then redeploy. Setup steps:{" "}
+              <code className="text-xs">docs/GOOGLE.md</code>.
+            </Callout>
+          ) : !g ? (
+            <>
+              <p className="text-muted">
+                Connect the team&apos;s Google account (for example the AGOD Gmail). The app then keeps an <strong className="text-fg">AGOD</strong> folder in its Drive with a
+                folder per customer and project, saves uploads and issued invoices there, and shares each project folder with its team.
+              </p>
+              <a href="/api/google/connect" className={buttonClass("primary", "sm")}>
+                Connect Google
+              </a>
+            </>
+          ) : (
+            <>
+              {g.lastError ? (
+                <Callout tone="bad" icon={CircleX}>
+                  Connected as {g.googleEmail}, but the last call failed{g.lastErrorAt && <> ({formatDateTime(g.lastErrorAt)})</>}: {g.lastError}
+                </Callout>
+              ) : (
+                <Callout tone="good" icon={CircleCheck}>
+                  Connected as {g.googleEmail}
+                  {g.connectedBy && <> by {g.connectedBy}</>} on {formatDateTime(g.connectedAt)}.
+                </Callout>
+              )}
+              <div className="flex flex-wrap items-center gap-3">
+                {g.rootUrl && (
+                  <a href={g.rootUrl} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "sm")}>
+                    <FolderOpen className="size-4" aria-hidden /> Open the AGOD folder <ExternalLink className="size-3.5 opacity-60" aria-hidden />
+                  </a>
+                )}
+                <a href="/api/google/connect" className={buttonClass("secondary", "sm")}>
+                  Reconnect
+                </a>
+              </div>
+              <p className="text-muted">
+                {g.lastSyncAt ? (
+                  <>
+                    Folders and sharing last checked {formatDateTime(g.lastSyncAt)}
+                    {g.lastSync && (
+                      <>
+                        {" "}
+                        ({g.lastSync.folders} folders, {g.lastSync.shared} shares added, {g.lastSync.unshared} removed)
+                      </>
+                    )}
+                    . This runs every morning with the reminders.
+                  </>
+                ) : (
+                  "Folders and sharing are checked every morning with the reminders."
+                )}
+              </p>
+              {g.lastSync && g.lastSync.failures.length > 0 && (
+                <Callout tone="warn" icon={TriangleAlert}>
+                  <p className="font-medium">Some folders could not be shared:</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs">
+                    {g.lastSync.failures.map((f) => (
+                      <li key={f} className="break-words">
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1 text-xs">Drive can only share with Google accounts. People who sign in with another email need a Google account with that address (or will connect their own Google account in a later update).</p>
+                </Callout>
+              )}
+              <GoogleActions />
+            </>
+          )}
+          {google.configured && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted">Authorized redirect URI for this environment</p>
+              <code className="block select-all break-all rounded-lg border border-line bg-surface-muted px-3 py-2 font-mono text-xs">{google.redirectUri}</code>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -94,6 +193,8 @@ export default async function IntegrationsPage() {
                             s?.reminderFailures ? `${s.reminderFailures} reminder failures` : null,
                             s?.emailFailures ? `${s.emailFailures} emails failed (they will be retried)` : null,
                             s?.emailsSkipped ? `${s.emailsSkipped} people turned email off` : null,
+                            s?.drive && "error" in s.drive ? `Drive: ${s.drive.error}` : null,
+                            s?.drive && "failures" in s.drive && s.drive.failures ? `Drive: ${s.drive.failures} sharing problems` : null,
                           ]
                             .filter(Boolean)
                             .join(" · ")}

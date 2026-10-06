@@ -33,6 +33,7 @@ export function navGroups(actor: Actor): NavGroup[] {
     {
       label: "Money",
       items: [
+        { href: "/invoices", label: "Invoices", icon: "invoices", show: can(actor, "invoice.view") },
         { href: "/ledger", label: "Ledger", icon: "ledger", show: can(actor, "payout.viewAll") },
         { href: "/questions", label: "Questions", icon: "questions", show: can(actor, "payoutQuestion.review") },
         { href: "/close", label: "Month close", icon: "close", show: can(actor, "period.view") },

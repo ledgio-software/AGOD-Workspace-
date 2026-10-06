@@ -213,6 +213,12 @@ src/
 ### Phase 19 — Email reminders ✓
 - Daily job (Vercel Cron) creates everyone's reminders and emails one summary per person (SMTP via Nodemailer); opt-out on Account; run history and test email on Integrations (`docs/EMAIL.md`)
 
+### Phase 20 — Invoices ✓
+- Draft → issued → paid invoices from subscription periods, project amounts or manual lines; numbered PDFs, sent by email; payments (Admin) and overdue reminders; invoice settings
+
+### Phase 21 — Google Drive ✓
+- Admin connects the team Google account; folders per customer and project (shared with the team), uploads and issued invoices saved in Drive, links to Docs/Sheets/Drive files on projects and tasks (`docs/GOOGLE.md`)
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
@@ -229,7 +235,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive](docs/GOOGLE.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)

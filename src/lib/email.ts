@@ -7,7 +7,8 @@ import nodemailer from "nodemailer";
 // mail server, ...). Outside Vercel, EMAIL_OUTBOX_DIR writes each email to a JSON file instead
 // (local testing only).
 
-export type EmailMessage = { to: string; subject: string; text: string; html: string };
+export type EmailAttachment = { filename: string; content: Uint8Array; contentType: string };
+export type EmailMessage = { to: string; subject: string; text: string; html: string; attachments?: EmailAttachment[] };
 
 export type EmailConfig =
   | { provider: "smtp"; host: string; port: number; secure: boolean; user?: string; pass?: string; from: string }
@@ -34,7 +35,12 @@ export async function sendEmail(config: EmailConfig, message: EmailMessage): Pro
   if (config.provider === "outbox") {
     await mkdir(config.dir, { recursive: true });
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await writeFile(path.join(config.dir, `${id}.json`), JSON.stringify({ from: config.from, ...message }, null, 2));
+    const { attachments = [], ...rest } = message;
+    await writeFile(
+      path.join(config.dir, `${id}.json`),
+      JSON.stringify({ from: config.from, ...rest, attachments: attachments.map((a) => ({ filename: a.filename, bytes: a.content.length })) }, null, 2),
+    );
+    for (const a of attachments) await writeFile(path.join(config.dir, `${id}-${a.filename}`), a.content);
     return { id };
   }
   const transport = nodemailer.createTransport({
@@ -53,6 +59,7 @@ export async function sendEmail(config: EmailConfig, message: EmailMessage): Pro
       subject: message.subject,
       text: message.text,
       html: message.html,
+      attachments: message.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content), contentType: a.contentType })),
       // Our messages never attach files or fetch URLs.
       disableFileAccess: true,
       disableUrlAccess: true,

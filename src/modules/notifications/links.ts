@@ -4,5 +4,6 @@ export function notificationPath(entityType: string | null, entityId: string | n
   if (entityType === "project") return `/projects/${entityId}`;
   if (entityType === "subscription") return `/subscriptions/${entityId}`;
   if (entityType === "payout") return `/payouts/${entityId}`;
+  if (entityType === "invoice") return `/invoices/${entityId}`;
   return null;
 }

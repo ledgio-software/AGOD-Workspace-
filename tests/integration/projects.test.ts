@@ -31,11 +31,21 @@ describe("creating projects", () => {
     await expect(createProject(member, input(member.id))).rejects.toThrow(PermissionError);
   });
 
+  it("keeps numbering past 999 projects in a year (codes compared as numbers)", async () => {
+    const pm = await createUser("PROJECT_MANAGER");
+    const prefix = `AGOD-${new Date().toISOString().slice(0, 4)}-`;
+    const probe = await createProject(pm, input(pm.id));
+    const next = Math.max(Number(probe.code.slice(prefix.length)) + 1, 1000);
+    await db.insert(projects).values({ code: `${prefix}${next}`, name: "Imported", clientType: "INTERNAL", totalValueMinor: 1, projectOwnerId: pm.id, createdBy: pm.id });
+    const after = await createProject(pm, input(pm.id));
+    expect(after.code).toBe(`${prefix}${next + 1}`);
+  });
+
   it("assigns sequential AGOD-<year>-<nnn> codes, stores money in pesewas and audits", async () => {
     const pm = await createUser("PROJECT_MANAGER");
     const first = await createProject(pm, input(pm.id));
     const second = await createProject(pm, input(pm.id));
-    expect(first.code).toMatch(/^AGOD-\d{4}-\d{3}$/);
+    expect(first.code).toMatch(/^AGOD-\d{4}-\d{3,}$/);
     expect(Number(second.code.slice(-3))).toBe(Number(first.code.slice(-3)) + 1);
     expect(first.totalValueMinor).toBe(1_000_000);
     expect(first.status).toBe("DRAFT");
