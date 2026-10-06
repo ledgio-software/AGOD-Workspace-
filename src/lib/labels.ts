@@ -99,6 +99,7 @@ const auditActionLabel: Record<string, string> = {
   "subscription.created": "created the subscription",
   "subscription.updated": "edited the subscription",
   "subscription.amended": "amended the terms",
+  "subscription.renewed": "renewed the subscription",
   "subscription.status_changed": "changed the status",
 };
 

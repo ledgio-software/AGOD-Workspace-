@@ -207,6 +207,9 @@ src/
 ### Phase 17 — Services and subscriptions ✓
 - Service catalogue; customer subscriptions with price, billing, renewal dates and statuses; changes to live terms recorded as amendments; monthly recurring value and renewal-due flags
 
+### Phase 18 — Renewals and recurring revenue ✓
+- Renewal reminders for the renewal owner (escalated to Admins after a week), "Record a renewal", renewals on the Dashboard, recurring revenue in Profitability
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

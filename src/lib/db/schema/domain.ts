@@ -828,6 +828,9 @@ export const subscriptions = pgTable(
   ],
 );
 
+// Phase 18: a renewal is recorded like an amendment (old and new terms kept), marked as a renewal.
+export const amendmentKind = pgEnum("amendment_kind", ["AMENDMENT", "RENEWAL"]);
+
 export const subscriptionAmendments = pgTable(
   "subscription_amendments",
   {
@@ -835,6 +838,7 @@ export const subscriptionAmendments = pgTable(
     subscriptionId: uuid("subscription_id")
       .notNull()
       .references(() => subscriptions.id, { onDelete: "restrict" }),
+    kind: amendmentKind("kind").notNull().default("AMENDMENT"),
     effectiveDate: date("effective_date").notNull(),
     // { field: { from, to } } for each changed term.
     changes: jsonb("changes").notNull(),

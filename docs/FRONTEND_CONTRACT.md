@@ -33,9 +33,9 @@ rules, audit) lives behind these functions, not in the pages.
 | `/projects/[id]` | anyone who can see the project | `getProjectWorkspace`, `getProjectPayouts`, `listComments`, `listProjectAttachments`, `getProjectGithub`, `getProjectFinance` (`finance.view`), `listTemplates` | `projects/actions`: project edit/status/health, team (`addAssignmentAction`, ...), milestones, tasks, approvals, comments, GitHub, files, finance (`projectFinanceAction`, `recordCostAction`, `voidCostAction`) |
 | `/customers` | `customer.view` | `listCustomers({ q, status })` | |
 | `/customers/new`, `/customers/[id]` | `customer.view` | `getCustomer` | `customers/actions` (`customer.manage`): customer create/edit/archive/restore, contacts add/edit/deactivate |
-| `/subscriptions` | `subscription.view` | `listSubscriptions({ q, status, attention, customerId })`, `recurringTotals` | |
+| `/subscriptions` | `subscription.view` | `listSubscriptions({ q, status, attention, within, customerId })`, `recurringTotals` | |
 | `/subscriptions/new` (`?customer=<id>`) | `subscription.manage` | `listCustomerOptions`, `listServiceOptions` | `createSubscriptionAction` |
-| `/subscriptions/[id]` | `subscription.view` | `getSubscription` | `subscriptions/actions`: `changeStatusAction`, `updateDraftAction`, `amendAction`, `updateDetailsAction` |
+| `/subscriptions/[id]` | `subscription.view` | `getSubscription`, `renewalSuggestion` | `subscriptions/actions`: `changeStatusAction`, `updateDraftAction`, `amendAction`, `renewAction`, `updateDetailsAction` |
 | `/services` | `subscription.view` | `listServices` | `createServiceAction`, `updateServiceAction`, `setServiceActiveAction` |
 | `/projects/[id]/statement` | anyone who can see the project | `getProjectStatement` | |
 | `/payouts/[id]` | the payee, managers | `getPayout`, `questionsForPayout`, `listPaymentReceipts` | `payouts/actions`: payments, adjustments, questions, receipts |
@@ -43,7 +43,7 @@ rules, audit) lives behind these functions, not in the pages.
 | `/questions` | `payoutQuestion.review` | `listQuestions` | `payouts/actions` (review, resolve) |
 | `/close` (+ `/close/export`) | `period.view` | `getPeriodClose`, `periodMovements` | `close/actions`: `closePeriodAction`, `reopenPeriodAction` (`period.close`) |
 | `/reconcile` | `payout.viewAll` | | `reconcile/actions`: `reconcileAction` |
-| `/profitability` (+ `/profitability/export`) | `finance.view` | `getProfitability({ scope, category })`, `getPayoutForecast`, `getPayoutAging`, `getUtilisation(month)` | |
+| `/profitability` (+ `/profitability/export`) | `finance.view` | `getProfitability({ scope, category })`, `getRecurringRevenue` (`?view=recurring`), `getPayoutForecast`, `getPayoutAging`, `getUtilisation(month)` | |
 | `/team`, `/team/[id]` | `team.view` | `listTeam`, `getContributionHistory` | `team/actions` (`team.manage`) |
 | `/workload` | `workload.view` | `getWorkload` | |
 | `/summary` | `report.weekly` | `getWeeklySummary`, `summaryText` | |

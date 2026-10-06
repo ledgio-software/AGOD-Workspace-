@@ -182,3 +182,12 @@ Phase 9 (file attachments in Vercel Blob).
 | Customers | A customer can't be archived while it has draft, active or paused subscriptions. |
 | Not included | Invoicing, payment collection, tax, usage metering and proration. Subscription income is not yet in Profitability. |
 | Who | Project Managers and Admins (row-level security); Team Members see none of it. |
+
+## Phase 18 decisions (2026-10-06): renewals and recurring revenue
+
+| Decision | Choice |
+|---|---|
+| Reminders | In-app, like the task and approval alerts: generated when a PM or Admin opens the Dashboard or My work, each sent once (dedupe key includes the date), so no scheduler is needed. The renewal owner (or the owner when none is set) is told when the notice period starts, when the renewal date passes without a decision, and when a live subscription is past its end date. Admins are told about anything a week overdue. Email/WhatsApp delivery would need a scheduled job and a provider. |
+| Renewing | "Record a renewal" moves the renewal date (and the end date, if any) forward, by default one billing period (one year for one-time and custom billing), optionally at a new price, with a note of what was agreed. It is stored as an amendment marked **Renewal**, effective on the old renewal date, so the previous terms stay visible. A reminder never renews anything by itself; not renewing means ending or cancelling the subscription with a reason. |
+| Renewals view | Dashboard card (next 60 days and anything overdue) and a "renewing within 30/60/90 days" filter on Subscriptions. |
+| Recurring revenue | A Profitability tab: monthly recurring value and annual run rate (× 12) of active subscriptions, by service and by customer, and what renews in the next 90 days. Agreed value, not invoiced or collected money; it is kept separate from project profit. |
