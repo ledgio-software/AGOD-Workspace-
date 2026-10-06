@@ -1209,3 +1209,75 @@ export const projectMeetings = pgTable(
   ],
 );
 
+
+// Phase 29: the client money flow. A project's payment plan (deposit, milestone and final
+// payments, and approved change requests), each invoiced on its own and signed off by the client;
+// and change requests that add to the project's value. Managers only (row-level security).
+
+export const changeRequests = pgTable(
+  "change_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    amountMinor: money("amount_minor").notNull(),
+    extraDays: integer("extra_days").notNull().default(0),
+    // DRAFT → SENT (to the client) → APPROVED (adds to the project) or REJECTED.
+    status: text("status").notNull().default("DRAFT"),
+    decidedOn: date("decided_on"),
+    decisionNote: text("decision_note"),
+    decidedBy: userRef("decided_by"),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("change_requests_project_idx").on(t.projectId),
+    check("change_requests_status", sql`${t.status} IN ('DRAFT', 'SENT', 'APPROVED', 'REJECTED')`),
+    check("change_requests_title", sql`length(btrim(${t.title})) BETWEEN 3 AND 200`),
+    check("change_requests_amount", sql`${t.amountMinor} >= 0`),
+    check("change_requests_days", sql`${t.extraDays} BETWEEN 0 AND 365`),
+    check("change_requests_decided", sql`(${t.status} IN ('APPROVED', 'REJECTED')) = (${t.decidedOn} IS NOT NULL)`),
+  ],
+);
+
+export const billingStages = pgTable(
+  "billing_stages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    position: integer("position").notNull(),
+    // DEPOSIT (before work starts), MILESTONE, FINAL, or CHANGE (an approved change request).
+    kind: text("kind").notNull(),
+    label: text("label").notNull(),
+    amountMinor: money("amount_minor").notNull(),
+    milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "restrict" }),
+    changeRequestId: uuid("change_request_id").references(() => changeRequests.id, { onDelete: "restrict" }),
+    // The invoice line that bills this stage (cleared if a draft line is removed; a void invoice's
+    // line is marked voided, and the stage can be invoiced again).
+    invoiceLineId: uuid("invoice_line_id").references(() => invoiceLines.id, { onDelete: "set null" }),
+    // Client sign-off: when the work was sent for review, and when (and how) the client accepted.
+    reviewSentOn: date("review_sent_on"),
+    signedOffOn: date("signed_off_on"),
+    signedOffBy: userRef("signed_off_by"),
+    signOffNote: text("sign_off_note"),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("billing_stages_project_position").on(t.projectId, t.position),
+    uniqueIndex("billing_stages_invoice_line").on(t.invoiceLineId),
+    check("billing_stages_kind", sql`${t.kind} IN ('DEPOSIT', 'MILESTONE', 'FINAL', 'CHANGE')`),
+    check("billing_stages_label", sql`length(btrim(${t.label})) BETWEEN 2 AND 120`),
+    check("billing_stages_amount", sql`${t.amountMinor} > 0`),
+    check("billing_stages_signoff", sql`(${t.signedOffOn} IS NULL) = (${t.signedOffBy} IS NULL)`),
+  ],
+);

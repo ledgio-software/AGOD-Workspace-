@@ -174,6 +174,44 @@ export async function addInvoiceLine(actor: Actor, invoiceId: string, raw: z.inp
   });
 }
 
+/**
+ * Phase 29: a new draft invoice billing one payment stage of a project, in the caller's
+ * transaction (the caller checks `invoice.manage`). Returns the invoice and its line.
+ */
+export async function draftProjectInvoiceTx(
+  tx: Tx,
+  actor: Actor,
+  input: { customerId: string; projectId: string; description: string; amountMinor: number },
+  request?: RequestMeta,
+): Promise<{ invoiceId: string; lineId: string }> {
+  const [project] = await tx
+    .select({ code: projects.code, totalValueMinor: projects.totalValueMinor })
+    .from(projects)
+    .where(eq(projects.id, input.projectId))
+    .for("update");
+  if (!project) throw new ServiceError("Project not found.");
+  const billed = await projectBilledMinor(tx, input.projectId);
+  if (billed + input.amountMinor > project.totalValueMinor) {
+    throw new ServiceError(`That would bill more than ${project.code}'s value: ${formatMoney(billed)} of ${formatMoney(project.totalValueMinor)} is already on invoices.`);
+  }
+  const invoice = await createDraftTx(tx, actor, input.customerId, null, request);
+  const [line] = await tx
+    .insert(invoiceLines)
+    .values({ invoiceId: invoice.id, position: 1, description: input.description, quantity: 1, unitPriceMinor: input.amountMinor, amountMinor: input.amountMinor, projectId: input.projectId })
+    .returning({ id: invoiceLines.id })
+    .catch(rethrowDbGuard);
+  await refreshTotal(tx, invoice);
+  await recordAudit(tx, {
+    actorId: actor.id,
+    entityType: "invoice",
+    entityId: invoice.id,
+    action: "invoice.line_added",
+    after: { description: input.description, amountMinor: input.amountMinor, projectId: input.projectId },
+    request,
+  });
+  return { invoiceId: invoice.id, lineId: line.id };
+}
+
 /** Adds the subscription's next unbilled period to a draft. */
 export async function addSubscriptionPeriod(actor: Actor, invoiceId: string, subscriptionId: string, request?: RequestMeta) {
   assertCan(actor, "invoice.manage");

@@ -270,6 +270,13 @@ export async function changeProjectStatus(
     if (!canTransition(project.status, input.to)) {
       throw new ServiceError(`A project cannot move from ${project.status} to ${input.to} here.`);
     }
+    // Phase 29: "no deposit, no work" (company setting); a manager may start anyway with a reason.
+    let depositOverride: string | null = null;
+    if (input.to === "IN_PROGRESS" && project.status === "PLANNING") {
+      const { depositBlock } = await import("@/modules/billing");
+      depositOverride = await depositBlock(tx, actor.orgId, project);
+      if (depositOverride && !input.reason) throw new ServiceError(depositOverride);
+    }
     await tx
       .update(projects)
       .set({ status: input.to, version: project.version + 1 })
@@ -281,7 +288,7 @@ export async function changeProjectStatus(
       projectId,
       action: "project.status_changed",
       before: { status: project.status },
-      after: { status: input.to },
+      after: { status: input.to, ...(depositOverride ? { startedWithoutDeposit: true } : {}) },
       reason: input.reason ?? null,
       request,
     });

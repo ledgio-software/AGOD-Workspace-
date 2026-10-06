@@ -9,7 +9,7 @@ import type { Health, ProjectStatus, TaskStatus } from "@/modules/projects/rules
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
 type Option = { id: string; name: string };
 
-export function StatusControls({ action, allowed }: { action: Action; allowed: ProjectStatus[] }) {
+export function StatusControls({ action, allowed, depositPending = false }: { action: Action; allowed: ProjectStatus[]; depositPending?: boolean }) {
   const [to, setTo] = useState<ProjectStatus | "">("");
   if (allowed.length === 0) return null;
   return (
@@ -29,6 +29,11 @@ export function StatusControls({ action, allowed }: { action: Action; allowed: P
       {to === "CANCELLED" && (
         <Field label="Reason for cancelling">
           <input name="reason" required className={inputClass} />
+        </Field>
+      )}
+      {to === "IN_PROGRESS" && depositPending && (
+        <Field label="Reason to start before the deposit is paid (optional)">
+          <input name="reason" placeholder="Leave empty to wait for the deposit" className={inputClass} />
         </Field>
       )}
       <SubmitButton variant={to === "CANCELLED" ? "danger" : "primary"}>Update status</SubmitButton>
