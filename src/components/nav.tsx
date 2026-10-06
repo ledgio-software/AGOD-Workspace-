@@ -23,6 +23,14 @@ export function navGroups(actor: Actor): NavGroup[] {
       ],
     },
     {
+      label: "Customers",
+      items: [
+        { href: "/customers", label: "Customers", icon: "customers", show: can(actor, "customer.view") },
+        { href: "/subscriptions", label: "Subscriptions", icon: "subscriptions", show: can(actor, "subscription.view") },
+        { href: "/services", label: "Services", icon: "services", show: can(actor, "subscription.view") },
+      ],
+    },
+    {
       label: "Money",
       items: [
         { href: "/ledger", label: "Ledger", icon: "ledger", show: can(actor, "payout.viewAll") },

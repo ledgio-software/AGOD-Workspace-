@@ -127,6 +127,55 @@
       "when": 1791218828169,
       "tag": "20261005164708_agod_share",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791239079965,
+      "tag": "20261005222439_customers",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791239102105,
+      "tag": "20261005222502_customers_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791240217660,
+      "tag": "20261005224337_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791240218558,
+      "tag": "20261005224338_subscriptions_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791245397818,
+      "tag": "20261006000957_renewals",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791246114134,
+      "tag": "20261006002154_email_reminders",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791246115055,
+      "tag": "20261006002155_email_reminders_rules",
+      "breakpoints": true
     }
   ]
 }

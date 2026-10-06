@@ -55,7 +55,7 @@ describe("tasks", () => {
       status: "DONE",
       completionNote: "Endpoints merged",
       completedOn: today,
-      evidenceUrl: "https://github.com/ledgio-software/AGOD-Workspace-/pull/1",
+      evidenceUrl: "https://github.com/acme-co/payroll-app/pull/1",
     });
     const [row] = await db.select().from(tasks).where(eq(tasks.id, task.id));
     expect(row.status).toBe("DONE");

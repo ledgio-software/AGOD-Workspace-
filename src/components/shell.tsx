@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  Building2,
   CalendarCheck,
   CircleHelp,
   FolderKanban,
@@ -12,7 +13,9 @@ import {
   ListChecks,
   Menu,
   Newspaper,
+  Package,
   Plug,
+  Repeat,
   ScrollText,
   TrendingUp,
   Users,
@@ -26,6 +29,9 @@ const icons = {
   dashboard: LayoutDashboard,
   myWork: ListChecks,
   projects: FolderKanban,
+  customers: Building2,
+  subscriptions: Repeat,
+  services: Package,
   workload: Gauge,
   weekly: Newspaper,
   ledger: Wallet,

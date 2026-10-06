@@ -7,7 +7,7 @@ Changing any of these later needs a PR that updates this file.
 | # | Decision | Choice |
 |---|---|---|
 | 1 | Currency | **GHS only** for the MVP. Money is stored as integer minor units (pesewas) with an ISO currency code column, so other currencies can be added later without a data migration. No currency conversion. |
-| 2 | Authentication | **Better Auth, separate from Ledgio.** Email + password, users/sessions stored in our own Neon database. Self sign-up is disabled: accounts are created by an Admin. Login is rate limited (5 attempts/minute per client). Inactive members cannot sign in. |
+| 2 | Authentication | **Better Auth, our own login.** Email + password, users/sessions stored in our own Neon database. Self sign-up is disabled: accounts are created by an Admin. Login is rate limited (5 attempts/minute per client). Inactive members cannot sign in. |
 | 3 | Compensation split mode | **One mode per project:** either all percentage splits totalling exactly 100%, or all fixed amounts totalling no more than the project value. No mixed plans. |
 | 4 | Who records manual payments | **Admin only.** PMs can view the ledger but cannot record payments. |
 | 5 | Reopening approved projects | **Allowed, Admin only,** with a required reason and an audit event. |
@@ -153,3 +153,52 @@ Phase 9 (file attachments in Vercel Blob).
 | Rounding | With an AGOD share, team members get their exact floored amounts and any leftover pesewas stay with AGOD. With 0%, the old rule applies (remainder to the largest share). |
 | Record | The approval snapshot stores the share percentage and amount (calculation version 2) and its notes say what AGOD kept. The project statement checks team lines + AGOD share = project value. |
 | Profit | No change to the profit rules: the AGOD share is simply what is left after payouts, so profit = AGOD share − other costs. |
+
+## Phase 16 decisions (2026-10-05): customers and contacts
+
+| Decision | Choice |
+|---|---|
+| What | A **customer** record per client: name, type (company, individual, partner, other), status (prospect, active, paused, churned, archived), account owner (a PM or Admin), optional reference in another system, and notes. Each customer has **contacts** with email and/or phone, a preferred channel, and primary/billing flags. |
+| Projects | Every external project links to a customer; internal projects have none (enforced by the database). `client_name` stays on the project as a copy of the customer's name and is updated when the customer is renamed, so reports, statements and exports are unchanged. |
+| Picking a customer | The project form offers the existing customers or "+ New customer…" with a name. A typed name that matches an existing customer (case and spaces ignored) links to it instead of creating a duplicate. |
+| Existing projects | The migration created one customer per distinct client name of external projects (owner: the owner of that client's first project) and linked the projects. |
+| Duplicates | Customer names are unique, ignoring case and surrounding spaces. |
+| Nothing is deleted | Customers are archived (with a reason, only once their projects are completed or cancelled) and can be restored; contacts are deactivated. Archived customers take no new projects or contact changes. The database refuses deletes. |
+| Primary contact | At most one active primary contact per customer; the first contact becomes primary, and marking another one primary moves the flag. |
+| Who | Project Managers and Admins see and manage customers and contacts (row-level security). Team Members only see the client name on their own projects. |
+| History | Customer and contact changes are in the audit log and on the customer page; PMs can read them as well as Admins. |
+
+## Phase 17 decisions (2026-10-05): services and subscriptions
+
+| Decision | Choice |
+|---|---|
+| Services | A catalogue of what AGOD sells: a short unique code (e.g. HOSTING-STD), name, description, default billing and optional default price. Services are retired, not deleted; a retired service stays on its subscriptions but can't be picked for new ones. Editing a service never changes existing subscriptions. |
+| Subscriptions | One customer's commitment to one service, with its own agreed terms: price (per period, per unit), quantity, billing (one-time, monthly, quarterly, annual, custom), pricing basis, start date, optional end date (empty = open-ended), optional renewal date, notice period, payment terms, owner and optional renewal owner, contract reference and notes. The service name is copied in when it is created. |
+| Statuses | Draft → Active ⇄ Paused → Ended or Cancelled. Drafts can also be cancelled. Pausing, ending and cancelling need a reason. Ended and cancelled are final (the database refuses changes); selling again means a new subscription. No "pending approval" step for now. |
+| Changing terms | Drafts are edited freely. Once active or paused, price, quantity, billing, basis, end/renewal dates, notice period and payment terms change only through an **amendment** with an effective date and a reason; the amendment stores the old and new values and can't be edited or deleted. Owners, reference and notes are edited directly (audited). |
+| Dates | End date ≥ start date; renewal date between start and end (checked in the form and by the database). |
+| Monthly recurring value | Active subscriptions only: price × quantity, quarterly ÷ 3, annual ÷ 12 (rounded to the pesewa). One-time and custom billing are not counted. Paused subscriptions don't count. |
+| Renewal due | A live subscription needs attention from its notice period before the renewal date (or the end date if there is no renewal date), is overdue after it, and is flagged if its end date has passed. Shown as badges and a filter; reminders and a daily job come in the next phase. |
+| Customers | A customer can't be archived while it has draft, active or paused subscriptions. |
+| Not included | Invoicing, payment collection, tax, usage metering and proration. Subscription income is not yet in Profitability. |
+| Who | Project Managers and Admins (row-level security); Team Members see none of it. |
+
+## Phase 18 decisions (2026-10-06): renewals and recurring revenue
+
+| Decision | Choice |
+|---|---|
+| Reminders | In-app, like the task and approval alerts: generated when a PM or Admin opens the Dashboard or My work, each sent once (dedupe key includes the date), so no scheduler is needed. The renewal owner (or the owner when none is set) is told when the notice period starts, when the renewal date passes without a decision, and when a live subscription is past its end date. Admins are told about anything a week overdue. Email/WhatsApp delivery would need a scheduled job and a provider. |
+| Renewing | "Record a renewal" moves the renewal date (and the end date, if any) forward, by default one billing period (one year for one-time and custom billing), optionally at a new price, with a note of what was agreed. It is stored as an amendment marked **Renewal**, effective on the old renewal date, so the previous terms stay visible. A reminder never renews anything by itself; not renewing means ending or cancelling the subscription with a reason. |
+| Renewals view | Dashboard card (next 60 days and anything overdue) and a "renewing within 30/60/90 days" filter on Subscriptions. |
+| Recurring revenue | A Profitability tab: monthly recurring value and annual run rate (× 12) of active subscriptions, by service and by customer, and what renews in the next 90 days. Agreed value, not invoiced or collected money; it is kept separate from project profit. |
+
+## Phase 19 decisions (2026-10-06): email reminders
+
+| Decision | Choice |
+|---|---|
+| What is emailed | One daily summary per person of their unread in-app notifications (all kinds: tasks, approvals, payouts, renewals, comments) from the last 7 days that weren't emailed before. No email on days with nothing new. Each notification is emailed at most once; the 7-day limit stops a backlog going out when email is first turned on. |
+| When | Vercel Cron at 06:00 UTC (= Accra) daily calls `/api/cron/daily`, protected by `CRON_SECRET`. The job first creates everyone's task, approval and renewal reminders (as each person, under their own permissions), so reminders no longer depend on people opening the app. Vercel runs crons for production only; Admins can run the job on demand from Integrations. |
+| Provider | SMTP through Nodemailer, set by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `EMAIL_FROM`, so any mail provider works (Gmail/Google Workspace with an app password to start). Messages never read files or URLs (`disableFileAccess`/`disableUrlAccess`). Without SMTP settings email is off and the app behaves as before. A local file outbox (`EMAIL_OUTBOX_DIR`) is for testing and never used on Vercel. |
+| Reliability | Notifications are claimed (marked emailed) before sending and released if sending fails, so a retried or overlapping run never double-sends and a failure is retried next day. Each run is recorded (`job_runs`) and shown to Admins. |
+| Opt-out | Each person turns the daily email off or on from Account (their own preference row, protected by row-level security). On by default. |
+| Not included | Instant (per-event) emails, SMS/WhatsApp, per-type email settings. |

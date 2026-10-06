@@ -75,6 +75,8 @@ Settings that must stay as they are:
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | optional, enables error monitoring | optional | no |
 | `BLOB_READ_WRITE_TOKEN` | added by connecting a Blob store (below) | same store or a separate one | yes |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | optional, the production GitHub App (`docs/GITHUB_APP.md`) | optional, the staging GitHub App | key and secret: yes |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | optional, turns on email reminders (`docs/EMAIL.md`) | optional (same mailbox is fine while testing) | `SMTP_PASS`: yes |
+| `CRON_SECRET` | needed for the daily reminders job | needed to run it on demand | yes |
 
 Generate a secret in PowerShell:
 `$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)`

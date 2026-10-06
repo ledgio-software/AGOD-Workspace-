@@ -84,7 +84,92 @@ const auditActionLabel: Record<string, string> = {
   "project.finance_updated": "changed the project type or cost budget",
   "cost.recorded": "recorded a project cost",
   "cost.voided": "voided a project cost",
+  "customer.created": "added the customer",
+  "customer.updated": "edited the customer",
+  "customer.archived": "archived the customer",
+  "customer.restored": "restored the customer",
+  "contact.added": "added a contact",
+  "contact.updated": "edited a contact",
+  "contact.deactivated": "deactivated a contact",
+  "contact.reactivated": "reactivated a contact",
+  "service.created": "added the service",
+  "service.updated": "edited the service",
+  "service.retired": "retired the service",
+  "service.reactivated": "offered the service again",
+  "subscription.created": "created the subscription",
+  "subscription.updated": "edited the subscription",
+  "subscription.amended": "amended the terms",
+  "subscription.renewed": "renewed the subscription",
+  "user.daily_email_on": "turned the daily email on",
+  "user.daily_email_off": "turned the daily email off",
+  "subscription.status_changed": "changed the status",
 };
+
+export const billingCadenceLabel = {
+  ONE_TIME: "One-time",
+  MONTHLY: "Monthly",
+  QUARTERLY: "Quarterly",
+  ANNUAL: "Annual",
+  CUSTOM: "Custom",
+} as const;
+
+/** "per month" style suffix for prices. */
+export const billingCadenceSuffix = {
+  ONE_TIME: "once",
+  MONTHLY: "/ month",
+  QUARTERLY: "/ quarter",
+  ANNUAL: "/ year",
+  CUSTOM: "(custom)",
+} as const;
+
+export const pricingBasisLabel = {
+  FIXED: "Fixed fee",
+  PER_SEAT: "Per seat / unit",
+  USAGE: "Usage-based",
+  OTHER: "Other",
+} as const;
+
+export const subscriptionStatusLabel = {
+  DRAFT: "Draft",
+  ACTIVE: "Active",
+  PAUSED: "Paused",
+  ENDED: "Ended",
+  CANCELLED: "Cancelled",
+} as const;
+
+/** Human names for amended terms. */
+export const subscriptionTermLabel: Record<string, string> = {
+  priceMinor: "Price",
+  quantity: "Quantity",
+  billingCadence: "Billing",
+  pricingBasis: "Pricing basis",
+  endDate: "End date",
+  renewalDate: "Renewal date",
+  noticePeriodDays: "Notice period (days)",
+  paymentTerms: "Payment terms",
+};
+
+export const customerTypeLabel = {
+  COMPANY: "Company",
+  PERSON: "Individual",
+  PARTNER: "Partner",
+  OTHER: "Other",
+} as const;
+
+export const customerStatusLabel = {
+  PROSPECT: "Prospect",
+  ACTIVE: "Active",
+  PAUSED: "Paused",
+  CHURNED: "Churned",
+  ARCHIVED: "Archived",
+} as const;
+
+export const contactChannelLabel = {
+  EMAIL: "Email",
+  PHONE: "Phone",
+  WHATSAPP: "WhatsApp",
+  OTHER: "Other",
+} as const;
 
 export const projectCategoryLabel = {
   DISCOVERY: "Discovery / research",

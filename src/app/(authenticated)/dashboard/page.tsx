@@ -8,9 +8,10 @@ import {
   Hourglass,
   Inbox,
   ListChecks,
+  Repeat,
   Wallet,
 } from "lucide-react";
-import { TaskStatusBadge } from "@/components/badges";
+import { RenewalBadge, TaskStatusBadge } from "@/components/badges";
 import { inputClass } from "@/components/form";
 import { Avatar, ButtonLink, Callout, Card, EmptyState, List, ListRow, PageHeader, StatCard, buttonClass } from "@/components/ui";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
@@ -21,6 +22,7 @@ import { requireUser } from "@/lib/session";
 import { questionsWaitingOn } from "@/modules/questions";
 import { getDashboard } from "@/modules/reports";
 import { refreshDeadlineAlertsQuietly } from "@/modules/notifications/deadlines";
+import { listSubscriptions, refreshRenewalAlertsQuietly } from "@/modules/subscriptions";
 import { getMyWork } from "@/modules/work";
 
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
@@ -115,11 +117,15 @@ async function MemberDashboard({ user }: { user: Awaited<ReturnType<typeof requi
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   const user = await requireUser();
-  await refreshDeadlineAlertsQuietly(user);
+  await Promise.all([refreshDeadlineAlertsQuietly(user), refreshRenewalAlertsQuietly(user)]);
 
   if (!can(user, "payout.viewAll")) return <MemberDashboard user={user} />;
 
-  const [d, questionsWaiting] = await Promise.all([getDashboard(user, await searchParams), questionsWaitingOn(user)]);
+  const [d, questionsWaiting, renewals] = await Promise.all([
+    getDashboard(user, await searchParams),
+    questionsWaitingOn(user),
+    can(user, "subscription.view") ? listSubscriptions(user, { within: 60 }) : Promise.resolve(null),
+  ]);
   const maxOutstanding = Math.max(1, ...d.outstandingByMember.map((m) => m.remainingMinor));
   const overdueCount = d.overdueProjects.length + d.overdueTasks.length;
 
@@ -263,6 +269,32 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </List>
           )}
         </Card>
+
+        {renewals && (
+          <Card
+            title="Renewals"
+            description="Next 60 days and anything overdue"
+            aside={<ViewAll href="/subscriptions?within=60" />}
+          >
+            {renewals.length === 0 ? (
+              <EmptyState icon={Repeat} title="No renewals coming up" />
+            ) : (
+              <List>
+                {renewals.slice(0, 6).map((s) => (
+                  <ListRow key={s.id}>
+                    <Link href={`/subscriptions/${s.id}`} className="min-w-0 hover:text-brand-600">
+                      <p className="truncate font-medium">{s.serviceName}</p>
+                      <p className="truncate text-xs text-muted">
+                        {s.customerName} · {formatCalendarDate(s.renewalDate ?? s.endDate)}
+                      </p>
+                    </Link>
+                    <RenewalBadge renewal={s.renewal} />
+                  </ListRow>
+                ))}
+              </List>
+            )}
+          </Card>
+        )}
 
         <Card title="Payments and adjustments">
           <dl className="grid grid-cols-3 gap-3 text-sm">

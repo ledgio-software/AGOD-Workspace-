@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Badge, HealthBadge, ProgressBar, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
 import { FileList, type FileItem, FileUploadForm } from "@/components/files";
-import { Avatar, ButtonLink, Callout, Card, EmptyState, cx, table } from "@/components/ui";
+import { Avatar, ButtonLink, Callout, Card, Disclosure, EmptyState, cx, table } from "@/components/ui";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
 import { costCategoryLabel, describeAuditAction, healthLabel, milestoneStatusLabel, payoutStatusLabel, projectCategoryLabel } from "@/lib/labels";
 import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
@@ -27,6 +27,7 @@ import { listComments } from "@/modules/comments";
 import { getProjectFinance } from "@/modules/finance";
 import { getProjectGithub, isGithubConfigured } from "@/modules/github";
 import { listTemplates } from "@/modules/templates";
+import { listCustomerOptions } from "@/modules/customers";
 import { getProjectWorkspace, listActiveMembers } from "@/modules/projects";
 import { acceptsTaskUpdates, allowedManualTransitions, isEditable, isTaskOverdue } from "@/modules/projects/rules";
 import { applyTemplateAction, saveAsTemplateAction } from "../../templates/actions";
@@ -80,21 +81,6 @@ import {
 const TABS = ["overview", "tasks", "team", "discussion", "files", "activity"] as const;
 type Tab = (typeof TABS)[number];
 
-/** A collapsible block for forms that are only needed now and then. */
-function Disclosure({ summary, children, className }: { summary: React.ReactNode; children: React.ReactNode; className?: string }) {
-  return (
-    <details className={cx("group rounded-lg border border-line", className)}>
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium text-fg hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
-        {summary}
-        <span className="text-muted transition group-open:rotate-90" aria-hidden>
-          ›
-        </span>
-      </summary>
-      <div className="border-t border-line p-4">{children}</div>
-    </details>
-  );
-}
-
 function Meta({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -137,6 +123,7 @@ export default async function ProjectWorkspacePage({
   const editable = isEditable(project.status);
   const canManage = isManager && editable;
   const members = isManager ? await listActiveMembers(actor) : [];
+  const customerOptions = canManage ? await listCustomerOptions(actor, project.customerId) : [];
   const teamOptions = Array.from(new Map(ws.team.map((t) => [t.memberId, { id: t.memberId, name: t.memberName }])).values());
   const pct = project.splitMode === "PERCENTAGE";
   const workOpen = acceptsTaskUpdates(project.status);
@@ -188,7 +175,16 @@ export default async function ProjectWorkspacePage({
               <HealthBadge health={ws.health} />
             </div>
             <p className="text-sm text-muted">
-              <span className="font-mono text-xs">{project.code}</span> · {project.clientType === "INTERNAL" ? "Internal project" : project.clientName} ·
+              <span className="font-mono text-xs">{project.code}</span> · {project.clientType === "INTERNAL" ? (
+                "Internal project"
+              ) : isManager && project.customerId ? (
+                <Link href={`/customers/${project.customerId}`} className="hover:text-fg hover:underline">
+                  {project.clientName}
+                </Link>
+              ) : (
+                project.clientName
+              )}{" "}
+              ·
               Owner {ws.ownerName}
             </p>
           </div>
@@ -453,13 +449,14 @@ export default async function ProjectWorkspacePage({
                 <ProjectForm
                   action={updateProjectAction.bind(null, project.id)}
                   members={members}
+                  customers={customerOptions}
                   submitLabel="Save changes"
                   splitModeLocked={ws.team.length > 0}
                   defaults={{
                     name: project.name,
                     description: project.description,
                     clientType: project.clientType,
-                    clientName: project.clientName,
+                    customerId: project.customerId,
                     totalValue: minorToInput(project.totalValueMinor),
                     splitMode: project.splitMode,
                     agodShare: String(project.agodShareBasisPoints / 100),

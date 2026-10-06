@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { CircleHelp } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
+import { QuestionStatusBadge } from "@/components/badges";
+import { Avatar, Card, EmptyState, PageHeader, TabNav, table } from "@/components/ui";
 import { formatDateTime } from "@/lib/dates";
-import { payoutQuestionStatusLabel } from "@/lib/labels";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { listQuestions } from "@/modules/questions";
@@ -20,54 +22,56 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Pr
   const questions = await listQuestions(actor, { status: (status || undefined) as "OPEN" | undefined });
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Payout questions</h1>
-        <p className="text-sm text-zinc-500">
-          Members ask about a payout without changing it. A PM answers or sends it to an Admin, who records any adjustment.
-        </p>
-      </div>
-      <nav className="flex flex-wrap gap-2 text-sm">
-        {tabs.map((t) => (
-          <Link
-            key={t.status}
-            href={`/questions?status=${t.status}`}
-            className={`rounded-md border px-3 py-1 ${status === t.status ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-300 text-zinc-500 dark:border-zinc-700"}`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
-      {questions.length === 0 ? (
-        <p className="text-sm text-zinc-500">No questions here.</p>
-      ) : (
-        <table className="w-full text-left text-sm">
-          <thead className="text-zinc-500">
-            <tr>
-              <th className="py-2 pr-3 font-medium">Asked</th>
-              <th className="py-2 pr-3 font-medium">Member</th>
-              <th className="py-2 pr-3 font-medium">Project</th>
-              <th className="py-2 pr-3 font-medium">Question</th>
-              <th className="py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {questions.map((q) => (
-              <tr key={q.id} className="border-t border-zinc-100 align-top dark:border-zinc-900">
-                <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(q.createdAt)}</td>
-                <td className="py-2 pr-3">{q.raisedByName}</td>
-                <td className="py-2 pr-3">{q.projectCode}</td>
-                <td className="py-2 pr-3">
-                  <Link href={`/payouts/${q.ledgerEntryId}#questions`} className="underline">
-                    {q.question.length > 120 ? `${q.question.slice(0, 120)}…` : q.question}
-                  </Link>
-                </td>
-                <td className="py-2">{payoutQuestionStatusLabel[q.status]}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Money"
+        title="Payout questions"
+        description="Members ask about a payout without changing it. A PM answers or sends it to an Admin, who records any adjustment."
+      />
+      <TabNav label="Question status" items={tabs.map((t) => ({ href: `/questions?status=${t.status}`, label: t.label, active: status === t.status }))} />
+      <Card bodyClassName="p-0">
+        {questions.length === 0 ? (
+          <div className="p-5">
+            <EmptyState icon={CircleHelp} title="No questions here" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className={table.table}>
+              <thead className={table.head}>
+                <tr>
+                  <th className={table.th}>Question</th>
+                  <th className={table.th}>Member</th>
+                  <th className={table.th}>Project</th>
+                  <th className={table.th}>Asked</th>
+                  <th className={table.th}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {questions.map((q) => (
+                  <tr key={q.id} className={`${table.row} align-top`}>
+                    <td className={`${table.td} min-w-72`}>
+                      <Link href={`/payouts/${q.ledgerEntryId}#questions`} className="font-medium hover:text-brand-600">
+                        {q.question.length > 140 ? `${q.question.slice(0, 140)}…` : q.question}
+                      </Link>
+                    </td>
+                    <td className={table.td}>
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <Avatar name={q.raisedByName} size="sm" />
+                        {q.raisedByName}
+                      </span>
+                    </td>
+                    <td className={`${table.td} font-mono text-xs`}>{q.projectCode}</td>
+                    <td className={`${table.td} whitespace-nowrap text-muted`}>{formatDateTime(q.createdAt)}</td>
+                    <td className={table.td}>
+                      <QuestionStatusBadge status={q.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

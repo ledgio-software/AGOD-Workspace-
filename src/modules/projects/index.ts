@@ -16,6 +16,7 @@ import { type Actor, assertCan, can } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { type PlanResult, calculateCompensation } from "@/modules/compensation/calculate";
 import { approvalReadiness } from "@/modules/approvals/readiness";
+import { resolveProjectCustomer } from "@/modules/customers";
 import { ServiceError } from "@/modules/errors";
 import {
   type Health,
@@ -46,6 +47,11 @@ export const projectInput = z
     name: z.string().trim().min(2, "Project name is required").max(200),
     description: optionalText,
     clientType: z.enum(["INTERNAL", "EXTERNAL"]),
+    // External projects link to a customer: an existing one by id, or by name (found or created).
+    customerId: z
+      .union([z.uuid("Choose a customer"), z.literal("")])
+      .transform((v) => (v === "" ? null : v))
+      .nullish(),
     clientName: optionalText,
     totalValue: z.string().transform((v, ctx) => {
       const minor = parseMoney(v);
@@ -76,8 +82,8 @@ export const projectInput = z
   .refine((p) => !p.startDate || !p.targetDate || p.targetDate >= p.startDate, {
     message: "The target date cannot be before the start date.",
   })
-  .refine((p) => p.clientType === "INTERNAL" || !!p.clientName, {
-    message: "Enter the client name for an external project.",
+  .refine((p) => p.clientType === "INTERNAL" || !!p.customerId || !!p.clientName, {
+    message: "Choose the customer for an external project.",
   });
 
 export type ProjectInput = z.input<typeof projectInput>;
@@ -106,6 +112,10 @@ export async function createProject(actor: Actor, raw: ProjectInput, request?: R
   const input = projectInput.parse(raw);
   return withActor(actor, async (tx) => {
     await assertActiveUser(tx, input.projectOwnerId, "The project owner");
+    const customer =
+      input.clientType === "EXTERNAL"
+        ? await resolveProjectCustomer(tx, actor, { ...input, ownerId: input.projectOwnerId }, null, request)
+        : null;
     const code = await nextProjectCode(tx);
     const [project] = await tx
       .insert(projects)
@@ -114,7 +124,8 @@ export async function createProject(actor: Actor, raw: ProjectInput, request?: R
         name: input.name,
         description: input.description ?? null,
         clientType: input.clientType,
-        clientName: input.clientType === "EXTERNAL" ? (input.clientName ?? null) : null,
+        customerId: customer?.id ?? null,
+        clientName: customer?.name ?? null,
         totalValueMinor: input.totalValue,
         currency: DEFAULT_CURRENCY,
         splitMode: input.splitMode,
@@ -145,6 +156,7 @@ function auditableProject(p: ProjectRow) {
     name: p.name,
     description: p.description,
     clientType: p.clientType,
+    customerId: p.customerId,
     clientName: p.clientName,
     totalValueMinor: p.totalValueMinor,
     currency: p.currency,
@@ -197,13 +209,18 @@ export async function updateProject(
     if (input.projectOwnerId !== project.projectOwnerId) {
       await assertActiveUser(tx, input.projectOwnerId, "The project owner");
     }
+    const customer =
+      input.clientType === "EXTERNAL"
+        ? await resolveProjectCustomer(tx, actor, { ...input, ownerId: input.projectOwnerId }, project.customerId, request)
+        : null;
     const [updated] = await tx
       .update(projects)
       .set({
         name: input.name,
         description: input.description ?? null,
         clientType: input.clientType,
-        clientName: input.clientType === "EXTERNAL" ? (input.clientName ?? null) : null,
+        customerId: customer?.id ?? null,
+        clientName: customer?.name ?? null,
         totalValueMinor: input.totalValue,
         splitMode: input.splitMode,
         agodShareBasisPoints: input.splitMode === "PERCENTAGE" ? input.agodShare : 0,

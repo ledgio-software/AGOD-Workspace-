@@ -97,6 +97,63 @@ export const costCategory = pgEnum("cost_category", [
 export const projectHealthStatus = pgEnum("project_health", ["ON_TRACK", "AT_RISK", "BLOCKED", "OVERDUE"]);
 export const payoutQuestionStatus = pgEnum("payout_question_status", ["OPEN", "AWAITING_ADMIN", "RESOLVED"]);
 
+// Phase 16 (customers): one record per client, with contacts. Projects link to it.
+export const customerType = pgEnum("customer_type", ["COMPANY", "PERSON", "PARTNER", "OTHER"]);
+export const customerStatus = pgEnum("customer_status", ["PROSPECT", "ACTIVE", "PAUSED", "CHURNED", "ARCHIVED"]);
+export const contactChannel = pgEnum("contact_channel", ["EMAIL", "PHONE", "WHATSAPP", "OTHER"]);
+
+export const customers = pgTable(
+  "customers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    type: customerType("type").notNull().default("COMPANY"),
+    status: customerStatus("status").notNull().default("ACTIVE"),
+    ownerId: userRef("owner_id").notNull(),
+    notes: text("notes"),
+    // Optional reference in another system (e.g. the accounting system's customer number).
+    externalReference: text("external_reference"),
+    createdBy: userRef("created_by").notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    // One customer per name (case and surrounding spaces ignored): prevents duplicates.
+    uniqueIndex("customers_name_unique").on(sql`lower(btrim(${t.name}))`),
+    check("customers_name_not_blank", sql`length(btrim(${t.name})) >= 2`),
+    check("customers_archived_matches_status", sql`(${t.status} = 'ARCHIVED') = (${t.archivedAt} IS NOT NULL)`),
+  ],
+);
+
+export const customerContacts = pgTable(
+  "customer_contacts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    role: text("role"),
+    email: text("email"),
+    phone: text("phone"),
+    preferredChannel: contactChannel("preferred_channel").notNull().default("EMAIL"),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    isBilling: boolean("is_billing").notNull().default(false),
+    // Contacts are removed by deactivating them, so history stays readable.
+    active: boolean("active").notNull().default(true),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("customer_contacts_customer_idx").on(t.customerId),
+    check("customer_contacts_reachable", sql`${t.email} IS NOT NULL OR ${t.phone} IS NOT NULL`),
+    // At most one active primary contact per customer.
+    uniqueIndex("customer_contacts_one_primary").on(t.customerId).where(sql`${t.isPrimary} AND ${t.active}`),
+  ],
+);
+
 export const projects = pgTable(
   "projects",
   {
@@ -106,6 +163,8 @@ export const projects = pgTable(
     description: text("description"),
     clientType: clientType("client_type").notNull(),
     clientName: text("client_name"),
+    // External projects belong to a customer; client_name keeps a copy of its name for display and reports.
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "restrict" }),
     totalValueMinor: money("total_value_minor").notNull(),
     currency: currency(),
     // Decision 3: one split mode per project.
@@ -137,6 +196,8 @@ export const projects = pgTable(
   (t) => [
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
     check("projects_cost_budget_non_negative", sql`${t.costBudgetMinor} >= 0`),
+    check("projects_customer_matches_client_type", sql`(${t.clientType} = 'EXTERNAL') = (${t.customerId} IS NOT NULL)`),
+    index("projects_customer_idx").on(t.customerId),
     check(
       "projects_agod_share_valid",
       sql`${t.agodShareBasisPoints} BETWEEN 0 AND 10000 AND (${t.splitMode} = 'PERCENTAGE' OR ${t.agodShareBasisPoints} = 0)`,
@@ -409,6 +470,8 @@ export const notifications = pgTable(
     // Set for generated alerts (e.g. "task.overdue:<task>:<due date>") so each is sent once.
     dedupeKey: text("dedupe_key"),
     readAt: timestamp("read_at", { withTimezone: true }),
+    // Phase 19: when it went out in the daily email (each notification is emailed at most once).
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
     createdAt,
   },
   (t) => [
@@ -676,4 +739,141 @@ export const projectCosts = pgTable(
     index("project_costs_project_idx").on(t.projectId),
     index("project_costs_incurred_idx").on(t.incurredOn),
   ],
+);
+
+// Phase 17 (services and subscriptions): a catalogue of what AGOD sells, and each customer's
+// commitments to it. A subscription keeps its own negotiated terms; once active, commercial terms
+// change only through an amendment, which records the old and new values.
+export const billingCadence = pgEnum("billing_cadence", ["ONE_TIME", "MONTHLY", "QUARTERLY", "ANNUAL", "CUSTOM"]);
+export const pricingBasis = pgEnum("pricing_basis", ["FIXED", "PER_SEAT", "USAGE", "OTHER"]);
+export const subscriptionStatus = pgEnum("subscription_status", ["DRAFT", "ACTIVE", "PAUSED", "ENDED", "CANCELLED"]);
+
+export const services = pgTable(
+  "services",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Short, stable code, e.g. HOSTING-STD.
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    defaultCadence: billingCadence("default_cadence").notNull().default("MONTHLY"),
+    defaultPriceMinor: money("default_price_minor"),
+    currency: currency(),
+    // Inactive services stay on existing subscriptions but can't be picked for new ones.
+    active: boolean("active").notNull().default(true),
+    createdBy: userRef("created_by").notNull(),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("services_code_unique").on(sql`upper(${t.code})`),
+    check("services_code_format", sql`${t.code} ~ '^[A-Za-z0-9][A-Za-z0-9_-]{1,29}$'`),
+    check("services_name_not_blank", sql`length(btrim(${t.name})) >= 2`),
+    check("services_default_price", sql`${t.defaultPriceMinor} IS NULL OR ${t.defaultPriceMinor} >= 0`),
+  ],
+);
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "restrict" }),
+    // The service's name when the subscription was created; later catalogue renames don't rewrite it.
+    serviceName: text("service_name").notNull(),
+    status: subscriptionStatus("status").notNull().default("DRAFT"),
+    startDate: date("start_date").notNull(),
+    // Null for open-ended subscriptions.
+    endDate: date("end_date"),
+    // When the next renewal decision is due (not the same as the end date).
+    renewalDate: date("renewal_date"),
+    noticePeriodDays: integer("notice_period_days").notNull().default(30),
+    billingCadence: billingCadence("billing_cadence").notNull(),
+    priceMinor: money("price_minor").notNull(),
+    currency: currency(),
+    pricingBasis: pricingBasis("pricing_basis").notNull().default("FIXED"),
+    quantity: integer("quantity").notNull().default(1),
+    paymentTerms: text("payment_terms"),
+    ownerId: userRef("owner_id").notNull(),
+    renewalOwnerId: userRef("renewal_owner_id"),
+    externalReference: text("external_reference"),
+    notes: text("notes"),
+    // Why it was paused, ended or cancelled (latest status change).
+    statusReason: text("status_reason"),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdBy: userRef("created_by").notNull(),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("subscriptions_customer_idx").on(t.customerId),
+    index("subscriptions_service_idx").on(t.serviceId),
+    index("subscriptions_renewal_idx").on(t.renewalDate),
+    check("subscriptions_price", sql`${t.priceMinor} >= 0`),
+    check("subscriptions_quantity", sql`${t.quantity} >= 1`),
+    check("subscriptions_notice", sql`${t.noticePeriodDays} BETWEEN 0 AND 365`),
+    check("subscriptions_end_after_start", sql`${t.endDate} IS NULL OR ${t.endDate} >= ${t.startDate}`),
+    check(
+      "subscriptions_renewal_in_term",
+      sql`${t.renewalDate} IS NULL OR (${t.renewalDate} >= ${t.startDate} AND (${t.endDate} IS NULL OR ${t.renewalDate} <= ${t.endDate}))`,
+    ),
+    check(
+      "subscriptions_ended_matches_status",
+      sql`(${t.status} IN ('ENDED', 'CANCELLED')) = (${t.endedAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
+// Phase 18: a renewal is recorded like an amendment (old and new terms kept), marked as a renewal.
+export const amendmentKind = pgEnum("amendment_kind", ["AMENDMENT", "RENEWAL"]);
+
+export const subscriptionAmendments = pgTable(
+  "subscription_amendments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "restrict" }),
+    kind: amendmentKind("kind").notNull().default("AMENDMENT"),
+    effectiveDate: date("effective_date").notNull(),
+    // { field: { from, to } } for each changed term.
+    changes: jsonb("changes").notNull(),
+    reason: text("reason").notNull(),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+  },
+  (t) => [
+    index("subscription_amendments_subscription_idx").on(t.subscriptionId),
+    check("subscription_amendments_reason", sql`length(btrim(${t.reason})) >= 3`),
+  ],
+);
+
+// Phase 19: each person's email choices. No row means the defaults (daily email on).
+export const notificationPreferences = pgTable("notification_preferences", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "restrict" }),
+  dailyEmail: boolean("daily_email").notNull().default(true),
+  updatedAt,
+});
+
+// Phase 19: a record of each scheduled job run (the daily reminders), shown to Admins.
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    job: text("job").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    ok: boolean("ok"),
+    summary: jsonb("summary"),
+    error: text("error"),
+  },
+  (t) => [index("job_runs_job_started_idx").on(t.job, t.startedAt)],
 );

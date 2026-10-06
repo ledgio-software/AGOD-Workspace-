@@ -38,7 +38,7 @@ async function setup({ finishTasks = true } = {}) {
   const project = await createProject(pm, {
     name: `Approval ${crypto.randomUUID().slice(0, 6)}`,
     clientType: "EXTERNAL",
-    clientName: "Ledgio",
+    clientName: "Acme Ltd",
     totalValue: "100.01",
     splitMode: "PERCENTAGE",
     projectOwnerId: pm.id,
@@ -337,7 +337,7 @@ describe("AGOD share", () => {
     const project = await createProject(pm, {
       name: `Share ${crypto.randomUUID().slice(0, 6)}`,
       clientType: "EXTERNAL",
-      clientName: "Ledgio",
+      clientName: "Acme Ltd",
       totalValue: "100.01",
       splitMode: "PERCENTAGE",
       agodShare: "30",

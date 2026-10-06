@@ -21,11 +21,11 @@ describe("task keys", () => {
 
 describe("parseGithubUrl", () => {
   it("recognises issues, pull requests, commits and branches", () => {
-    expect(parseGithubUrl("https://github.com/Ledgio-Software/App/pull/12/files")).toEqual({
+    expect(parseGithubUrl("https://github.com/Acme-Co/App/pull/12/files")).toEqual({
       kind: "PULL_REQUEST",
-      repo: "ledgio-software/app",
+      repo: "acme-co/app",
       number: 12,
-      url: "https://github.com/ledgio-software/app/pull/12",
+      url: "https://github.com/acme-co/app/pull/12",
     });
     expect(parseGithubUrl("https://github.com/agod/app/issues/7#issuecomment-1")).toMatchObject({ kind: "ISSUE", number: 7 });
     expect(parseGithubUrl("https://github.com/agod/app/commit/ABCDEF1234")).toMatchObject({ kind: "COMMIT", ref: "abcdef1234" });
@@ -50,7 +50,7 @@ describe("parseGithubUrl", () => {
 
 describe("normaliseRepo", () => {
   it("accepts owner/name or a repository URL", () => {
-    expect(normaliseRepo(" Ledgio-Software/AGOD-Workspace- ")).toBe("ledgio-software/agod-workspace-");
+    expect(normaliseRepo(" Acme-Co/Payroll-App ")).toBe("acme-co/payroll-app");
     expect(normaliseRepo("https://github.com/agod/app.git")).toBe("agod/app");
     expect(normaliseRepo("")).toBeNull();
     expect(normaliseRepo("not a repo")).toBeUndefined();

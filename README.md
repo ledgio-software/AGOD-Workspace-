@@ -195,6 +195,24 @@ src/
 ### Phase 13 — Frontend redesign, part 2 ✓
 - Projects list, project page with tabs (Overview, Tasks, Team & money, Discussion, Files, Activity), new project and statement
 
+### Phase 14 — Frontend redesign, part 3 ✓
+- Money pages: Ledger, payout detail, Questions, Month close, Reconcile, and Profitability with charts (profit by type and client, payout forecast, ageing, utilisation)
+
+### Phase 15 — Frontend redesign, part 4 ✓
+- Team (with the add/manage panels), contribution history, Workload (load meters), Weekly summary, Audit log, Templates, Integrations and Account; every page now uses the design system
+
+### Phase 16 — Customers and contacts ✓
+- Customer records (type, status, account owner, reference, notes) with contacts; external projects link to a customer; archive instead of delete
+
+### Phase 17 — Services and subscriptions ✓
+- Service catalogue; customer subscriptions with price, billing, renewal dates and statuses; changes to live terms recorded as amendments; monthly recurring value and renewal-due flags
+
+### Phase 18 — Renewals and recurring revenue ✓
+- Renewal reminders for the renewal owner (escalated to Admins after a week), "Record a renewal", renewals on the Dashboard, recurring revenue in Profitability
+
+### Phase 19 — Email reminders ✓
+- Daily job (Vercel Cron) creates everyone's reminders and emails one summary per person (SMTP via Nodemailer); opt-out on Account; run history and test email on Integrations (`docs/EMAIL.md`)
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

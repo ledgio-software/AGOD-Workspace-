@@ -1,80 +1,111 @@
 import Link from "next/link";
+import { CircleSlash, Clock, ListChecks, UserX } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
+import { Avatar, Callout, Card, PageHeader, StatCard, compactTable as ct, cx, table } from "@/components/ui";
 import { roleLabel } from "@/lib/labels";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getWorkload } from "@/modules/reports/workload";
 
-function loadClass(percent: number | null, open: number) {
-  if (percent === null) return open > 0 ? "text-red-600" : "text-zinc-500";
-  if (percent > 100) return "text-red-600 font-semibold";
-  if (percent >= 80) return "text-amber-700 font-semibold";
-  return "";
+/** A load meter: the fill moves from the accent to amber to red as planned work passes capacity. */
+function LoadMeter({ percent, open }: { percent: number | null; open: number }) {
+  if (percent === null) {
+    return <span className={cx("text-xs", open > 0 ? "font-medium text-red-600 dark:text-red-400" : "text-muted")}>{open ? "No capacity" : "—"}</span>;
+  }
+  const fill = percent > 100 ? "bg-red-500" : percent >= 80 ? "bg-amber-500" : "bg-brand-500";
+  const text = percent > 100 ? "text-red-600 dark:text-red-400" : percent >= 80 ? "text-amber-700 dark:text-amber-400" : "text-fg";
+  return (
+    <span className="inline-flex items-center justify-end gap-2" title={`${percent}% of capacity`}>
+      <span className="relative h-1.5 w-20 overflow-hidden rounded-full bg-surface-muted ring-1 ring-inset ring-line">
+        <span className={cx("absolute inset-y-0 left-0 rounded-full", fill)} style={{ width: `${Math.min(percent, 100)}%` }} />
+      </span>
+      <span className={cx("w-10 text-right text-sm font-semibold tabular-nums", text)}>{percent}%</span>
+    </span>
+  );
 }
 
 export default async function WorkloadPage() {
   const actor = await requireUser();
   if (!can(actor, "workload.view")) return <AccessDenied what="the workload view" />;
   const w = await getWorkload(actor);
+  const sum = (k: "open" | "blocked" | "overdue") => w.rows.reduce((s, r) => s + r[k], 0);
+  const over = w.rows.filter((r) => (r.loadPercent ?? 0) > 100).length;
 
   return (
-    <div className="max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Workload and capacity</h1>
-        <p className="text-sm text-zinc-500">
-          Open tasks on active projects per person. <strong>Planned</strong> is the estimated hours of tasks due in the next {w.windowDays} days
-          or already overdue, compared with the person&apos;s weekly capacity (set by an Admin on the Team page). Tasks without an estimate
-          count as 0 hours, so check the “No estimate” column.
-        </p>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Work"
+        title="Workload and capacity"
+        description={
+          <>
+            Open tasks on active projects per person. <strong>Planned</strong> is the estimated hours of tasks due in the next {w.windowDays} days or
+            already overdue, compared with weekly capacity (set by an Admin on the Team page). Tasks without an estimate count as 0 hours, so check
+            the “No estimate” column.
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Open tasks" value={sum("open")} icon={ListChecks} />
+        <StatCard label="Blocked" value={sum("blocked")} icon={CircleSlash} tone={sum("blocked") ? "bad" : "default"} />
+        <StatCard label="Overdue" value={sum("overdue")} icon={Clock} tone={sum("overdue") ? "warn" : "default"} />
+        <StatCard label="Over capacity" value={over} hint="people above 100%" icon={UserX} tone={over ? "bad" : "good"} />
       </div>
+
       {w.unassigned > 0 && (
-        <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <Callout tone="warn" icon={UserX}>
           {w.unassigned} open task{w.unassigned === 1 ? " has" : "s have"} nobody assigned.
-        </p>
+        </Callout>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-zinc-500">
-            <tr>
-              <th className="py-2 pr-3 font-medium">Person</th>
-              <th className="py-2 pr-3 text-right font-medium">Projects</th>
-              <th className="py-2 pr-3 text-right font-medium">Open</th>
-              <th className="py-2 pr-3 text-right font-medium">In progress</th>
-              <th className="py-2 pr-3 text-right font-medium">Blocked</th>
-              <th className="py-2 pr-3 text-right font-medium">Overdue</th>
-              <th className="py-2 pr-3 text-right font-medium">Due in {w.windowDays} days</th>
-              <th className="py-2 pr-3 text-right font-medium">No estimate</th>
-              <th className="py-2 pr-3 text-right font-medium">Planned / capacity</th>
-              <th className="py-2 text-right font-medium">Load</th>
-            </tr>
-          </thead>
-          <tbody>
-            {w.rows.map((r) => (
-              <tr key={r.id} className="border-t border-zinc-100 dark:border-zinc-900">
-                <td className="py-2 pr-3">
-                  <Link href={`/team/${r.id}`} className="underline">
-                    {r.name}
-                  </Link>
-                  <span className="text-zinc-500"> · {roleLabel[r.role as keyof typeof roleLabel]}</span>
-                </td>
-                <td className="py-2 pr-3 text-right tabular-nums">{r.activeProjects}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">{r.open}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">{r.inProgress}</td>
-                <td className={`py-2 pr-3 text-right tabular-nums ${r.blocked ? "text-red-600" : ""}`}>{r.blocked}</td>
-                <td className={`py-2 pr-3 text-right tabular-nums ${r.overdue ? "text-red-600" : ""}`}>{r.overdue}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">{r.dueThisWeek}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">{r.unestimated}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">
-                  {r.plannedHours}h / {r.weeklyCapacityHours}h
-                </td>
-                <td className={`py-2 text-right tabular-nums ${loadClass(r.loadPercent, r.open)}`}>
-                  {r.loadPercent === null ? (r.open ? "No capacity" : "—") : `${r.loadPercent}%`}
-                </td>
+
+      <Card bodyClassName="p-0">
+        <div className="overflow-x-auto">
+          <table className={table.table}>
+            <thead className={table.head}>
+              <tr>
+                <th className={ct.th}>Person</th>
+                <th className={`${ct.th} text-right`}>Projects</th>
+                <th className={`${ct.th} text-right`}>Open</th>
+                <th className={`${ct.th} text-right`}>In progress</th>
+                <th className={`${ct.th} text-right`}>Blocked</th>
+                <th className={`${ct.th} text-right`}>Overdue</th>
+                <th className={`${ct.th} text-right`}>Due in {w.windowDays} days</th>
+                <th className={`${ct.th} text-right`}>No estimate</th>
+                <th className={`${ct.th} text-right`}>Planned / capacity</th>
+                <th className={`${ct.th} text-right`}>Load</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {w.rows.map((r) => (
+                <tr key={r.id} className={table.row}>
+                  <td className={ct.td}>
+                    <Link href={`/team/${r.id}`} className="flex items-center gap-2.5 whitespace-nowrap hover:text-brand-600">
+                      <Avatar name={r.name} size="sm" />
+                      <span>
+                        <span className="block font-medium">{r.name}</span>
+                        <span className="block text-xs text-muted">{roleLabel[r.role as keyof typeof roleLabel]}</span>
+                      </span>
+                    </Link>
+                  </td>
+                  <td className={ct.num}>{r.activeProjects}</td>
+                  <td className={ct.num}>{r.open}</td>
+                  <td className={ct.num}>{r.inProgress}</td>
+                  <td className={cx(ct.num, r.blocked > 0 && "font-semibold text-red-600 dark:text-red-400")}>{r.blocked}</td>
+                  <td className={cx(ct.num, r.overdue > 0 && "font-semibold text-red-600 dark:text-red-400")}>{r.overdue}</td>
+                  <td className={ct.num}>{r.dueThisWeek}</td>
+                  <td className={cx(ct.num, r.unestimated > 0 && "text-amber-700 dark:text-amber-400")}>{r.unestimated}</td>
+                  <td className={ct.num}>
+                    {r.plannedHours}h <span className="text-muted">/ {r.weeklyCapacityHours}h</span>
+                  </td>
+                  <td className={ct.num}>
+                    <LoadMeter percent={r.loadPercent} open={r.open} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }
