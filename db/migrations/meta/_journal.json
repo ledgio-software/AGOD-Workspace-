@@ -141,6 +141,20 @@
       "when": 1791239102105,
       "tag": "20261005222502_customers_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791240217660,
+      "tag": "20261005224337_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791240218558,
+      "tag": "20261005224338_subscriptions_rules",
+      "breakpoints": true
     }
   ]
 }

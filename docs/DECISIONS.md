@@ -167,3 +167,18 @@ Phase 9 (file attachments in Vercel Blob).
 | Primary contact | At most one active primary contact per customer; the first contact becomes primary, and marking another one primary moves the flag. |
 | Who | Project Managers and Admins see and manage customers and contacts (row-level security). Team Members only see the client name on their own projects. |
 | History | Customer and contact changes are in the audit log and on the customer page; PMs can read them as well as Admins. |
+
+## Phase 17 decisions (2026-10-05): services and subscriptions
+
+| Decision | Choice |
+|---|---|
+| Services | A catalogue of what AGOD sells: a short unique code (e.g. HOSTING-STD), name, description, default billing and optional default price. Services are retired, not deleted; a retired service stays on its subscriptions but can't be picked for new ones. Editing a service never changes existing subscriptions. |
+| Subscriptions | One customer's commitment to one service, with its own agreed terms: price (per period, per unit), quantity, billing (one-time, monthly, quarterly, annual, custom), pricing basis, start date, optional end date (empty = open-ended), optional renewal date, notice period, payment terms, owner and optional renewal owner, contract reference and notes. The service name is copied in when it is created. |
+| Statuses | Draft → Active ⇄ Paused → Ended or Cancelled. Drafts can also be cancelled. Pausing, ending and cancelling need a reason. Ended and cancelled are final (the database refuses changes); selling again means a new subscription. No "pending approval" step for now. |
+| Changing terms | Drafts are edited freely. Once active or paused, price, quantity, billing, basis, end/renewal dates, notice period and payment terms change only through an **amendment** with an effective date and a reason; the amendment stores the old and new values and can't be edited or deleted. Owners, reference and notes are edited directly (audited). |
+| Dates | End date ≥ start date; renewal date between start and end (checked in the form and by the database). |
+| Monthly recurring value | Active subscriptions only: price × quantity, quarterly ÷ 3, annual ÷ 12 (rounded to the pesewa). One-time and custom billing are not counted. Paused subscriptions don't count. |
+| Renewal due | A live subscription needs attention from its notice period before the renewal date (or the end date if there is no renewal date), is overdue after it, and is flagged if its end date has passed. Shown as badges and a filter; reminders and a daily job come in the next phase. |
+| Customers | A customer can't be archived while it has draft, active or paused subscriptions. |
+| Not included | Invoicing, payment collection, tax, usage metering and proration. Subscription income is not yet in Profitability. |
+| Who | Project Managers and Admins (row-level security); Team Members see none of it. |

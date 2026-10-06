@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowLeft, Archive, FolderKanban, Mail, Phone, Plus, UserRound } from "lucide-react";
+import { Activity, ArrowLeft, Archive, FolderKanban, Mail, Phone, Plus, Repeat, UserRound } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
-import { Badge, CustomerStatusBadge, ProjectStatusBadge } from "@/components/badges";
+import { Badge, CustomerStatusBadge, ProjectStatusBadge, RenewalBadge, SubscriptionStatusBadge } from "@/components/badges";
 import { ButtonLink, Callout, Card, Disclosure, EmptyState, StatCard, table } from "@/components/ui";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
-import { contactChannelLabel, customerTypeLabel, describeAuditAction } from "@/lib/labels";
+import { billingCadenceSuffix, contactChannelLabel, customerTypeLabel, describeAuditAction } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getCustomer } from "@/modules/customers";
 import { listActiveMembers } from "@/modules/projects";
+import { listSubscriptions, recurringTotals } from "@/modules/subscriptions";
 import { addContactAction, archiveCustomerAction, setContactActiveAction, updateContactAction, updateCustomerAction } from "../actions";
 import { ArchiveForm, ContactActiveForm, ContactForm, CustomerForm } from "../customer-forms";
 
@@ -33,6 +34,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   const archived = customer.status === "ARCHIVED";
   const canManage = can(actor, "customer.manage");
   const canEdit = canManage && !archived;
+  const subs = can(actor, "subscription.view") ? await listSubscriptions(actor, { customerId: customer.id, status: "ALL" }) : null;
+  const mrr = subs ? recurringTotals(subs) : [];
   const owners = canEdit ? (await listActiveMembers(actor)).filter((m) => m.role !== "TEAM_MEMBER") : [];
 
   const live = projects.filter((p) => p.status !== "CANCELLED");
@@ -147,6 +150,44 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             )}
           </Card>
 
+          {subs && (
+            <Card
+              title="Subscriptions"
+              description={mrr.length ? `Monthly recurring value ${mrr.map((m) => formatMoney(m.monthlyMinor, m.currency)).join(" + ")}` : undefined}
+              aside={
+                canEdit && can(actor, "subscription.manage") ? (
+                  <ButtonLink href={`/subscriptions/new?customer=${customer.id}`} size="sm">
+                    <Plus className="size-3.5" aria-hidden /> Add
+                  </ButtonLink>
+                ) : undefined
+              }
+            >
+              {subs.length === 0 ? (
+                <EmptyState icon={Repeat} title="No subscriptions yet" />
+              ) : (
+                <ul className="-my-2 divide-y divide-line">
+                  {subs.map((sub) => (
+                    <li key={sub.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                      <div className="min-w-0">
+                        <Link href={`/subscriptions/${sub.id}`} className="font-medium hover:text-brand-600">
+                          {sub.serviceName}
+                        </Link>
+                        <div className="text-xs text-muted">
+                          {formatMoney(sub.priceMinor * sub.quantity, sub.currency)} {billingCadenceSuffix[sub.billingCadence]}
+                          {(sub.renewalDate ?? sub.endDate) && <> · renews {formatCalendarDate(sub.renewalDate ?? sub.endDate)}</>}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <RenewalBadge renewal={sub.renewal} />
+                        <SubscriptionStatusBadge status={sub.status} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
           <Card title="Projects">
             {projects.length === 0 ? (
               <EmptyState icon={FolderKanban} title="No projects for this customer yet" />
@@ -240,7 +281,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             <p className="mb-3 text-sm text-muted">
               {archived
                 ? "Restoring makes the customer active again."
-                : "Archiving hides the customer from lists and pickers. Its history and projects stay. Finish or cancel open projects first."}
+                : "Archiving hides the customer from lists and pickers. Its history and projects stay. Finish or cancel open projects and end its subscriptions first."}
             </p>
             <ArchiveForm action={archiveCustomerAction.bind(null, customer.id)} archived={archived} />
           </Disclosure>

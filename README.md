@@ -204,6 +204,9 @@ src/
 ### Phase 16 — Customers and contacts ✓
 - Customer records (type, status, account owner, reference, notes) with contacts; external projects link to a customer; archive instead of delete
 
+### Phase 17 — Services and subscriptions ✓
+- Service catalogue; customer subscriptions with price, billing, renewal dates and statuses; changes to live terms recorded as amendments; monthly recurring value and renewal-due flags
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

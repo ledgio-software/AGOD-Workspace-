@@ -738,3 +738,112 @@ export const projectCosts = pgTable(
     index("project_costs_incurred_idx").on(t.incurredOn),
   ],
 );
+
+// Phase 17 (services and subscriptions): a catalogue of what AGOD sells, and each customer's
+// commitments to it. A subscription keeps its own negotiated terms; once active, commercial terms
+// change only through an amendment, which records the old and new values.
+export const billingCadence = pgEnum("billing_cadence", ["ONE_TIME", "MONTHLY", "QUARTERLY", "ANNUAL", "CUSTOM"]);
+export const pricingBasis = pgEnum("pricing_basis", ["FIXED", "PER_SEAT", "USAGE", "OTHER"]);
+export const subscriptionStatus = pgEnum("subscription_status", ["DRAFT", "ACTIVE", "PAUSED", "ENDED", "CANCELLED"]);
+
+export const services = pgTable(
+  "services",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Short, stable code, e.g. HOSTING-STD.
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    defaultCadence: billingCadence("default_cadence").notNull().default("MONTHLY"),
+    defaultPriceMinor: money("default_price_minor"),
+    currency: currency(),
+    // Inactive services stay on existing subscriptions but can't be picked for new ones.
+    active: boolean("active").notNull().default(true),
+    createdBy: userRef("created_by").notNull(),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("services_code_unique").on(sql`upper(${t.code})`),
+    check("services_code_format", sql`${t.code} ~ '^[A-Za-z0-9][A-Za-z0-9_-]{1,29}$'`),
+    check("services_name_not_blank", sql`length(btrim(${t.name})) >= 2`),
+    check("services_default_price", sql`${t.defaultPriceMinor} IS NULL OR ${t.defaultPriceMinor} >= 0`),
+  ],
+);
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "restrict" }),
+    // The service's name when the subscription was created; later catalogue renames don't rewrite it.
+    serviceName: text("service_name").notNull(),
+    status: subscriptionStatus("status").notNull().default("DRAFT"),
+    startDate: date("start_date").notNull(),
+    // Null for open-ended subscriptions.
+    endDate: date("end_date"),
+    // When the next renewal decision is due (not the same as the end date).
+    renewalDate: date("renewal_date"),
+    noticePeriodDays: integer("notice_period_days").notNull().default(30),
+    billingCadence: billingCadence("billing_cadence").notNull(),
+    priceMinor: money("price_minor").notNull(),
+    currency: currency(),
+    pricingBasis: pricingBasis("pricing_basis").notNull().default("FIXED"),
+    quantity: integer("quantity").notNull().default(1),
+    paymentTerms: text("payment_terms"),
+    ownerId: userRef("owner_id").notNull(),
+    renewalOwnerId: userRef("renewal_owner_id"),
+    externalReference: text("external_reference"),
+    notes: text("notes"),
+    // Why it was paused, ended or cancelled (latest status change).
+    statusReason: text("status_reason"),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdBy: userRef("created_by").notNull(),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("subscriptions_customer_idx").on(t.customerId),
+    index("subscriptions_service_idx").on(t.serviceId),
+    index("subscriptions_renewal_idx").on(t.renewalDate),
+    check("subscriptions_price", sql`${t.priceMinor} >= 0`),
+    check("subscriptions_quantity", sql`${t.quantity} >= 1`),
+    check("subscriptions_notice", sql`${t.noticePeriodDays} BETWEEN 0 AND 365`),
+    check("subscriptions_end_after_start", sql`${t.endDate} IS NULL OR ${t.endDate} >= ${t.startDate}`),
+    check(
+      "subscriptions_renewal_in_term",
+      sql`${t.renewalDate} IS NULL OR (${t.renewalDate} >= ${t.startDate} AND (${t.endDate} IS NULL OR ${t.renewalDate} <= ${t.endDate}))`,
+    ),
+    check(
+      "subscriptions_ended_matches_status",
+      sql`(${t.status} IN ('ENDED', 'CANCELLED')) = (${t.endedAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
+export const subscriptionAmendments = pgTable(
+  "subscription_amendments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "restrict" }),
+    effectiveDate: date("effective_date").notNull(),
+    // { field: { from, to } } for each changed term.
+    changes: jsonb("changes").notNull(),
+    reason: text("reason").notNull(),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+  },
+  (t) => [
+    index("subscription_amendments_subscription_idx").on(t.subscriptionId),
+    check("subscription_amendments_reason", sql`length(btrim(${t.reason})) >= 3`),
+  ],
+);

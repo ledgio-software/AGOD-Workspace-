@@ -7,6 +7,7 @@ import { type Actor, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { isUniqueViolation } from "@/modules/db-errors";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
+import { openSubscriptionCount } from "@/modules/subscriptions";
 
 // Phase 16: customers (one record per client) and their contacts. PMs and Admins only; members
 // see the client name copied onto their projects. Nothing is deleted: customers are archived,
@@ -334,6 +335,9 @@ export async function archiveCustomer(actor: Actor, customerId: string, raw: z.i
       .where(and(eq(projects.customerId, customerId), sql`${projects.status} not in ('COMPLETED', 'CANCELLED')`))
       .limit(1);
     if (open) throw new ServiceError(`Finish or cancel this customer's open projects first (${open.code}).`);
+    if ((await openSubscriptionCount(tx, customerId)) > 0) {
+      throw new ServiceError("End or cancel this customer's subscriptions first.");
+    }
     await tx
       .update(customers)
       .set({ status: "ARCHIVED", archivedAt: new Date(), version: customer.version + 1, updatedAt: new Date() })
