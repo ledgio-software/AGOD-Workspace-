@@ -1,7 +1,7 @@
 import { and, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { communityReports, memberProfiles, showcasePosts, showcaseReviews, users } from "@/lib/db/schema";
+import { communityReports, communitySessions, memberProfiles, showcasePosts, showcaseReviews, users } from "@/lib/db/schema";
 import { ServiceError } from "@/modules/errors";
 
 // Phase 25: the community. Everyone who signs up is a member with a profile, whether or not they
@@ -235,7 +235,7 @@ export const reportInput = z.object({
   reason: z.string().trim().min(10, "Say what is wrong (at least 10 characters)").max(1000),
 });
 
-export type ReportTarget = "PROFILE" | "POST" | "REVIEW";
+export type ReportTarget = "PROFILE" | "POST" | "REVIEW" | "SESSION";
 
 /** Files a report (once per person and thing while it is open). */
 export async function fileReport(member: Member, targetType: ReportTarget, targetId: string, raw: z.input<typeof reportInput>) {
@@ -289,14 +289,17 @@ export async function listReports(member: Member) {
            CASE r.target_type
              WHEN 'PROFILE' THEN tu.name
              WHEN 'POST' THEN sp.title
+             WHEN 'SESSION' THEN cs.title
              ELSE 'Feedback by ' || rvu.name || ' on ' || rvp.title END AS target_name,
            CASE r.target_type
              WHEN 'PROFILE' THEN '/members/' || p.handle
              WHEN 'POST' THEN '/showcase/' || sp.id
+             WHEN 'SESSION' THEN '/sessions/' || cs.id
              ELSE '/showcase/' || rv.post_id || '#reviews' END AS target_link,
            CASE r.target_type
              WHEN 'PROFILE' THEN p.hidden_at IS NOT NULL
              WHEN 'POST' THEN sp.hidden_at IS NOT NULL
+             WHEN 'SESSION' THEN cs.hidden_at IS NOT NULL
              ELSE rv.hidden_at IS NOT NULL END AS target_hidden,
            su.name AS resolver
     FROM community_reports r
@@ -307,6 +310,7 @@ export async function listReports(member: Member) {
     LEFT JOIN showcase_reviews rv ON r.target_type = 'REVIEW' AND rv.id = r.target_id
     LEFT JOIN users rvu ON rvu.id = rv.reviewer_id
     LEFT JOIN showcase_posts rvp ON rvp.id = rv.post_id AND rvp.removed_at IS NULL
+    LEFT JOIN community_sessions cs ON r.target_type = 'SESSION' AND cs.id = r.target_id
     LEFT JOIN users su ON su.id = r.resolved_by
     ORDER BY (r.status = 'OPEN') DESC, r.created_at DESC
     LIMIT 100
@@ -335,6 +339,10 @@ export async function resolveReport(member: Member, reportId: string, raw: z.inp
         const [post] = await tx.select({ owner: showcasePosts.authorId }).from(showcasePosts).where(eq(showcasePosts.id, report.targetId));
         if (post?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
         await tx.update(showcasePosts).set(hide).where(and(eq(showcasePosts.id, report.targetId), isNull(showcasePosts.hiddenAt)));
+      } else if (report.targetType === "SESSION") {
+        const [session] = await tx.select({ owner: communitySessions.hostId }).from(communitySessions).where(eq(communitySessions.id, report.targetId));
+        if (session?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(communitySessions).set(hide).where(and(eq(communitySessions.id, report.targetId), isNull(communitySessions.hiddenAt)));
       } else {
         const [review] = await tx.select({ owner: showcaseReviews.reviewerId }).from(showcaseReviews).where(eq(showcaseReviews.id, report.targetId));
         if (review?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");

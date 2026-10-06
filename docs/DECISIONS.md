@@ -311,3 +311,14 @@ Phase 9 (file attachments in Vercel Blob).
 | Password link fails | Same fallback, except for people who also belong to another company (no company may set their password): they use *Forgot password* once email works. |
 | Error message | A refused SMTP login explains the fix (Gmail: an App password in `SMTP_PASS`, full address in `SMTP_USER`, redeploy). |
 
+## Phase 27 decisions (2026-10-06): teaching sessions
+
+| Decision | Choice |
+|---|---|
+| Who hosts | Reviewers (self-chosen badge) and organizers, after the code of conduct; five upcoming sessions per host. |
+| Calls | The host's own Google Meet, Zoom or Discord link, as the handbook says; the app doesn't create calls (members without a company have no Google connection). |
+| Privacy | The call link is shown only to the host, people who joined and organizers, to keep strangers out of calls. |
+| Calendar | A standard .ics file (attached to emails and downloadable), so it works with any calendar without connecting accounts. |
+| Emails | Confirmation on joining, a reminder from the daily job for sessions in the next 24 hours, and emails on time/link changes and cancellations. |
+| Archive | The host adds a recording link and notes after the session; past sessions are listed with them. |
+| Not included | Waitlists, recurring sessions, in-app video, attendance tracking. |

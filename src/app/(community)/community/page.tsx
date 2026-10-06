@@ -5,9 +5,11 @@ import { Callout, Card, PageHeader, buttonClass } from "@/components/ui";
 import { companiesOf, requireMember } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { canModerate, chatLinks, ensureProfile, listMembers, listReports, onboarding } from "@/modules/community";
+import { mySessions, sessionsTakenPart } from "@/modules/community/sessions";
 import { giveBack, reviewRequests } from "@/modules/community/showcase";
 import { switchCompanyAction } from "../../(authenticated)/company/actions";
 import { MemberGrid } from "../../(public)/members/member-grid";
+import { SessionList } from "../../(public)/sessions/session-list";
 import { PostGrid } from "../../(public)/showcase/post-grid";
 import { AcceptConductForm, CreateCompanyForm } from "./forms";
 
@@ -28,13 +30,15 @@ function Step({ done, title, children, soon }: { done: boolean; title: string; c
 export default async function CommunityHomePage() {
   const { member } = await requireMember();
   const profile = await ensureProfile(member);
-  const [steps, companies, organizer, recent, counts, waiting] = await Promise.all([
+  const [steps, companies, organizer, recent, counts, waiting, sessionsDone, upcomingMine] = await Promise.all([
     onboarding(profile),
     companiesOf(member.id),
     canModerate(member),
     listMembers(member),
     giveBack(member.id),
     reviewRequests(member),
+    sessionsTakenPart(member),
+    mySessions(member),
   ]);
   const openReports = organizer ? (await listReports(member)).filter((r) => r.status === "OPEN").length : 0;
   const chat = chatLinks();
@@ -112,9 +116,27 @@ export default async function CommunityHomePage() {
                   See who is waiting
                 </Link>
               </Step>
-              <Step done={false} soon title="Join a teaching session" />
+              <Step done={sessionsDone.joined + sessionsDone.hosted > 0} title="Join a teaching session">
+                <p className="text-muted">Live group calls where experienced builders teach. Reviewers can host their own.</p>
+                <Link href="/sessions" className={buttonClass("secondary", "sm")}>
+                  See upcoming sessions
+                </Link>
+              </Step>
             </ol>
           </Card>
+
+          {upcomingMine.length > 0 && (
+            <Card
+              title="Your upcoming sessions"
+              aside={
+                <Link href="/sessions" className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  All sessions <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              }
+            >
+              <SessionList sessions={upcomingMine} />
+            </Card>
+          )}
 
           <Card
             title="Waiting for feedback"
@@ -173,7 +195,6 @@ export default async function CommunityHomePage() {
 
           <Card title="What's coming" aside={<Sparkles className="size-4 text-muted" aria-hidden />}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-              <li>Teaching sessions with Google Meet links</li>
               <li>Mentorship matching and a tools &amp; prompts library</li>
             </ul>
           </Card>

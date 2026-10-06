@@ -93,7 +93,11 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | See members-only projects | | ✓ | ✓ |
 | Share a project (after agreeing to the code of conduct); edit, mark shipped, add screenshots, take down own projects; reply to feedback on them | | ✓ | ✓ |
 | Give feedback (not on own projects); report projects and feedback | | ✓ | ✓ |
-| See reports; hide or show profiles, projects and feedback; make or remove organizers | | | ✓ |
+| See upcoming and past sessions, recordings and notes | ✓ | ✓ | ✓ |
+| Join or leave a session (after the code of conduct); see its call link once joined | | ✓ | ✓ |
+| Host sessions (with the Reviewer badge); edit, cancel, add recordings to own sessions | | Reviewers | ✓ |
+| Cancel any session | | | ✓ |
+| See reports; hide or show profiles, projects, feedback and sessions; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
 another, and no role ever reaches another company's data. An Admin sets a temporary password only for

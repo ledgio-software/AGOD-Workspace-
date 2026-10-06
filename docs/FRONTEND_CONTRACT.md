@@ -46,6 +46,9 @@ rules, audit) lives behind these functions, not in the pages.
 | `/community/reports` | organizers | `listReports` | `resolveReportAction` |
 | `/showcase` | public | `listPosts({ status, q, page, order })` | |
 | `/showcase/[id]` (+ `/showcase/[id]/images/[imageId]`) | public (members-only posts: signed in) | `getPost`, `openScreenshot` | `addReviewAction`, `replyToReviewAction`, `reportPostAction`, `reportReviewAction`; author: `setPostStatusAction`, `addScreenshotAction`, `removeScreenshotAction`, `removePostAction`; organizers: `unhideShowcaseAction` |
+| `/sessions` (`?show=recordings`) | public | `listSessions("upcoming" \| "past")` | |
+| `/sessions/[id]` (+ `/sessions/[id]/calendar.ics`) | public (call link: host, attendees, organizers) | `getSession`, `sessionIcs` | `joinSessionAction`, `leaveSessionAction`, `reportSessionAction`; host: `addRecordingAction`, `cancelSessionAction`; organizers: `cancelSessionAction`, `unhideSessionAction` |
+| `/community/sessions/new`, `/community/sessions/[id]/edit` | Reviewers and organizers (host) | `hostingStatus`, `getSession` | `createSessionAction`, `updateSessionAction` |
 | `/community/showcase/new`, `/community/showcase/[id]/edit` | signed in (author) | `giveBack`, `screenshotsAvailable`, `getPost` | `createPostAction` (with an optional screenshot), `updatePostAction` |
 | `/sign-up`, `/forgot-password`, `/reset-password` | public | `signupOpen`, `emailConfig` | Better Auth client: `signUp.email` (with `pendingCompany`), `requestPasswordReset`, `resetPassword` |
 | `/integrations` (`?google=<result>`) | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig`, `googleStatus`, `companyCalendarStatus` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction`, `syncDriveAction` (Drive and calendars), `disconnectGoogleAction` (`google.manage`); `/api/google/connect` → Google → `/api/google/callback` |

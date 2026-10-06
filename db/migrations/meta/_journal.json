@@ -281,6 +281,20 @@
       "when": 1791286884039,
       "tag": "20261006114124_showcase_image_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791302455601,
+      "tag": "20261006160055_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791302456737,
+      "tag": "20261006160056_sessions_rules",
+      "breakpoints": true
     }
   ]
 }
