@@ -46,7 +46,7 @@ export function BillingTab({ actor, billing, milestones }: { actor: Actor; billi
 
   return (
     <div className="space-y-6">
-      {settings.requireDeposit && project.status === "PLANNING" && (!deposit || deposit.status !== "PAID") && (
+      {settings.requireDeposit && (project.status === "DRAFT" || project.status === "PLANNING") && (!deposit || deposit.status !== "PAID") && (
         <Callout tone="warn" icon={Wallet}>
           This company starts client work only after the deposit is paid.{" "}
           {deposit ? `The deposit (${formatMoney(deposit.amountMinor)}) isn't paid yet.` : "Add a deposit to the payment plan."}
@@ -102,7 +102,7 @@ export function BillingTab({ actor, billing, milestones }: { actor: Actor; billi
                         {s.milestoneTitle ? ` · ${s.milestoneTitle}` : ""}
                       </span>
                     </td>
-                    <td className={cx(table.td, "text-right tabular-nums")}>
+                    <td className={cx(table.td, "whitespace-nowrap text-right tabular-nums")}>
                       {formatMoney(s.amountMinor)}
                       {s.status === "PART_PAID" && <span className="block text-xs text-muted">{formatMoney(s.paidMinor)} paid</span>}
                     </td>
