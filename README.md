@@ -210,6 +210,9 @@ src/
 ### Phase 18 — Renewals and recurring revenue ✓
 - Renewal reminders for the renewal owner (escalated to Admins after a week), "Record a renewal", renewals on the Dashboard, recurring revenue in Profitability
 
+### Phase 19 — Email reminders ✓
+- Daily job (Vercel Cron) creates everyone's reminders and emails one summary per person (SMTP via Nodemailer); opt-out on Account; run history and test email on Integrations (`docs/EMAIL.md`)
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

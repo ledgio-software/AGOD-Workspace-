@@ -191,3 +191,14 @@ Phase 9 (file attachments in Vercel Blob).
 | Renewing | "Record a renewal" moves the renewal date (and the end date, if any) forward, by default one billing period (one year for one-time and custom billing), optionally at a new price, with a note of what was agreed. It is stored as an amendment marked **Renewal**, effective on the old renewal date, so the previous terms stay visible. A reminder never renews anything by itself; not renewing means ending or cancelling the subscription with a reason. |
 | Renewals view | Dashboard card (next 60 days and anything overdue) and a "renewing within 30/60/90 days" filter on Subscriptions. |
 | Recurring revenue | A Profitability tab: monthly recurring value and annual run rate (× 12) of active subscriptions, by service and by customer, and what renews in the next 90 days. Agreed value, not invoiced or collected money; it is kept separate from project profit. |
+
+## Phase 19 decisions (2026-10-06): email reminders
+
+| Decision | Choice |
+|---|---|
+| What is emailed | One daily summary per person of their unread in-app notifications (all kinds: tasks, approvals, payouts, renewals, comments) from the last 7 days that weren't emailed before. No email on days with nothing new. Each notification is emailed at most once; the 7-day limit stops a backlog going out when email is first turned on. |
+| When | Vercel Cron at 06:00 UTC (= Accra) daily calls `/api/cron/daily`, protected by `CRON_SECRET`. The job first creates everyone's task, approval and renewal reminders (as each person, under their own permissions), so reminders no longer depend on people opening the app. Vercel runs crons for production only; Admins can run the job on demand from Integrations. |
+| Provider | SMTP through Nodemailer, set by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `EMAIL_FROM`, so any mail provider works (Gmail/Google Workspace with an app password to start). Messages never read files or URLs (`disableFileAccess`/`disableUrlAccess`). Without SMTP settings email is off and the app behaves as before. A local file outbox (`EMAIL_OUTBOX_DIR`) is for testing and never used on Vercel. |
+| Reliability | Notifications are claimed (marked emailed) before sending and released if sending fails, so a retried or overlapping run never double-sends and a failure is retried next day. Each run is recorded (`job_runs`) and shown to Admins. |
+| Opt-out | Each person turns the daily email off or on from Account (their own preference row, protected by row-level security). On by default. |
+| Not included | Instant (per-event) emails, SMS/WhatsApp, per-type email settings. |

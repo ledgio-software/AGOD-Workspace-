@@ -37,6 +37,8 @@ rules, audit) lives behind these functions, not in the pages.
 | `/subscriptions/new` (`?customer=<id>`) | `subscription.manage` | `listCustomerOptions`, `listServiceOptions` | `createSubscriptionAction` |
 | `/subscriptions/[id]` | `subscription.view` | `getSubscription`, `renewalSuggestion` | `subscriptions/actions`: `changeStatusAction`, `updateDraftAction`, `amendAction`, `renewAction`, `updateDetailsAction` |
 | `/services` | `subscription.view` | `listServices` | `createServiceAction`, `updateServiceAction`, `setServiceActiveAction` |
+| `/account` | everyone | `getDailyEmail` | `account/actions`: `setDailyEmailAction` |
+| `/integrations` | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction` |
 | `/projects/[id]/statement` | anyone who can see the project | `getProjectStatement` | |
 | `/payouts/[id]` | the payee, managers | `getPayout`, `questionsForPayout`, `listPaymentReceipts` | `payouts/actions`: payments, adjustments, questions, receipts |
 | `/ledger` (+ `/ledger/export`) | `payout.viewAll` | `listLedger` | |
