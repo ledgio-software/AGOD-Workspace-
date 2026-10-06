@@ -202,3 +202,17 @@ Phase 9 (file attachments in Vercel Blob).
 | Reliability | Notifications are claimed (marked emailed) before sending and released if sending fails, so a retried or overlapping run never double-sends and a failure is retried next day. Each run is recorded (`job_runs`) and shown to Admins. |
 | Opt-out | Each person turns the daily email off or on from Account (their own preference row, protected by row-level security). On by default. |
 | Not included | Instant (per-event) emails, SMS/WhatsApp, per-type email settings. |
+
+## Phase 20 decisions (2026-10-06): invoices
+
+| Decision | Choice |
+|---|---|
+| Lifecycle | **Draft** (edited freely, can be deleted; no number yet) → **Issued** (gets the next number `INV-<year>-<nnnn>`, copies the bill-to name and email, and is frozen) → optionally **Void** (with a reason, only while no payments are recorded). Open, partly paid, paid and overdue are worked out from payments and the due date. A correction is a void plus a new invoice; there are no credit notes yet. |
+| Lines | Manual lines (description × quantity × unit price), the next unbilled **period of a subscription** (one billing period at the subscription's price; one-time billed once; custom billing as a manual line), or an amount for a **project** of that customer (deposit, milestone, balance). The database refuses billing the same subscription period twice, and the service refuses billing more than a project's value. Voiding frees what the invoice billed. |
+| Subscription billing | "Prepare subscription invoices" creates one draft per customer with every active subscription's next period starting by a chosen date (default: in 7 days). Nothing is sent until each draft is issued. |
+| Who | PMs and Admins create, issue, email and void invoices. Only **Admins** record or void customer payments and edit the invoice settings (like decision 4 for payouts). Team Members see nothing. Row-level security and triggers enforce the same. |
+| Payments | Recorded manually (amount, date not in the future, method, reference), never more than the balance; partial payments allowed. Payments are voided with a reason, never deleted or edited. |
+| PDF and email | The PDF is generated on the server (pdf-lib, built-in Helvetica; characters outside its set print as "?"). "Send by email" attaches it and goes to the billing contact copied at issue (or another address), over the SMTP settings from Phase 19; it records when and to whom. |
+| Settings | Business name, address, contact details, tax ID, payment instructions (bank, MoMo), footer and default payment terms (14 days), printed on every PDF, including invoices issued earlier. |
+| Reminders | Overdue invoices remind the customer's account owner (once per due date); Admins are told after 14 days. In the app, the daily email and a Dashboard warning. |
+| Not included | Tax/VAT lines, discounts, credit notes, online card or MoMo collection, multi-currency invoices, recurring auto-issue. |

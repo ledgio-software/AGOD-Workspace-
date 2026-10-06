@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowLeft, Archive, FolderKanban, Mail, Phone, Plus, Repeat, UserRound } from "lucide-react";
+import { Activity, ArrowLeft, Archive, FileText, FolderKanban, Mail, Phone, Plus, Repeat, UserRound } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
-import { Badge, CustomerStatusBadge, ProjectStatusBadge, RenewalBadge, SubscriptionStatusBadge } from "@/components/badges";
+import { Badge, CustomerStatusBadge, InvoiceStateBadge, ProjectStatusBadge, RenewalBadge, SubscriptionStatusBadge } from "@/components/badges";
 import { ButtonLink, Callout, Card, Disclosure, EmptyState, StatCard, table } from "@/components/ui";
-import { formatCalendarDate, formatDateTime } from "@/lib/dates";
+import { formatCalendarDate, formatDateTime, todayInOperatingZone } from "@/lib/dates";
 import { billingCadenceSuffix, contactChannelLabel, customerTypeLabel, describeAuditAction } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getCustomer } from "@/modules/customers";
 import { listActiveMembers } from "@/modules/projects";
+import { invoiceTotals, listInvoices } from "@/modules/invoices";
 import { listSubscriptions, recurringTotals } from "@/modules/subscriptions";
 import { addContactAction, archiveCustomerAction, setContactActiveAction, updateContactAction, updateCustomerAction } from "../actions";
 import { ArchiveForm, ContactActiveForm, ContactForm, CustomerForm } from "../customer-forms";
@@ -36,6 +37,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   const canEdit = canManage && !archived;
   const subs = can(actor, "subscription.view") ? await listSubscriptions(actor, { customerId: customer.id, status: "ALL" }) : null;
   const mrr = subs ? recurringTotals(subs) : [];
+  const invs = can(actor, "invoice.view") ? await listInvoices(actor, { customerId: customer.id }) : null;
   const owners = canEdit ? (await listActiveMembers(actor)).filter((m) => m.role !== "TEAM_MEMBER") : [];
 
   const live = projects.filter((p) => p.status !== "CANCELLED");
@@ -184,6 +186,46 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
                     </li>
                   ))}
                 </ul>
+              )}
+            </Card>
+          )}
+
+          {invs && (
+            <Card
+              title="Invoices"
+              description={invs.length ? `Outstanding ${formatMoney(invoiceTotals(invs, todayInOperatingZone()).outstandingMinor)}` : undefined}
+              aside={
+                canEdit && can(actor, "invoice.manage") ? (
+                  <ButtonLink href={`/invoices/new?customer=${customer.id}`} size="sm">
+                    <Plus className="size-3.5" aria-hidden /> New
+                  </ButtonLink>
+                ) : undefined
+              }
+            >
+              {invs.length === 0 ? (
+                <EmptyState icon={FileText} title="No invoices yet" />
+              ) : (
+                <ul className="-my-2 divide-y divide-line">
+                  {invs.slice(0, 6).map((i) => (
+                    <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                      <div className="min-w-0">
+                        <Link href={`/invoices/${i.id}`} className="font-medium hover:text-brand-600">
+                          {i.number ?? "Draft"}
+                        </Link>
+                        <div className="text-xs text-muted">
+                          {formatMoney(i.totalMinor, i.currency)}
+                          {i.dueDate && <> · due {formatCalendarDate(i.dueDate)}</>}
+                        </div>
+                      </div>
+                      <InvoiceStateBadge state={i.state} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {invs.length > 6 && (
+                <Link href={`/invoices?q=${encodeURIComponent(customer.name)}`} className="mt-3 block text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  All {invs.length} invoices
+                </Link>
               )}
             </Card>
           )}

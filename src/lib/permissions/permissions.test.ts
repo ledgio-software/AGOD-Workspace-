@@ -42,6 +42,10 @@ const matrix: Record<Action, [boolean, boolean, boolean]> = {
   "customer.manage": [false, true, true],
   "subscription.view": [false, true, true],
   "subscription.manage": [false, true, true],
+  "invoice.view": [false, true, true],
+  "invoice.manage": [false, true, true],
+  "invoice.recordPayment": [false, false, true],
+  "invoice.settings": [false, false, true],
 };
 
 describe("can: role matrix", () => {

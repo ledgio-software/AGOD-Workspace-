@@ -877,3 +877,147 @@ export const jobRuns = pgTable(
   },
   (t) => [index("job_runs_job_started_idx").on(t.job, t.startedAt)],
 );
+
+// Phase 20: invoices to customers. Drafts are edited freely; issuing assigns the number and
+// freezes the lines. "Paid" and "overdue" are worked out from payments and the due date.
+export const invoiceStatus = pgEnum("invoice_status", ["DRAFT", "ISSUED", "VOID"]);
+
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // INV-<year>-<nnnn>, given when issued, so drafts don't use up numbers.
+    number: text("number").unique(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    status: invoiceStatus("status").notNull().default("DRAFT"),
+    issueDate: date("issue_date"),
+    dueDate: date("due_date"),
+    currency: currency(),
+    totalMinor: money("total_minor").notNull().default(0),
+    paidMinor: money("paid_minor").notNull().default(0),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    // Copied from the customer when issued, so the invoice reads the same later.
+    billToName: text("bill_to_name"),
+    billToEmail: text("bill_to_email"),
+    notes: text("notes"),
+    createdBy: userRef("created_by").notNull(),
+    issuedBy: userRef("issued_by"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    voidedBy: userRef("voided_by"),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidReason: text("void_reason"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    sentTo: text("sent_to"),
+    version: integer("version").notNull().default(1),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("invoices_customer_idx").on(t.customerId),
+    index("invoices_status_due_idx").on(t.status, t.dueDate),
+    check("invoices_number_format", sql`${t.number} IS NULL OR ${t.number} ~ '^INV-[0-9]{4}-[0-9]{4,}$'`),
+    check(
+      "invoices_issued_complete",
+      sql`${t.status} = 'DRAFT' OR (${t.number} IS NOT NULL AND ${t.issueDate} IS NOT NULL AND ${t.dueDate} IS NOT NULL AND ${t.issuedAt} IS NOT NULL)`,
+    ),
+    check("invoices_due_after_issue", sql`${t.dueDate} IS NULL OR ${t.issueDate} IS NULL OR ${t.dueDate} >= ${t.issueDate}`),
+    check("invoices_amounts", sql`${t.totalMinor} >= 0 AND ${t.paidMinor} >= 0 AND ${t.paidMinor} <= ${t.totalMinor}`),
+    check("invoices_paid_at", sql`(${t.paidAt} IS NOT NULL) = (${t.status} = 'ISSUED' AND ${t.paidMinor} = ${t.totalMinor} AND ${t.totalMinor} > 0)`),
+    check(
+      "invoices_void_complete",
+      sql`(${t.status} = 'VOID') = (${t.voidedAt} IS NOT NULL AND ${t.voidedBy} IS NOT NULL AND length(btrim(coalesce(${t.voidReason}, ''))) >= 3)`,
+    ),
+  ],
+);
+
+export const invoiceLines = pgTable(
+  "invoice_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    position: integer("position").notNull(),
+    description: text("description").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    unitPriceMinor: money("unit_price_minor").notNull(),
+    amountMinor: money("amount_minor").notNull(),
+    // What the line bills: a subscription period, or (part of) a project.
+    subscriptionId: uuid("subscription_id").references(() => subscriptions.id, { onDelete: "restrict" }),
+    periodStart: date("period_start"),
+    periodEnd: date("period_end"),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "restrict" }),
+    // Set when the invoice is voided, so the period or project amount can be billed again.
+    voided: boolean("voided").notNull().default(false),
+    createdAt,
+  },
+  (t) => [
+    index("invoice_lines_invoice_idx").on(t.invoiceId),
+    index("invoice_lines_project_idx").on(t.projectId),
+    check("invoice_lines_description", sql`length(btrim(${t.description})) >= 2`),
+    check("invoice_lines_quantity", sql`${t.quantity} >= 1`),
+    check("invoice_lines_price", sql`${t.unitPriceMinor} >= 0`),
+    check("invoice_lines_amount", sql`${t.amountMinor} = ${t.quantity} * ${t.unitPriceMinor}`),
+    check(
+      "invoice_lines_period",
+      sql`(${t.subscriptionId} IS NULL AND ${t.periodStart} IS NULL AND ${t.periodEnd} IS NULL)
+       OR (${t.subscriptionId} IS NOT NULL AND ${t.periodStart} IS NOT NULL AND ${t.periodEnd} IS NOT NULL AND ${t.periodEnd} >= ${t.periodStart})`,
+    ),
+    check("invoice_lines_one_source", sql`${t.subscriptionId} IS NULL OR ${t.projectId} IS NULL`),
+    // A subscription period is billed once (unless its invoice was voided).
+    uniqueIndex("invoice_lines_subscription_period")
+      .on(t.subscriptionId, t.periodStart)
+      .where(sql`${t.subscriptionId} IS NOT NULL AND NOT ${t.voided}`),
+  ],
+);
+
+export const invoicePayments = pgTable(
+  "invoice_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    amountMinor: money("amount_minor").notNull(),
+    paidOn: date("paid_on").notNull(),
+    method: paymentMethod("method").notNull(),
+    reference: text("reference"),
+    note: text("note"),
+    recordedBy: userRef("recorded_by").notNull(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: userRef("voided_by"),
+    voidReason: text("void_reason"),
+    createdAt,
+  },
+  (t) => [
+    index("invoice_payments_invoice_idx").on(t.invoiceId),
+    check("invoice_payments_amount", sql`${t.amountMinor} > 0`),
+    check(
+      "invoice_payments_void_complete",
+      sql`(${t.voidedAt} IS NULL AND ${t.voidedBy} IS NULL AND ${t.voidReason} IS NULL)
+       OR (${t.voidedAt} IS NOT NULL AND ${t.voidedBy} IS NOT NULL AND length(btrim(coalesce(${t.voidReason}, ''))) >= 3)`,
+    ),
+  ],
+);
+
+// Phase 20: who AGOD is on its invoices. One row (id = 1), edited by Admins.
+export const invoiceSettings = pgTable(
+  "invoice_settings",
+  {
+    id: integer("id").primaryKey().default(1),
+    businessName: text("business_name").notNull().default("AGOD"),
+    address: text("address"),
+    email: text("email"),
+    phone: text("phone"),
+    taxId: text("tax_id"),
+    // How to pay: bank account, MoMo number, ... printed on every invoice.
+    paymentInstructions: text("payment_instructions"),
+    footer: text("footer"),
+    defaultDueDays: integer("default_due_days").notNull().default(14),
+    updatedBy: userRef("updated_by"),
+    updatedAt,
+  },
+  (t) => [check("invoice_settings_singleton", sql`${t.id} = 1`), check("invoice_settings_due_days", sql`${t.defaultDueDays} BETWEEN 0 AND 120`)],
+);

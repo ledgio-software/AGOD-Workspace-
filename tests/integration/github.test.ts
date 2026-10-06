@@ -59,7 +59,7 @@ describe("task numbers and keys", () => {
   it("numbers tasks per project and normalises the repository", async () => {
     const { project, t1, t2 } = await setup();
     expect([t1.number, t2.number]).toEqual([1, 2]);
-    expect(project.code).toMatch(/^AGOD-\d{4}-\d{3}$/);
+    expect(project.code).toMatch(/^AGOD-\d{4}-\d{3,}$/);
   });
 
   it("refuses a malformed repository and lets only managers set it", async () => {

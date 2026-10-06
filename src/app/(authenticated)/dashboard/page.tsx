@@ -14,7 +14,7 @@ import {
 import { RenewalBadge, TaskStatusBadge } from "@/components/badges";
 import { inputClass } from "@/components/form";
 import { Avatar, ButtonLink, Callout, Card, EmptyState, List, ListRow, PageHeader, StatCard, buttonClass } from "@/components/ui";
-import { formatCalendarDate, formatDateTime } from "@/lib/dates";
+import { formatCalendarDate, formatDateTime, todayInOperatingZone } from "@/lib/dates";
 import { adjustmentTypeLabel, describeAuditAction, payoutStatusLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { can } from "@/lib/permissions";
@@ -22,6 +22,7 @@ import { requireUser } from "@/lib/session";
 import { questionsWaitingOn } from "@/modules/questions";
 import { getDashboard } from "@/modules/reports";
 import { refreshDeadlineAlertsQuietly } from "@/modules/notifications/deadlines";
+import { invoiceTotals, listInvoices, refreshInvoiceAlertsQuietly } from "@/modules/invoices";
 import { listSubscriptions, refreshRenewalAlertsQuietly } from "@/modules/subscriptions";
 import { getMyWork } from "@/modules/work";
 
@@ -117,15 +118,17 @@ async function MemberDashboard({ user }: { user: Awaited<ReturnType<typeof requi
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   const user = await requireUser();
-  await Promise.all([refreshDeadlineAlertsQuietly(user), refreshRenewalAlertsQuietly(user)]);
+  await Promise.all([refreshDeadlineAlertsQuietly(user), refreshRenewalAlertsQuietly(user), refreshInvoiceAlertsQuietly(user)]);
 
   if (!can(user, "payout.viewAll")) return <MemberDashboard user={user} />;
 
-  const [d, questionsWaiting, renewals] = await Promise.all([
+  const [d, questionsWaiting, renewals, invoiceList] = await Promise.all([
     getDashboard(user, await searchParams),
     questionsWaitingOn(user),
     can(user, "subscription.view") ? listSubscriptions(user, { within: 60 }) : Promise.resolve(null),
+    can(user, "invoice.view") ? listInvoices(user, { state: "UNPAID" }) : Promise.resolve(null),
   ]);
+  const invoiceStats = invoiceList ? invoiceTotals(invoiceList, todayInOperatingZone()) : null;
   const maxOutstanding = Math.max(1, ...d.outstandingByMember.map((m) => m.remainingMinor));
   const overdueCount = d.overdueProjects.length + d.overdueTasks.length;
 
@@ -159,6 +162,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           action={<ButtonLink href={`/questions?status=${user.role === "ADMIN" ? "" : "OPEN"}`} size="sm">Review</ButtonLink>}
         >
           {questionsWaiting} payout question{questionsWaiting === 1 ? " is" : "s are"} waiting for you.
+        </Callout>
+      )}
+
+      {invoiceStats && invoiceStats.overdueCount > 0 && (
+        <Callout
+          tone="bad"
+          icon={CircleAlert}
+          action={<ButtonLink href="/invoices?state=OVERDUE" size="sm">View</ButtonLink>}
+        >
+          {invoiceStats.overdueCount} overdue invoice{invoiceStats.overdueCount === 1 ? "" : "s"}: {formatMoney(invoiceStats.overdueMinor)} unpaid past the due date.
         </Callout>
       )}
 

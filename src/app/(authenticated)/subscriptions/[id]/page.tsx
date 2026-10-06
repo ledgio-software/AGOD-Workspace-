@@ -17,6 +17,8 @@ import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { listActiveMembers } from "@/modules/projects";
 import { getSubscription, renewalSuggestion } from "@/modules/subscriptions";
+import { invoiceSubscriptionAction } from "../../invoices/actions";
+import { InvoiceSubscriptionButton } from "../../invoices/invoice-forms";
 import { allowedSubscriptionTransitions, isLive } from "@/modules/subscriptions/rules";
 import { amendAction, changeStatusAction, renewAction, updateDetailsAction, updateDraftAction } from "../actions";
 import { AmendForm, DetailsForm, DraftEditForm, RenewForm, StatusForm } from "../subscription-forms";
@@ -108,6 +110,12 @@ export default async function SubscriptionPage({ params }: { params: Promise<{ i
       )}
       {data.renewal?.kind === "PAST_END" && (
         <Callout tone="bad">The end date has passed. Amend the end date if it was renewed, or end the subscription.</Callout>
+      )}
+
+      {can(actor, "invoice.manage") && s.status === "ACTIVE" && (
+        <div>
+          <InvoiceSubscriptionButton action={invoiceSubscriptionAction.bind(null, s.id)} />
+        </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">

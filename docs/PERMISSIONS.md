@@ -65,6 +65,8 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Set project type and cost budget; record or void project costs | | ✓ | ✓ |
 | Customers and contacts: view, add, edit, archive or restore | | ✓ | ✓ |
 | Services and subscriptions: view, create, amend, change status | | ✓ | ✓ |
+| Invoices: view, create, issue, email, void | | ✓ | ✓ |
+| Record or void customer payments on invoices; invoice settings | | | ✓ |
 
 The GitHub webhook (`/api/github/webhook`) is the one place that writes domain data without a signed-in
 person: it verifies GitHub's signature, then acts as the system through the owner connection, only on projects

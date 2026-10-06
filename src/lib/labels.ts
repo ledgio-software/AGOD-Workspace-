@@ -100,6 +100,17 @@ const auditActionLabel: Record<string, string> = {
   "subscription.updated": "edited the subscription",
   "subscription.amended": "amended the terms",
   "subscription.renewed": "renewed the subscription",
+  "invoice.created": "created the invoice draft",
+  "invoice.updated": "edited the invoice",
+  "invoice.line_added": "added an invoice line",
+  "invoice.line_removed": "removed an invoice line",
+  "invoice.draft_deleted": "deleted the draft",
+  "invoice.issued": "issued the invoice",
+  "invoice.voided": "voided the invoice",
+  "invoice.sent": "emailed the invoice",
+  "invoice.payment_recorded": "recorded a payment",
+  "invoice.payment_voided": "voided a payment",
+  "invoice.settings_updated": "changed the invoice settings",
   "user.daily_email_on": "turned the daily email on",
   "user.daily_email_off": "turned the daily email off",
   "subscription.status_changed": "changed the status",
@@ -220,5 +231,14 @@ export const adjustmentTypeLabel = {
   INCREASE: "Increase",
   DECREASE: "Decrease",
   WRITE_OFF: "Write-off",
+  VOID: "Void",
+} as const;
+
+export const invoiceStateLabel = {
+  DRAFT: "Draft",
+  OPEN: "Open",
+  PARTLY_PAID: "Partly paid",
+  PAID: "Paid",
+  OVERDUE: "Overdue",
   VOID: "Void",
 } as const;
