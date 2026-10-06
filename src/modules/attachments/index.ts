@@ -21,7 +21,7 @@ export type AttachmentTarget =
   | { kind: "TASK"; taskId: string }
   | { kind: "PAYMENT"; paymentId: string };
 
-export const attachmentsAvailable = async () => storage() !== null || (isGoogleConfigured() && (await companyConnection()) !== null);
+export const attachmentsAvailable = async (orgId: string) => storage() !== null || (isGoogleConfigured() && (await companyConnection(orgId)) !== null);
 
 const removeStored = (key: string) => (isDriveKey(key) ? removeFromDrive(key) : (storage()?.remove(key) ?? Promise.resolve()));
 
@@ -62,7 +62,7 @@ export async function uploadAttachment(
 
   let storageKey: string | null = null;
   try {
-    storageKey = await putInDrive(target.kind === "PAYMENT" ? { kind: "PAYMENT" } : { kind: target.kind, projectId: resolved.projectId }, {
+    storageKey = await putInDrive(actor.orgId, target.kind === "PAYMENT" ? { kind: "PAYMENT" } : { kind: target.kind, projectId: resolved.projectId }, {
       name: checked.fileName,
       bytes: file.bytes,
       contentType: checked.contentType,

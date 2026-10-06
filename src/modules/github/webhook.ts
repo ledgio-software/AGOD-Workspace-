@@ -38,9 +38,12 @@ type Payload = {
 
 export type DeliveryResult = { status: "processed" | "duplicate"; summary: string };
 
-async function systemNotify(tx: Tx, n: { recipientId: string | null; type: string; title: string; message: string; projectId: string }) {
+// Phase 22: no one is signed in here, so every row is written to the company of the project it
+// concerns (projects in several companies may be connected to the same repository).
+async function systemNotify(tx: Tx, n: { recipientId: string | null; type: string; title: string; message: string; projectId: string; organizationId: string }) {
   if (!n.recipientId) return;
   await tx.insert(notifications).values({
+    organizationId: n.organizationId,
     recipientId: n.recipientId,
     type: n.type,
     title: n.title,
@@ -82,7 +85,7 @@ const unique = (rows: Found) => [...new Map(rows.map((r) => [r.task.id, r])).val
 async function upsertLink(tx: Tx, found: Found[number], values: Omit<typeof taskLinks.$inferInsert, "taskId" | "projectId">) {
   await tx
     .insert(taskLinks)
-    .values({ ...values, taskId: found.task.id, projectId: found.project.id })
+    .values({ ...values, organizationId: found.project.organizationId, taskId: found.task.id, projectId: found.project.id })
     .onConflictDoUpdate({
       target: [taskLinks.taskId, taskLinks.key],
       set: {
@@ -114,6 +117,7 @@ async function moveTask(tx: Tx, found: Found[number], next: TaskStatus, pr: Pull
     before: { status: task.status },
     after: { status: next },
     reason: `GitHub: pull request ${repo}#${pr.number} ${prState} (${pr.html_url})`,
+    organizationId: project.organizationId,
   });
   if (next === "READY_FOR_QA") {
     await systemNotify(tx, {
@@ -122,6 +126,7 @@ async function moveTask(tx: Tx, found: Found[number], next: TaskStatus, pr: Pull
       title: `Ready for QA: ${key}`,
       message: `"${task.title}" was merged in ${repo}#${pr.number}. Verify it on staging and mark it done.`,
       projectId: project.id,
+      organizationId: project.organizationId,
     });
   }
   return `${key} ${task.status}→${next}`;
@@ -178,6 +183,7 @@ async function onReview(tx: Tx, repo: string, p: Payload): Promise<string> {
         title: `Changes requested on ${taskKey(f.project.code, f.task.number)}`,
         message: `${review.user.login} requested changes on ${repo}#${pr.number}.`,
         projectId: f.project.id,
+        organizationId: f.project.organizationId,
       });
     }
   }
@@ -205,27 +211,37 @@ async function onIssue(tx: Tx, repo: string, p: Payload): Promise<string> {
   return `Issue #${issue.number} ${issue.state}: ${found.length} task(s)`;
 }
 
+/** Companies with a project connected to this repository: each keeps its own deployment history. */
+async function companiesUsing(tx: Tx, repo: string): Promise<string[]> {
+  const rows = await tx.selectDistinct({ id: projects.organizationId }).from(projects).where(eq(projects.githubRepo, repo));
+  return rows.map((r) => r.id);
+}
+
 async function onDeploymentStatus(tx: Tx, repo: string, p: Payload): Promise<string> {
   const d = p.deployment!;
   const status = p.deployment_status!;
   const url = status.environment_url || status.target_url || null;
-  await tx
-    .insert(githubDeployments)
-    .values({ githubId: d.id, repo, environment: d.environment, ref: d.ref, sha: d.sha, state: status.state, url })
-    .onConflictDoUpdate({ target: githubDeployments.githubId, set: { state: status.state, url, updatedAt: new Date() } });
+  for (const organizationId of await companiesUsing(tx, repo)) {
+    await tx
+      .insert(githubDeployments)
+      .values({ organizationId, githubId: d.id, repo, environment: d.environment, ref: d.ref, sha: d.sha, state: status.state, url })
+      .onConflictDoUpdate({ target: [githubDeployments.organizationId, githubDeployments.githubId], set: { state: status.state, url, updatedAt: new Date() } });
+  }
   return `Deployment ${d.environment} ${status.state} (${d.sha.slice(0, 7)})`;
 }
 
 async function onRelease(tx: Tx, repo: string, p: Payload): Promise<string> {
   const r = p.release!;
   if (r.draft) return `Release ${r.tag_name} is a draft: ignored`;
-  await tx
-    .insert(githubReleases)
-    .values({ githubId: r.id, repo, tag: r.tag_name, name: r.name, url: r.html_url, publishedAt: r.published_at ? new Date(r.published_at) : null })
-    .onConflictDoUpdate({
-      target: githubReleases.githubId,
-      set: { tag: r.tag_name, name: r.name, url: r.html_url, publishedAt: r.published_at ? new Date(r.published_at) : null },
-    });
+  for (const organizationId of await companiesUsing(tx, repo)) {
+    await tx
+      .insert(githubReleases)
+      .values({ organizationId, githubId: r.id, repo, tag: r.tag_name, name: r.name, url: r.html_url, publishedAt: r.published_at ? new Date(r.published_at) : null })
+      .onConflictDoUpdate({
+        target: [githubReleases.organizationId, githubReleases.githubId],
+        set: { tag: r.tag_name, name: r.name, url: r.html_url, publishedAt: r.published_at ? new Date(r.published_at) : null },
+      });
+  }
   return `Release ${r.tag_name}`;
 }
 

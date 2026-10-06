@@ -40,7 +40,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   const mrr = subs ? recurringTotals(subs) : [];
   const invs = can(actor, "invoice.view") ? await listInvoices(actor, { customerId: customer.id }) : null;
   const owners = canEdit ? (await listActiveMembers(actor)).filter((m) => m.role !== "TEAM_MEMBER") : [];
-  const driveFolder = await driveFolderLink("CUSTOMER", customer.id);
+  const driveFolder = await driveFolderLink(actor.orgId, "CUSTOMER", customer.id);
 
   const live = projects.filter((p) => p.status !== "CANCELLED");
   const open = projects.filter((p) => p.status !== "COMPLETED" && p.status !== "CANCELLED");

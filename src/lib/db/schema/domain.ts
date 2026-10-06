@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
+import { organizations } from "./orgs";
 
 // Domain tables from the design document, section 6.
 // Money is always integer minor units (pesewas) + ISO currency code.
@@ -28,6 +29,13 @@ const updatedAt = timestamp("updated_at", { withTimezone: true })
   .$onUpdate(() => new Date());
 const money = (name: string) => bigint(name, { mode: "number" });
 const currency = () => char("currency", { length: 3 }).notNull().default("GHS");
+// Phase 22: the company a row belongs to. Filled from the signed-in person's current company
+// (app.org_id, set by withActor); row-level security keeps every company's rows apart.
+const orgRef = () =>
+  uuid("organization_id")
+    .notNull()
+    .default(sql`app_org_id()`)
+    .references(() => organizations.id, { onDelete: "restrict" });
 const userRef = (name: string) => uuid(name).references(() => users.id, { onDelete: "restrict" });
 
 export const clientType = pgEnum("client_type", ["INTERNAL", "EXTERNAL"]);
@@ -106,6 +114,7 @@ export const customers = pgTable(
   "customers",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     name: text("name").notNull(),
     type: customerType("type").notNull().default("COMPANY"),
     status: customerStatus("status").notNull().default("ACTIVE"),
@@ -121,7 +130,7 @@ export const customers = pgTable(
   },
   (t) => [
     // One customer per name (case and surrounding spaces ignored): prevents duplicates.
-    uniqueIndex("customers_name_unique").on(sql`lower(btrim(${t.name}))`),
+    uniqueIndex("customers_name_unique").on(t.organizationId, sql`lower(btrim(${t.name}))`),
     check("customers_name_not_blank", sql`length(btrim(${t.name})) >= 2`),
     check("customers_archived_matches_status", sql`(${t.status} = 'ARCHIVED') = (${t.archivedAt} IS NOT NULL)`),
   ],
@@ -131,6 +140,7 @@ export const customerContacts = pgTable(
   "customer_contacts",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "restrict" }),
@@ -158,7 +168,8 @@ export const projects = pgTable(
   "projects",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    code: text("code").notNull().unique(),
+    organizationId: orgRef(),
+    code: text("code").notNull(),
     name: text("name").notNull(),
     description: text("description"),
     clientType: clientType("client_type").notNull(),
@@ -194,6 +205,7 @@ export const projects = pgTable(
     updatedAt,
   },
   (t) => [
+    uniqueIndex("projects_org_code_unique").on(t.organizationId, t.code),
     check("projects_total_value_non_negative", sql`${t.totalValueMinor} >= 0`),
     check("projects_cost_budget_non_negative", sql`${t.costBudgetMinor} >= 0`),
     check("projects_customer_matches_client_type", sql`(${t.clientType} = 'EXTERNAL') = (${t.customerId} IS NOT NULL)`),
@@ -217,6 +229,7 @@ export const projectAssignments = pgTable(
   "project_assignments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
@@ -248,6 +261,7 @@ export const milestones = pgTable(
   "milestones",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
@@ -267,6 +281,7 @@ export const tasks = pgTable(
   "tasks",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
@@ -314,6 +329,7 @@ export const compensationSnapshots = pgTable(
   "compensation_snapshots",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
@@ -338,6 +354,7 @@ export const compensationSnapshotLines = pgTable(
   "compensation_snapshot_lines",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     snapshotId: uuid("snapshot_id")
       .notNull()
       .references(() => compensationSnapshots.id, { onDelete: "restrict" }),
@@ -364,6 +381,7 @@ export const payoutLedgerEntries = pgTable(
   "payout_ledger_entries",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
@@ -393,6 +411,7 @@ export const paymentTransactions = pgTable(
   "payment_transactions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     ledgerEntryId: uuid("ledger_entry_id")
       .notNull()
       .references(() => payoutLedgerEntries.id, { onDelete: "restrict" }),
@@ -416,6 +435,7 @@ export const adjustments = pgTable(
   "adjustments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     ledgerEntryId: uuid("ledger_entry_id")
       .notNull()
       .references(() => payoutLedgerEntries.id, { onDelete: "restrict" }),
@@ -436,6 +456,7 @@ export const auditEvents = pgTable(
   "audit_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     actorId: userRef("actor_id"),
     entityType: text("entity_type").notNull(),
     entityId: uuid("entity_id").notNull(),
@@ -461,6 +482,7 @@ export const notifications = pgTable(
   "notifications",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     recipientId: userRef("recipient_id").notNull(),
     type: text("type").notNull(),
     title: text("title").notNull(),
@@ -486,6 +508,7 @@ export const payoutQuestions = pgTable(
   "payout_questions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     ledgerEntryId: uuid("ledger_entry_id")
       .notNull()
       .references(() => payoutLedgerEntries.id, { onDelete: "restrict" }),
@@ -522,8 +545,9 @@ export const payoutPeriods = pgTable(
   "payout_periods",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     // Calendar month in the operating timezone, YYYY-MM.
-    period: char("period", { length: 7 }).notNull().unique(),
+    period: char("period", { length: 7 }).notNull(),
     locked: boolean("locked").notNull(),
     lockedBy: userRef("locked_by"),
     lockedAt: timestamp("locked_at", { withTimezone: true }),
@@ -535,6 +559,7 @@ export const payoutPeriods = pgTable(
     updatedAt,
   },
   (t) => [
+    uniqueIndex("payout_periods_org_period_unique").on(t.organizationId, t.period),
     check("payout_periods_format", sql`${t.period} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
     check("payout_periods_locked_by", sql`NOT ${t.locked} OR (${t.lockedBy} IS NOT NULL AND ${t.lockedAt} IS NOT NULL)`),
   ],
@@ -546,6 +571,7 @@ export const comments = pgTable(
   "comments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
@@ -567,7 +593,8 @@ export const projectTemplates = pgTable(
   "project_templates",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    name: text("name").notNull().unique(),
+    organizationId: orgRef(),
+    name: text("name").notNull(),
     description: text("description"),
     outline: text("outline").notNull(),
     active: boolean("active").notNull().default(true),
@@ -576,7 +603,10 @@ export const projectTemplates = pgTable(
     createdAt,
     updatedAt,
   },
-  (t) => [check("project_templates_name_length", sql`length(trim(${t.name})) >= 3`)],
+  (t) => [
+    uniqueIndex("project_templates_org_name_unique").on(t.organizationId, t.name),
+    check("project_templates_name_length", sql`length(trim(${t.name})) >= 3`),
+  ],
 );
 
 // GitHub integration (roadmap 2.5). Written by people (links pasted on a task) and by the GitHub
@@ -587,6 +617,7 @@ export const taskLinks = pgTable(
   "task_links",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     taskId: uuid("task_id")
       .notNull()
       .references(() => tasks.id, { onDelete: "restrict" }),
@@ -638,7 +669,8 @@ export const githubDeployments = pgTable(
   "github_deployments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    githubId: bigint("github_id", { mode: "number" }).notNull().unique(),
+    organizationId: orgRef(),
+    githubId: bigint("github_id", { mode: "number" }).notNull(),
     repo: text("repo").notNull(),
     environment: text("environment").notNull(),
     ref: text("ref"),
@@ -649,14 +681,15 @@ export const githubDeployments = pgTable(
     createdAt,
     updatedAt,
   },
-  (t) => [index("github_deployments_repo_sha_idx").on(t.repo, t.sha)],
+  (t) => [index("github_deployments_repo_sha_idx").on(t.repo, t.sha), uniqueIndex("github_deployments_org_github_id").on(t.organizationId, t.githubId)],
 );
 
 export const githubReleases = pgTable(
   "github_releases",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    githubId: bigint("github_id", { mode: "number" }).notNull().unique(),
+    organizationId: orgRef(),
+    githubId: bigint("github_id", { mode: "number" }).notNull(),
     repo: text("repo").notNull(),
     tag: text("tag").notNull(),
     name: text("name"),
@@ -664,7 +697,7 @@ export const githubReleases = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt,
   },
-  (t) => [index("github_releases_repo_idx").on(t.repo)],
+  (t) => [index("github_releases_repo_idx").on(t.repo), uniqueIndex("github_releases_org_github_id").on(t.organizationId, t.githubId)],
 );
 
 // File attachments (roadmap Stage 2): project documents, task deliverables and payment receipts.
@@ -676,6 +709,7 @@ export const attachments = pgTable(
   "attachments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     kind: attachmentKind("kind").notNull(),
     projectId: uuid("project_id")
       .notNull()
@@ -713,6 +747,7 @@ export const projectCosts = pgTable(
   "project_costs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
@@ -752,6 +787,7 @@ export const services = pgTable(
   "services",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     // Short, stable code, e.g. HOSTING-STD.
     code: text("code").notNull(),
     name: text("name").notNull(),
@@ -767,7 +803,7 @@ export const services = pgTable(
     updatedAt,
   },
   (t) => [
-    uniqueIndex("services_code_unique").on(sql`upper(${t.code})`),
+    uniqueIndex("services_code_unique").on(t.organizationId, sql`upper(${t.code})`),
     check("services_code_format", sql`${t.code} ~ '^[A-Za-z0-9][A-Za-z0-9_-]{1,29}$'`),
     check("services_name_not_blank", sql`length(btrim(${t.name})) >= 2`),
     check("services_default_price", sql`${t.defaultPriceMinor} IS NULL OR ${t.defaultPriceMinor} >= 0`),
@@ -778,6 +814,7 @@ export const subscriptions = pgTable(
   "subscriptions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "restrict" }),
@@ -837,6 +874,7 @@ export const subscriptionAmendments = pgTable(
   "subscription_amendments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     subscriptionId: uuid("subscription_id")
       .notNull()
       .references(() => subscriptions.id, { onDelete: "restrict" }),
@@ -868,6 +906,7 @@ export const jobRuns = pgTable(
   "job_runs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     job: text("job").notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -875,7 +914,7 @@ export const jobRuns = pgTable(
     summary: jsonb("summary"),
     error: text("error"),
   },
-  (t) => [index("job_runs_job_started_idx").on(t.job, t.startedAt)],
+  (t) => [index("job_runs_job_started_idx").on(t.organizationId, t.job, t.startedAt)],
 );
 
 // Phase 20: invoices to customers. Drafts are edited freely; issuing assigns the number and
@@ -886,8 +925,9 @@ export const invoices = pgTable(
   "invoices",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     // INV-<year>-<nnnn>, given when issued, so drafts don't use up numbers.
-    number: text("number").unique(),
+    number: text("number"),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "restrict" }),
@@ -918,6 +958,7 @@ export const invoices = pgTable(
   },
   (t) => [
     index("invoices_customer_idx").on(t.customerId),
+    uniqueIndex("invoices_org_number_unique").on(t.organizationId, t.number),
     index("invoices_status_due_idx").on(t.status, t.dueDate),
     check("invoices_number_format", sql`${t.number} IS NULL OR ${t.number} ~ '^INV-[0-9]{4}-[0-9]{4,}$'`),
     check(
@@ -938,6 +979,7 @@ export const invoiceLines = pgTable(
   "invoice_lines",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     invoiceId: uuid("invoice_id")
       .notNull()
       .references(() => invoices.id, { onDelete: "restrict" }),
@@ -979,6 +1021,7 @@ export const invoicePayments = pgTable(
   "invoice_payments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     invoiceId: uuid("invoice_id")
       .notNull()
       .references(() => invoices.id, { onDelete: "restrict" }),
@@ -1004,11 +1047,11 @@ export const invoicePayments = pgTable(
   ],
 );
 
-// Phase 20: who AGOD is on its invoices. One row (id = 1), edited by Admins.
+// Phase 20: who the company is on its invoices. One row per company (Phase 22), edited by Admins.
 export const invoiceSettings = pgTable(
   "invoice_settings",
   {
-    id: integer("id").primaryKey().default(1),
+    organizationId: orgRef().primaryKey(),
     businessName: text("business_name").notNull().default("AGOD"),
     address: text("address"),
     email: text("email"),
@@ -1021,7 +1064,7 @@ export const invoiceSettings = pgTable(
     updatedBy: userRef("updated_by"),
     updatedAt,
   },
-  (t) => [check("invoice_settings_singleton", sql`${t.id} = 1`), check("invoice_settings_due_days", sql`${t.defaultDueDays} BETWEEN 0 AND 120`)],
+  (t) => [check("invoice_settings_due_days", sql`${t.defaultDueDays} BETWEEN 0 AND 120`)],
 );
 
 // Phase 21: Google (Drive now, Calendar next). One COMPANY connection (the AGOD Google account an
@@ -1033,6 +1076,7 @@ export const googleConnections = pgTable(
   "google_connections",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     kind: googleConnectionKind("kind").notNull(),
     // COMPANY: the Admin who connected it. PERSONAL: whose calendar it is.
     userId: userRef("user_id").notNull(),
@@ -1049,8 +1093,8 @@ export const googleConnections = pgTable(
     lastSync: jsonb("last_sync"),
   },
   (t) => [
-    uniqueIndex("google_connections_one_company").on(t.kind).where(sql`${t.kind} = 'COMPANY' AND ${t.disconnectedAt} IS NULL`),
-    uniqueIndex("google_connections_one_personal").on(t.userId).where(sql`${t.kind} = 'PERSONAL' AND ${t.disconnectedAt} IS NULL`),
+    uniqueIndex("google_connections_one_company").on(t.organizationId).where(sql`${t.kind} = 'COMPANY' AND ${t.disconnectedAt} IS NULL`),
+    uniqueIndex("google_connections_one_personal").on(t.organizationId, t.userId).where(sql`${t.kind} = 'PERSONAL' AND ${t.disconnectedAt} IS NULL`),
   ],
 );
 
@@ -1059,6 +1103,7 @@ export const driveFolders = pgTable(
   "drive_folders",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     connectionId: uuid("connection_id")
       .notNull()
       .references(() => googleConnections.id, { onDelete: "restrict" }),
@@ -1083,6 +1128,7 @@ export const projectLinks = pgTable(
   "project_links",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),

@@ -6,7 +6,7 @@ A bug in one layer is caught by the other.
 | Layer | Where | What it does |
 |---|---|---|
 | 1. Permission service | `src/lib/permissions` | `can(actor, action, resource)` / `assertCan(...)`: the role rules from the design doc (section 4) and `docs/DECISIONS.md`. Pure function, fully unit-tested. |
-| 2. Row-level security | `db/migrations/*_row_level_security.sql` | Domain queries run as the `agod_app` role. Policies decide which rows each user can read or write, using the user's role and active flag from `users`. |
+| 2. Row-level security | `db/migrations/*_row_level_security.sql`, `*_organizations_rules.sql` | Domain queries run as the `agod_app` role in one company (`app.org_id`). A restrictive policy on every company-owned table hides other companies' rows; the other policies decide which rows each person can read or write, using their role and active flag from their membership in that company (`docs/COMPANIES.md`). |
 | Integrity triggers | same migration | Audit events, compensation snapshots, snapshot lines, payments and adjustments are append-only for everyone. Members may change only progress fields of their own tasks. |
 
 The UI hides what a role can't use, but that is convenience only; the server and database are the gates.
@@ -20,7 +20,8 @@ The UI hides what a role can't use, but that is convenience only; the server and
 3. **Audit material changes:** call `recordAudit(tx, ...)` with the same `tx`, so the event commits with the change.
    Approvals, rejections, payments, adjustments, reopenings and role changes must always be audited.
 4. **Mirror the rule in SQL:** a new table needs `ENABLE ROW LEVEL SECURITY`, grants for `agod_app`
-   (no `DELETE` for financial data) and policies, in a new migration.
+   (no `DELETE` for financial data) and policies, in a new migration. Company-owned tables also need
+   `organization_id`, a restrictive `_tenant` policy and an `app_same_org` trigger (`docs/COMPANIES.md`).
 5. **Test both layers:** a unit test for the rule and an integration test in `tests/integration/`
    showing the database refuses the action on its own.
 
@@ -71,6 +72,11 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Remove a link | own links | ✓ | ✓ |
 | Create a project's Drive folder now; save an invoice to Drive | | ✓ | ✓ |
 | Connect, disconnect or sync the team Google account (`google.manage`) | | | ✓ |
+| Company name and project code prefix (`company.manage`) | | | ✓ |
+
+Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
+another, and no role ever reaches another company's data. An Admin resets passwords only for people who
+belong to no other company.
 
 The GitHub webhook (`/api/github/webhook`) is the one place that writes domain data without a signed-in
 person: it verifies GitHub's signature, then acts as the system through the owner connection, only on projects

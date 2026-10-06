@@ -5,7 +5,7 @@ import { normalizeDatabaseUrl } from "./src/lib/db/url";
 config({ path: [".env.local", ".env"], quiet: true });
 
 export default defineConfig({
-  schema: "./src/lib/db/schema",
+  schema: "./src/lib/db/schema/index.ts",
   out: "./db/migrations",
   dialect: "postgresql",
   dbCredentials: { url: normalizeDatabaseUrl(process.env.DATABASE_URL!) },

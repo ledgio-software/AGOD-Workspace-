@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  Building,
   Building2,
   CalendarCheck,
   CircleHelp,
@@ -43,6 +44,7 @@ const icons = {
   team: Users,
   audit: ScrollText,
   integrations: Plug,
+  company: Building,
 } as const;
 
 export type IconName = keyof typeof icons;
@@ -51,12 +53,15 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function Brand() {
+/** The current company (Phase 22): its initial and name, above the product's purpose. */
+function Brand({ company }: { company: string }) {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2.5 px-2">
-      <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white shadow-sm">A</span>
-      <span className="leading-tight">
-        <span className="block text-sm font-semibold text-fg">AGOD</span>
+    <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 px-2">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white shadow-sm">
+        {(company.trim()[0] ?? "?").toUpperCase()}
+      </span>
+      <span className="min-w-0 leading-tight">
+        <span className="block truncate text-sm font-semibold text-fg">{company}</span>
         <span className="block text-[11px] text-muted">Projects &amp; Payouts</span>
       </span>
     </Link>
@@ -99,7 +104,20 @@ function SidebarNav({ groups, pathname }: { groups: NavGroup[]; pathname: string
 }
 
 /** The signed-in layout: sidebar on large screens, a top bar with a slide-in menu on small ones. */
-export function AppShell({ groups, user, children }: { groups: NavGroup[]; user: React.ReactNode; children: React.ReactNode }) {
+export function AppShell({
+  groups,
+  user,
+  company,
+  switcher,
+  children,
+}: {
+  groups: NavGroup[];
+  user: React.ReactNode;
+  company: string;
+  /** Shown under the company name when the person belongs to several companies. */
+  switcher?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [lastPath, setLastPath] = useState(pathname);
@@ -118,7 +136,10 @@ export function AppShell({ groups, user, children }: { groups: NavGroup[]; user:
 
   const sidebar = (
     <div className="flex h-full flex-col gap-6 px-3 py-5">
-      <Brand />
+      <div className="space-y-3">
+        <Brand company={company} />
+        {switcher}
+      </div>
       <div className="flex-1 overflow-y-auto">
         <SidebarNav groups={groups} pathname={pathname} />
       </div>
@@ -157,7 +178,7 @@ export function AppShell({ groups, user, children }: { groups: NavGroup[]; user:
           >
             <Menu className="size-5" aria-hidden />
           </button>
-          <Brand />
+          <Brand company={company} />
         </header>
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>

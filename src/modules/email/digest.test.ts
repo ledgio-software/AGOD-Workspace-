@@ -6,7 +6,7 @@ describe("daily email", () => {
   const item = { title: "Renewal due: Hosting for Northwind", message: "Renews 2026-10-20.", entityType: "subscription", entityId: "abc" };
 
   it("links each item and names the single update in the subject", () => {
-    const d = buildDigest({ name: "Ama Mensah", items: [item], baseUrl: "https://agod.example/" });
+    const d = buildDigest({ name: "Ama Mensah", items: [item], baseUrl: "https://agod.example/", company: "AGOD" });
     expect(d.subject).toBe("AGOD: Renewal due: Hosting for Northwind");
     expect(d.text).toContain("Hi Ama,");
     expect(d.text).toContain("https://agod.example/subscriptions/abc");
@@ -18,8 +18,10 @@ describe("daily email", () => {
       name: "Kofi",
       items: [item, { title: "<script>x</script>", message: "Tom & Jerry", entityType: "comment", entityId: null }],
       baseUrl: "https://agod.example",
+      company: "Acme <Ltd>",
     });
-    expect(d.subject).toBe("AGOD: 2 updates for you");
+    expect(d.subject).toBe("Acme <Ltd>: 2 updates for you");
+    expect(d.html).toContain("Acme &lt;Ltd&gt;");
     expect(d.html).not.toContain("<script>");
     expect(d.html).toContain("&lt;script&gt;");
     expect(d.html).toContain("Tom &amp; Jerry");

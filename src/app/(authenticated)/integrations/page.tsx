@@ -15,7 +15,7 @@ import { EmailActions } from "./email-actions";
 import { GoogleActions } from "./google-actions";
 
 const googleResult: Record<string, { tone: "good" | "warn" | "bad"; text: string }> = {
-  connected: { tone: "good", text: "Google connected. The AGOD folder was created in its Drive and shared with the managers." },
+  connected: { tone: "good", text: "Google connected. The company folder was created in its Drive and shared with the managers." },
   cancelled: { tone: "warn", text: "Connecting Google was cancelled on Google's screen. Nothing changed." },
   expired: { tone: "bad", text: "That sign-in took too long or was started in another browser. Try again." },
   "no-drive": { tone: "bad", text: "Google Drive access was not allowed. Try again and leave the Drive box ticked on Google's screen." },
@@ -91,7 +91,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           ) : !g ? (
             <>
               <p className="text-muted">
-                Connect the team&apos;s Google account (for example the AGOD Gmail). The app then keeps an <strong className="text-fg">AGOD</strong> folder in its Drive with a
+                Connect the team&apos;s Google account (for example your company Gmail). The app then keeps a <strong className="text-fg">{actor.orgName}</strong> folder in its Drive with a
                 folder per customer and project, saves uploads and issued invoices there, and shares each project folder with its team.
               </p>
               <a href="/api/google/connect" className={buttonClass("primary", "sm")}>
@@ -113,7 +113,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               <div className="flex flex-wrap items-center gap-3">
                 {g.rootUrl && (
                   <a href={g.rootUrl} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "sm")}>
-                    <FolderOpen className="size-4" aria-hidden /> Open the AGOD folder <ExternalLink className="size-3.5 opacity-60" aria-hidden />
+                    <FolderOpen className="size-4" aria-hidden /> Open the company folder <ExternalLink className="size-3.5 opacity-60" aria-hidden />
                   </a>
                 )}
                 <a href="/api/google/connect" className={buttonClass("secondary", "sm")}>

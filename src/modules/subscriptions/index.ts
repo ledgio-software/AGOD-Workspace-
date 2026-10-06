@@ -3,7 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { auditEvents, customers, notifications, services, subscriptionAmendments, subscriptions, users } from "@/lib/db/schema";
+import { auditEvents, customers, notifications, services, subscriptionAmendments, subscriptions, orgMembers, users } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { DEFAULT_CURRENCY, parseMoney } from "@/lib/money";
 import { addDays } from "@/modules/notifications/deadlines";
@@ -277,7 +277,7 @@ function assertDates(startDate: string, t: { endDate?: string | null; renewalDat
 }
 
 async function assertOwner(tx: Tx, userId: string, what: string) {
-  const [user] = await tx.select({ active: users.active, role: users.role }).from(users).where(eq(users.id, userId));
+  const [user] = await tx.select({ active: orgMembers.active, role: orgMembers.role }).from(orgMembers).where(eq(orgMembers.id, userId));
   if (!user) throw new ServiceError(`${what} not found.`);
   if (!user.active) throw new ServiceError(`${what} is inactive.`);
   if (user.role === "TEAM_MEMBER") throw new ServiceError(`${what} must be a Project Manager or Admin.`);

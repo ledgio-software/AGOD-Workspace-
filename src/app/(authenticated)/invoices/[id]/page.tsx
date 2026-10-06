@@ -54,7 +54,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const today = todayInOperatingZone();
   const sources = draft && canManage ? await invoiceSources(actor, invoice.customerId) : null;
   const livePayments = payments.filter((p) => !p.voidedAt);
-  const canSaveToDrive = issued && canManage && !invoice.driveFileId && isGoogleConfigured() && (await companyConnection()) !== null;
+  const canSaveToDrive = issued && canManage && !invoice.driveFileId && isGoogleConfigured() && (await companyConnection(actor.orgId)) !== null;
 
   return (
     <div className="space-y-6">

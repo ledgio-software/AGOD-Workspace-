@@ -29,7 +29,14 @@ export function CreateMemberForm() {
         renderResult={(state) =>
           state.ok && (
             <div className="sm:col-span-4">
-              <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+              {state.data.temporaryPassword ? (
+                <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+              ) : (
+                <p className="rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
+                  {state.data.email} already has an account, so they were added to this company. They sign in with their own password and
+                  choose this company from the company menu.
+                </p>
+              )}
             </div>
           )
         }
@@ -92,7 +99,7 @@ export function MemberActions({ member }: { member: Member }) {
           confirmMessage={`Reset the password for ${member.email}? They will be signed out.`}
           className="space-y-2"
           renderResult={(state) =>
-            state.ok && <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+            state.ok && state.data.temporaryPassword && <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
           }
         >
           <input type="hidden" name="userId" value={member.id} />

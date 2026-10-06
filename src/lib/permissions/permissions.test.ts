@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { type Action, type Actor, PermissionError, assertCan, can } from ".";
 
-const member: Actor = { id: "m", role: "TEAM_MEMBER" };
-const pm: Actor = { id: "p", role: "PROJECT_MANAGER" };
-const admin: Actor = { id: "a", role: "ADMIN" };
+const member: Actor = { id: "m", role: "TEAM_MEMBER", orgId: "o" };
+const pm: Actor = { id: "p", role: "PROJECT_MANAGER", orgId: "o" };
+const admin: Actor = { id: "a", role: "ADMIN", orgId: "o" };
 
 // Expected result per role without resource context: [member, pm, admin]
 // Mirrors the role table in the design doc, section 4, plus decisions 4 and 5.
@@ -47,6 +47,7 @@ const matrix: Record<Action, [boolean, boolean, boolean]> = {
   "invoice.recordPayment": [false, false, true],
   "invoice.settings": [false, false, true],
   "google.manage": [false, false, true],
+  "company.manage": [false, false, true],
 };
 
 describe("can: role matrix", () => {

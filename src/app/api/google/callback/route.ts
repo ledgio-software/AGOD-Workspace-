@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return response;
   };
 
-  const attempt = openAttempt(request.cookies.get(OAUTH_COOKIE)?.value, { state: url.searchParams.get("state"), userId: actor.id });
+  const attempt = openAttempt(request.cookies.get(OAUTH_COOKIE)?.value, { state: url.searchParams.get("state"), userId: actor.id, orgId: actor.orgId });
   if (!attempt) return done("expired");
   if (url.searchParams.get("error")) return done("cancelled");
   const code = url.searchParams.get("code");

@@ -34,11 +34,8 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   phone: text("phone"),
-  role: userRole("role").notNull().default("TEAM_MEMBER"),
-  // Inactive members stay in historical records but cannot sign in.
+  // A disabled login can't sign in to any company. Roles live on memberships (Phase 22).
   active: boolean("active").notNull().default(true),
-  // Hours per week available for project work; the workload view compares estimates with it.
-  weeklyCapacityHours: integer("weekly_capacity_hours").notNull().default(40),
   ...timestamps,
 });
 

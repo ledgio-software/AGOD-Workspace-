@@ -12,6 +12,7 @@ import {
   projects,
   tasks,
   users,
+  orgMembers,
 } from "@/lib/db/schema";
 import { formatMoney, formatPercent } from "@/lib/money";
 import { type Actor, assertCan } from "@/lib/permissions";
@@ -41,9 +42,9 @@ function rethrowGuard(error: unknown): never {
 
 async function managersAndOwner(tx: Tx, project: { projectOwnerId: string }) {
   const managers = await tx
-    .select({ id: users.id })
-    .from(users)
-    .where(and(eq(users.active, true), or(eq(users.role, "PROJECT_MANAGER"), eq(users.role, "ADMIN"))));
+    .select({ id: orgMembers.id })
+    .from(orgMembers)
+    .where(and(eq(orgMembers.active, true), or(eq(orgMembers.role, "PROJECT_MANAGER"), eq(orgMembers.role, "ADMIN"))));
   return [...new Set([project.projectOwnerId, ...managers.map((m) => m.id)])];
 }
 

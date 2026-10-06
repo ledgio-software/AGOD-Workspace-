@@ -144,9 +144,9 @@ export default async function ProjectWorkspacePage({
     listProjectAttachments(actor, project.id),
     can(actor, "finance.view") ? getProjectFinance(actor, project.id) : Promise.resolve(null),
     listProjectLinks(actor, project.id),
-    isGoogleConfigured() ? companyConnection().then((c) => c !== null) : Promise.resolve(false),
+    isGoogleConfigured() ? companyConnection(actor.orgId).then((c) => c !== null) : Promise.resolve(false),
   ]);
-  const driveFolder = driveConnected ? await driveFolderLink("PROJECT", project.id) : null;
+  const driveFolder = driveConnected ? await driveFolderLink(actor.orgId, "PROJECT", project.id) : null;
   const toLinks = (list: LinkView[]): LinkItem[] =>
     list.map((l) => ({
       id: l.id,
@@ -158,7 +158,7 @@ export default async function ProjectWorkspacePage({
       remove: isManager || l.addedBy === actor.id ? removeLinkAction.bind(null, project.id, l.id) : undefined,
     }));
   const githubReady = isGithubConfigured();
-  const uploadsReady = await attachmentsAvailable();
+  const uploadsReady = await attachmentsAvailable(actor.orgId);
   const toItems = (list: AttachmentView[]): FileItem[] =>
     list.map((f) => ({
       id: f.id,

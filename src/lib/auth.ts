@@ -19,7 +19,6 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      role: { type: "string", input: false, defaultValue: "TEAM_MEMBER" },
       active: { type: "boolean", input: false, defaultValue: true },
       phone: { type: "string", required: false, input: false },
     },

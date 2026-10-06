@@ -10,7 +10,9 @@ describe("task keys", () => {
       { projectCode: "AGOD-2026-005", number: 3 },
       { projectCode: "AGOD-2026-007", number: 12 },
     ]);
-    expect(findTaskKeys("XAGOD-2026-005-T3", "AGOD-2026-05-T3")).toEqual([]);
+    expect(findTaskKeys("TOOLONGPRE-2026-005-T3", "AGOD-2026-05-T3", "1AB-2026-005-T3")).toEqual([]);
+    // Other companies' prefixes (Phase 22).
+    expect(findTaskKeys("feature/ACME-2026-001-T2-login")).toEqual([{ projectCode: "ACME-2026-001", number: 2 }]);
   });
 
   it("suggests a branch name", () => {

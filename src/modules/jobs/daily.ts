@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { jobRuns, notificationPreferences, notifications, users } from "@/lib/db/schema";
+import { jobRuns, memberships, notificationPreferences, notifications, organizations, users } from "@/lib/db/schema";
 import { type EmailConfig, emailConfig, sendEmail } from "@/lib/email";
 import { resolveBaseUrl } from "@/lib/env";
 import { withActor } from "@/lib/db/actor";
@@ -17,6 +17,7 @@ import { refreshRenewalAlerts } from "@/modules/subscriptions";
 // each person who wants it one summary of their unread notifications not emailed before.
 // Runs through the owner connection like the GitHub webhook; reminders are created as each person,
 // under their own permissions. Phase 21: then it creates and shares the Google Drive folders.
+// Phase 22: once per company; people in several companies get one email from each.
 
 export const DAILY_JOB = "daily-reminders";
 /** Only recent notifications are emailed, so turning email on doesn't send a long backlog. */
@@ -35,19 +36,60 @@ export type DailySummary = {
   drive?: { folders: number; shared: number; unshared: number; failures: number } | { error: string };
 };
 
-export async function runDailyReminders(
-  options: { now?: Date; email?: EmailConfig | null; /** Limits the run to these people (tests). */ userIds?: string[]; drive?: boolean } = {},
-): Promise<DailySummary> {
+export type DailyRunOptions = {
+  now?: Date;
+  email?: EmailConfig | null;
+  /** Limits the run to these people (tests). */
+  userIds?: string[];
+  /** Limits the run to these companies (default: every company). */
+  orgIds?: string[];
+  drive?: boolean;
+};
+
+/**
+ * Phase 22: runs each company in turn (its own run record, people, reminders, emails and Drive),
+ * so one company's problem never stops another's. Returns the totals.
+ */
+export async function runDailyReminders(options: DailyRunOptions = {}): Promise<DailySummary> {
+  const companies = await db
+    .select({ id: organizations.id, name: organizations.name })
+    .from(organizations)
+    .where(options.orgIds ? inArray(organizations.id, options.orgIds) : undefined)
+    .orderBy(asc(organizations.createdAt));
+  const total: DailySummary = { people: 0, remindersCreated: 0, reminderFailures: 0, email: "off", emailsSent: 0, emailFailures: 0, emailsSkipped: 0 };
+  for (const company of companies) {
+    const s = await runCompany(company, options);
+    total.people += s.people;
+    total.remindersCreated += s.remindersCreated;
+    total.reminderFailures += s.reminderFailures;
+    total.email = s.email;
+    total.emailsSent += s.emailsSent;
+    total.emailFailures += s.emailFailures;
+    total.emailsSkipped += s.emailsSkipped;
+    if (s.drive) {
+      const d = total.drive && "folders" in total.drive ? total.drive : { folders: 0, shared: 0, unshared: 0, failures: 0 };
+      total.drive =
+        "error" in s.drive
+          ? { ...d, failures: d.failures + 1 }
+          : { folders: d.folders + s.drive.folders, shared: d.shared + s.drive.shared, unshared: d.unshared + s.drive.unshared, failures: d.failures + s.drive.failures };
+    }
+  }
+  return total;
+}
+
+async function runCompany(company: { id: string; name: string }, options: DailyRunOptions): Promise<DailySummary> {
   const now = options.now ?? new Date();
   const email = options.email === undefined ? emailConfig() : options.email;
-  const [run] = await db.insert(jobRuns).values({ job: DAILY_JOB, startedAt: now }).returning({ id: jobRuns.id });
+  const [run] = await db.insert(jobRuns).values({ organizationId: company.id, job: DAILY_JOB, startedAt: now }).returning({ id: jobRuns.id });
   try {
+    const active = and(eq(memberships.organizationId, company.id), eq(memberships.active, true), eq(users.active, true));
     const people = await db
-      .select({ id: users.id, role: users.role, name: users.name, email: users.email, dailyEmail: notificationPreferences.dailyEmail })
-      .from(users)
+      .select({ id: users.id, role: memberships.role, name: users.name, email: users.email, dailyEmail: notificationPreferences.dailyEmail })
+      .from(memberships)
+      .innerJoin(users, eq(users.id, memberships.userId))
       .leftJoin(notificationPreferences, eq(notificationPreferences.userId, users.id))
-      .where(options.userIds ? and(eq(users.active, true), inArray(users.id, options.userIds)) : eq(users.active, true))
-      .orderBy(asc(users.createdAt));
+      .where(options.userIds ? and(active, inArray(users.id, options.userIds)) : active)
+      .orderBy(asc(memberships.createdAt));
 
     const summary: DailySummary = {
       people: people.length,
@@ -60,7 +102,7 @@ export async function runDailyReminders(
     };
 
     for (const person of people) {
-      const actor: Actor = { id: person.id, role: person.role };
+      const actor: Actor = { id: person.id, role: person.role, orgId: company.id };
       try {
         summary.remindersCreated += (await refreshDeadlineAlerts(actor, now)) + (await refreshRenewalAlerts(actor)) + (await refreshInvoiceAlerts(actor));
       } catch (error) {
@@ -76,7 +118,7 @@ export async function runDailyReminders(
           summary.emailsSkipped += 1;
           continue;
         }
-        const result = await emailPerson(email, person, baseUrl, now);
+        const result = await emailPerson(email, company, person, baseUrl, now);
         if (result === "sent") summary.emailsSent += 1;
         if (result === "failed") summary.emailFailures += 1;
       }
@@ -84,11 +126,11 @@ export async function runDailyReminders(
 
     if (options.drive !== false) {
       try {
-        const drive = await syncDrive();
+        const drive = await syncDrive(company.id);
         if (drive) summary.drive = { folders: drive.folders, shared: drive.shared, unshared: drive.unshared, failures: drive.failures.length };
       } catch (error) {
         summary.drive = { error: error instanceof Error ? error.message.slice(0, 300) : String(error) };
-        console.error("Drive sync failed", summary.drive.error);
+        console.error("Drive sync failed", company.id, summary.drive.error);
       }
     }
 
@@ -112,6 +154,7 @@ export async function runDailyReminders(
  */
 async function emailPerson(
   email: EmailConfig,
+  company: { id: string; name: string },
   person: { id: string; name: string; email: string },
   baseUrl: string,
   now: Date,
@@ -120,7 +163,15 @@ async function emailPerson(
   const pending = await db
     .select({ id: notifications.id })
     .from(notifications)
-    .where(and(eq(notifications.recipientId, person.id), isNull(notifications.emailedAt), isNull(notifications.readAt), gt(notifications.createdAt, since)))
+    .where(
+      and(
+        eq(notifications.organizationId, company.id),
+        eq(notifications.recipientId, person.id),
+        isNull(notifications.emailedAt),
+        isNull(notifications.readAt),
+        gt(notifications.createdAt, since),
+      ),
+    )
     .orderBy(desc(notifications.createdAt))
     .limit(MAX_ITEMS_PER_EMAIL);
   if (pending.length === 0) return "none";
@@ -132,7 +183,7 @@ async function emailPerson(
   if (claimed.length === 0) return "none";
   claimed.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   try {
-    await sendEmail(email, { to: person.email, ...buildDigest({ name: person.name, items: claimed, baseUrl }) });
+    await sendEmail(email, { to: person.email, ...buildDigest({ name: person.name, items: claimed, baseUrl, company: company.name }) });
     return "sent";
   } catch (error) {
     await db.update(notifications).set({ emailedAt: null }).where(inArray(notifications.id, claimed.map((c) => c.id)));
@@ -153,13 +204,15 @@ export async function sendTestEmail(actor: Actor): Promise<void> {
   const email = emailConfig();
   if (!email) throw new ServiceError("Email is not set up on this environment.");
   const [me] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, actor.id));
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, actor.orgId));
   const message = buildDigest({
     name: me.name,
+    company: org.name,
     baseUrl: resolveBaseUrl(process.env) ?? "",
-    items: [{ title: "Test email", message: "Email from AGOD is working.", entityType: null, entityId: null }],
+    items: [{ title: "Test email", message: `Email from ${org.name} is working.`, entityType: null, entityId: null }],
   });
   try {
-    await sendEmail(email, { to: me.email, ...message, subject: "AGOD: test email" });
+    await sendEmail(email, { to: me.email, ...message, subject: `${org.name}: test email` });
   } catch (error) {
     throw new ServiceError(error instanceof Error ? error.message : "The email could not be sent.");
   }
@@ -168,7 +221,7 @@ export async function sendTestEmail(actor: Actor): Promise<void> {
 /** Admin: run the daily job now (e.g. to check it on staging). */
 export async function runDailyRemindersNow(actor: Actor): Promise<DailySummary> {
   assertCan(actor, "audit.viewAll");
-  return runDailyReminders();
+  return runDailyReminders({ orgIds: [actor.orgId] });
 }
 
 

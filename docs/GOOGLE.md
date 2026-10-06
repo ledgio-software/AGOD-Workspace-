@@ -1,7 +1,8 @@
 # Google Drive (Phase 21)
 
 An Admin connects **one Google account for the team** (for example `agod.team@gmail.com`). The app
-then keeps everything in an **AGOD** folder in that account's Drive:
+then keeps everything in a folder named after the company (**AGOD** here) in that account's Drive. Each
+company (Phase 22, `docs/COMPANIES.md`) connects its own Google account:
 
 ```
 AGOD/                              shared (Editor) with every active PM and Admin

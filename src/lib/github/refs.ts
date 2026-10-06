@@ -5,7 +5,8 @@ export function taskKey(projectCode: string, taskNumber: number): string {
   return `${projectCode}-T${taskNumber}`;
 }
 
-const KEY_PATTERN = /\b(AGOD-\d{4}-\d{3,})-T(\d{1,5})\b/gi;
+// Any company's project code prefix (2-8 letters/digits, starting with a letter; Phase 22).
+const KEY_PATTERN = /\b([A-Z][A-Z0-9]{1,7}-\d{4}-\d{3,})-T(\d{1,5})\b/gi;
 
 /** Every task key mentioned in the text (branch name, title or body), without duplicates. */
 export function findTaskKeys(...texts: (string | null | undefined)[]): { projectCode: string; number: number }[] {
