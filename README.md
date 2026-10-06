@@ -225,6 +225,9 @@ src/
 ### Phase 23 — Sign-up, invitations and password reset ✓
 - Companies sign up themselves (confirmed by email, switch: `ALLOW_SIGNUP`); invitations and password links by email; "Forgot password"; product name Ghana Vibe Coders & Developers (`docs/COMPANIES.md`)
 
+### Phase 24 — Google Calendar ✓
+- Company calendar of deadlines shared with managers, personal calendars of each person's tasks, and project meetings with Google Meet links and invitations (`docs/GOOGLE.md`)
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
@@ -241,7 +244,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive](docs/GOOGLE.md) · [Companies and sign-up](docs/COMPANIES.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive and Calendar](docs/GOOGLE.md) · [Companies and sign-up](docs/COMPANIES.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)

@@ -230,3 +230,141 @@ export async function deleteFile(config: GoogleConfig, token: string, fileId: st
 /** Link that opens a Drive file or folder in the browser. */
 export const driveFileUrl = (fileId: string) => `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`;
 export const driveFolderUrl = (folderId: string) => `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
+
+// --- Calendar (Phase 24) ----------------------------------------------------------------------
+
+export type CalendarEventInput = {
+  summary: string;
+  description?: string;
+  /** All-day event on this date (YYYY-MM-DD)... */
+  date?: string;
+  /** ...or a timed event. */
+  start?: Date;
+  end?: Date;
+  timeZone?: string;
+  attendees?: string[];
+  /** Ask Google to add a Meet link. */
+  meet?: boolean;
+};
+export type CalendarEvent = { id: string; htmlLink?: string; hangoutLink?: string; status?: string };
+export type CalendarAclRule = { id: string; role: string; scope: { type: string; value?: string } };
+
+const nextDay = (date: string) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+
+function eventBody(e: CalendarEventInput, requestId?: string) {
+  const time = e.date
+    ? { start: { date: e.date }, end: { date: nextDay(e.date) } }
+    : { start: { dateTime: e.start!.toISOString(), timeZone: e.timeZone }, end: { dateTime: e.end!.toISOString(), timeZone: e.timeZone } };
+  return {
+    summary: e.summary,
+    description: e.description ?? "",
+    ...time,
+    // Deadlines don't block anyone's time.
+    ...(e.date ? { transparency: "transparent" } : {}),
+    ...(e.attendees ? { attendees: e.attendees.map((email) => ({ email })) } : {}),
+    ...(e.meet && requestId ? { conferenceData: { createRequest: { requestId, conferenceSolutionKey: { type: "hangoutsMeet" } } } } : {}),
+  };
+}
+
+const calendarPath = (config: GoogleConfig, calendarId: string) => `${config.calendarUrl}/calendars/${encodeURIComponent(calendarId)}`;
+
+export async function createCalendar(config: GoogleConfig, token: string, summary: string, timeZone: string): Promise<{ id: string }> {
+  const response = await fetch(`${config.calendarUrl}/calendars`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ summary, timeZone }),
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  await check(response, "creating the calendar");
+  return (await response.json()) as { id: string };
+}
+
+/** The calendar, or null when it was deleted. */
+export async function getCalendar(config: GoogleConfig, token: string, calendarId: string): Promise<{ id: string; summary: string } | null> {
+  const response = await fetch(calendarPath(config, calendarId), { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(TIMEOUT) });
+  if (response.status === 404) return null;
+  await check(response, "reading the calendar");
+  return (await response.json()) as { id: string; summary: string };
+}
+
+export async function listCalendarAcl(config: GoogleConfig, token: string, calendarId: string): Promise<CalendarAclRule[]> {
+  const response = await fetch(`${calendarPath(config, calendarId)}/acl`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(TIMEOUT) });
+  await check(response, "reading the calendar sharing");
+  return ((await response.json()) as { items?: CalendarAclRule[] }).items ?? [];
+}
+
+export async function shareCalendar(config: GoogleConfig, token: string, calendarId: string, email: string, role: "reader" | "writer") {
+  const response = await fetch(`${calendarPath(config, calendarId)}/acl?sendNotifications=false`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ role, scope: { type: "user", value: email } }),
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  await check(response, `sharing the calendar with ${email}`);
+}
+
+export async function unshareCalendar(config: GoogleConfig, token: string, calendarId: string, ruleId: string) {
+  const response = await fetch(`${calendarPath(config, calendarId)}/acl/${encodeURIComponent(ruleId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  if (response.status === 404 || response.status === 410) return;
+  await check(response, "removing calendar access");
+}
+
+/** Creates an event; with `meet` (and a request id), Google adds a Meet link; `notify` emails the attendees. */
+export async function insertEvent(
+  config: GoogleConfig,
+  token: string,
+  calendarId: string,
+  event: CalendarEventInput,
+  o: { requestId?: string; notify?: boolean } = {},
+): Promise<CalendarEvent> {
+  const params = new URLSearchParams({ sendUpdates: o.notify ? "all" : "none", ...(event.meet ? { conferenceDataVersion: "1" } : {}) });
+  const response = await fetch(`${calendarPath(config, calendarId)}/events?${params}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(eventBody(event, o.requestId)),
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  await check(response, "creating the event");
+  return (await response.json()) as CalendarEvent;
+}
+
+/** Replaces an event's details; null when the event no longer exists. */
+export async function updateEvent(config: GoogleConfig, token: string, calendarId: string, eventId: string, event: CalendarEventInput): Promise<CalendarEvent | null> {
+  const response = await fetch(`${calendarPath(config, calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=none`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(eventBody(event)),
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  if (response.status === 404 || response.status === 410) return null;
+  await check(response, "updating the event");
+  return (await response.json()) as CalendarEvent;
+}
+
+export async function deleteEvent(config: GoogleConfig, token: string, calendarId: string, eventId: string, notify = false) {
+  const response = await fetch(`${calendarPath(config, calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=${notify ? "all" : "none"}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  if (response.status === 404 || response.status === 410) return;
+  await check(response, "deleting the event");
+}
+
+/** Opens a calendar in Google Calendar (for people it is shared with). */
+export const calendarUrl = (calendarId: string) => `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(calendarId)}`;
+
+/** Sets an event's guests and has Google email them the invitation. */
+export async function inviteToEvent(config: GoogleConfig, token: string, calendarId: string, eventId: string, emails: string[]) {
+  const response = await fetch(`${calendarPath(config, calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=all`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ attendees: emails.map((email) => ({ email })) }),
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  await check(response, "inviting the team");
+}

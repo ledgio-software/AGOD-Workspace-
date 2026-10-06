@@ -9,17 +9,33 @@ import type { AddressInfo } from "node:net";
 
 export type FakeFile = { id: string; name: string; mimeType: string; parents: string[]; bytes: Buffer; description?: string };
 export type FakePermission = { id: string; type: string; role: string; emailAddress: string };
+export type FakeEvent = {
+  id: string;
+  summary: string;
+  description: string;
+  start: { date?: string; dateTime?: string; timeZone?: string };
+  end: { date?: string; dateTime?: string; timeZone?: string };
+  attendees: string[];
+  hangoutLink?: string;
+  /** Invitation or cancellation emails Google sent for it (sendUpdates=all). */
+  notified: string[];
+};
+export type FakeCalendar = { id: string; summary: string; timeZone: string; owner: string; acl: FakeAclRule[]; events: Map<string, FakeEvent> };
+export type FakeAclRule = { id: string; role: string; scope: { type: string; value: string } };
 
 export type FakeGoogle = {
   url: string;
   server: Server;
   files: Map<string, FakeFile>;
   permissions: Map<string, FakePermission[]>;
-  /** The account the consent screen "signs in" as. */
-  account: { email: string; grantDrive: boolean };
+  calendars: Map<string, FakeCalendar>;
+  /** The account the consent screen "signs in" as, and which boxes it leaves ticked. */
+  account: { email: string; grantDrive: boolean; grantCalendar: boolean };
   /** Refresh tokens issued, and whether they still work. */
   refreshTokens: Map<string, { email: string; revoked: boolean }>;
   requests: string[];
+  /** Events deleted through the API (with the cancellation emails sent). */
+  deletedEvents: FakeEvent[];
   /** The account removed the app's access (Google account → Security): every token stops working. */
   revokeAll(): void;
   close(): Promise<void>;
@@ -78,7 +94,9 @@ export async function startFakeGoogle(port = 0): Promise<FakeGoogle> {
   const accessTokens = new Map<string, string>(); // token -> email
   const refreshTokens = new Map<string, { email: string; revoked: boolean }>();
   const requests: string[] = [];
-  const account = { email: "agod.team@gmail.com", grantDrive: true };
+  const calendars = new Map<string, FakeCalendar>();
+  const deletedEvents: FakeEvent[] = [];
+  const account = { email: "agod.team@gmail.com", grantDrive: true, grantCalendar: true };
 
   const userOf = (req: IncomingMessage) => {
     const token = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1];
@@ -106,7 +124,7 @@ export async function startFakeGoogle(port = 0): Promise<FakeGoogle> {
           back.searchParams.set("error", "access_denied");
         } else {
           const code = `code-${id()}`;
-          const scopes = (p.get("scope") ?? "").split(" ").filter((s) => account.grantDrive || !s.endsWith("/drive.file"));
+          const scopes = (p.get("scope") ?? "").split(" ").filter((s) => (account.grantDrive || !s.endsWith("/drive.file")) && (account.grantCalendar || !s.includes("/auth/calendar")));
           codes.set(code, { challenge: p.get("code_challenge")!, scope: scopes.join(" "), redirectUri: back.toString() });
           back.searchParams.set("code", code);
         }
@@ -168,6 +186,78 @@ export async function startFakeGoogle(port = 0): Promise<FakeGoogle> {
         return send(res, 200, view(file));
       }
 
+      // Calendar: calendars belong to the account that created them (all the app can reach with
+      // calendar.app.created); events, Meet links, guests and sharing.
+      if (req.method === "POST" && path === "/calendar/v3/calendars") {
+        const meta = JSON.parse((await body(req)).toString()) as { summary: string; timeZone: string };
+        const calendar: FakeCalendar = { id: `${id()}@group.calendar.google.com`, summary: meta.summary, timeZone: meta.timeZone, owner: email, acl: [{ id: `user:${email}`, role: "owner", scope: { type: "user", value: email } }], events: new Map() };
+        calendars.set(calendar.id, calendar);
+        return send(res, 200, { id: calendar.id, summary: calendar.summary, timeZone: calendar.timeZone });
+      }
+      const calMatch = /^\/calendar\/v3\/calendars\/([^/]+)(?:\/(acl|events)(?:\/([^/]+))?)?$/.exec(path);
+      if (calMatch) {
+        const [, calendarId, part, itemId] = calMatch;
+        const calendar = calendars.get(decodeURIComponent(calendarId));
+        if (!calendar || calendar.owner !== email) return driveError(res, 404, "Not Found", "notFound");
+        if (!part) {
+          if (req.method === "GET") return send(res, 200, { id: calendar.id, summary: calendar.summary, timeZone: calendar.timeZone });
+          if (req.method === "DELETE") {
+            calendars.delete(calendar.id);
+            return send(res, 204);
+          }
+        }
+        if (part === "acl") {
+          if (req.method === "GET" && !itemId) return send(res, 200, { items: calendar.acl });
+          if (req.method === "POST" && !itemId) {
+            const rule = JSON.parse((await body(req)).toString()) as { role: string; scope: { type: string; value: string } };
+            if (rule.scope.value.endsWith("@nogoogle.test")) return driveError(res, 400, "Invalid scope value.", "invalid");
+            const created = { id: `user:${rule.scope.value}`, role: rule.role, scope: rule.scope };
+            calendar.acl = calendar.acl.filter((r) => r.id !== created.id).concat(created);
+            return send(res, 200, created);
+          }
+          if (req.method === "DELETE" && itemId) {
+            const before = calendar.acl.length;
+            calendar.acl = calendar.acl.filter((r) => r.id !== decodeURIComponent(itemId));
+            return before === calendar.acl.length ? driveError(res, 404, "Not Found", "notFound") : send(res, 204);
+          }
+        }
+        if (part === "events") {
+          const notify = url.searchParams.get("sendUpdates") === "all";
+          type Body = { summary?: string; description?: string; start?: FakeEvent["start"]; end?: FakeEvent["end"]; attendees?: { email: string }[]; conferenceData?: { createRequest?: { requestId: string } } };
+          const eventView = (e: FakeEvent) => ({ id: e.id, summary: e.summary, description: e.description, start: e.start, end: e.end, attendees: e.attendees.map((a) => ({ email: a })), hangoutLink: e.hangoutLink, status: "confirmed", htmlLink: `https://calendar.google.com/event?eid=${e.id}` });
+          if (req.method === "POST" && !itemId) {
+            const b = JSON.parse((await body(req)).toString()) as Body;
+            if (!b.start || !b.end) return driveError(res, 400, "Missing time", "required");
+            const event: FakeEvent = { id: id().toLowerCase().replace(/[^a-z0-9]/g, "a"), summary: b.summary ?? "", description: b.description ?? "", start: b.start, end: b.end, attendees: (b.attendees ?? []).map((a) => a.email), notified: [] };
+            if (b.conferenceData?.createRequest && url.searchParams.get("conferenceDataVersion") === "1") event.hangoutLink = `https://meet.google.com/${id().slice(0, 3)}-${id().slice(0, 4)}-${id().slice(0, 3)}`.toLowerCase();
+            if (notify) event.notified.push(...event.attendees.map((a) => `invite:${a}`));
+            calendar.events.set(event.id, event);
+            return send(res, 200, eventView(event));
+          }
+          const event = itemId ? calendar.events.get(decodeURIComponent(itemId)) : undefined;
+          if (!event) return driveError(res, 404, "Not Found", "notFound");
+          if (req.method === "PATCH") {
+            const b = JSON.parse((await body(req)).toString()) as Body;
+            if (b.summary !== undefined) event.summary = b.summary;
+            if (b.description !== undefined) event.description = b.description;
+            if (b.start) event.start = b.start;
+            if (b.end) event.end = b.end;
+            if (b.attendees) {
+              const added = b.attendees.map((a) => a.email).filter((a) => !event.attendees.includes(a));
+              event.attendees = b.attendees.map((a) => a.email);
+              if (notify) event.notified.push(...added.map((a) => `invite:${a}`));
+            }
+            return send(res, 200, eventView(event));
+          }
+          if (req.method === "DELETE") {
+            if (notify) event.notified.push(...event.attendees.map((a) => `cancel:${a}`));
+            calendar.events.delete(event.id);
+            deletedEvents.push(event);
+            return send(res, 204);
+          }
+        }
+      }
+
       const fileMatch = /^\/drive\/v3\/files\/([^/]+)(\/permissions(?:\/([^/]+))?)?$/.exec(path);
       if (fileMatch) {
         const [, fileId, perms, permissionId] = fileMatch;
@@ -213,6 +303,8 @@ export async function startFakeGoogle(port = 0): Promise<FakeGoogle> {
     server,
     files,
     permissions,
+    calendars,
+    deletedEvents,
     account,
     refreshTokens,
     requests,
@@ -229,3 +321,9 @@ export const childrenOf = (google: FakeGoogle, folderId: string) => [...google.f
 /** Emails a file is shared with (not its owner). */
 export const sharedWith = (google: FakeGoogle, fileId: string) =>
   (google.permissions.get(fileId) ?? []).filter((p) => p.role !== "owner").map((p) => p.emailAddress.toLowerCase()).sort();
+
+/** A calendar's events, in no particular order. */
+export const eventsIn = (google: FakeGoogle, calendarId: string) => [...(google.calendars.get(calendarId)?.events.values() ?? [])];
+/** Emails a calendar is shared with (not its owner). */
+export const calendarSharedWith = (google: FakeGoogle, calendarId: string) =>
+  (google.calendars.get(calendarId)?.acl ?? []).filter((r) => r.role !== "owner").map((r) => r.scope.value.toLowerCase()).sort();

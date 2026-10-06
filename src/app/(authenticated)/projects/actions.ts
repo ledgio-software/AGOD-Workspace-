@@ -20,6 +20,7 @@ import { addComment } from "@/modules/comments";
 import { recordCost, setProjectFinance, voidCost } from "@/modules/finance";
 import { createIssueForTask, linkTaskUrl, setProjectRepo, unlinkTask } from "@/modules/github";
 import { createProjectFolder } from "@/modules/google";
+import { cancelMeeting, scheduleMeeting } from "@/modules/google/calendar";
 import { addProjectLink, removeProjectLink } from "@/modules/links";
 import { createTask, updateTaskDetails, updateTaskProgress, waiveTask } from "@/modules/tasks";
 
@@ -466,6 +467,31 @@ export async function voidCostAction(projectId: string, costId: string, _prev: R
     await voidCost(actor, costId, text(form, "reason"), await getRequestMeta());
     return undefined;
   }, "Cost voided.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function scheduleMeetingAction(projectId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await scheduleMeeting(
+      actor,
+      projectId,
+      { title: text(form, "title"), agenda: text(form, "agenda"), date: text(form, "date"), time: text(form, "time"), durationMinutes: Number(text(form, "durationMinutes")) },
+      await getRequestMeta(),
+    );
+    return undefined;
+  }, "Meeting scheduled. Google emailed the invitation with the Meet link to the project team.");
+  if (result.ok) refresh(projectId);
+  return result;
+}
+
+export async function cancelMeetingAction(projectId: string, meetingId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await cancelMeeting(actor, meetingId, await getRequestMeta());
+    return undefined;
+  }, "Meeting cancelled. Google told everyone invited.");
   if (result.ok) refresh(projectId);
   return result;
 }

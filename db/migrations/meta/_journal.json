@@ -232,6 +232,20 @@
       "when": 1791278263326,
       "tag": "20261006091743_signup_pending_company",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791279489412,
+      "tag": "20261006093809_google_calendar",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791279490612,
+      "tag": "20261006093810_google_calendar_rules",
+      "breakpoints": true
     }
   ]
 }

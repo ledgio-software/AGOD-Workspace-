@@ -58,3 +58,13 @@ export const COMPANY_SCOPES = [
   "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/calendar",
 ];
+
+/**
+ * Phase 24: what a person allows when connecting their own Google account: the app creates one
+ * calendar there for their work and manages only that calendar's events (never the rest of their
+ * calendar).
+ */
+export const PERSONAL_SCOPES = ["openid", "email", "https://www.googleapis.com/auth/calendar.app.created"];
+export const PERSONAL_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
+export const COMPANY_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar";
+

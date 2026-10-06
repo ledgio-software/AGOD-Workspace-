@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   Activity,
   ArrowLeft,
+  CalendarDays,
   CircleCheck,
   CircleX,
   ExternalLink,
@@ -15,11 +16,12 @@ import {
   Receipt,
   TriangleAlert,
   Users,
+  Video,
 } from "lucide-react";
 import { Badge, HealthBadge, ProgressBar, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
 import { AddLinkForm, DriveFolderButton, FileList, type FileItem, FileUploadForm, LinkList, type LinkItem } from "@/components/files";
 import { Avatar, ButtonLink, Callout, Card, Disclosure, EmptyState, buttonClass, cx, table } from "@/components/ui";
-import { formatCalendarDate, formatDateTime } from "@/lib/dates";
+import { formatCalendarDate, formatDateTime, todayInOperatingZone } from "@/lib/dates";
 import { costCategoryLabel, describeAuditAction, healthLabel, milestoneStatusLabel, payoutStatusLabel, projectCategoryLabel } from "@/lib/labels";
 import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
 import { can } from "@/lib/permissions";
@@ -30,6 +32,7 @@ import { listComments } from "@/modules/comments";
 import { getProjectFinance } from "@/modules/finance";
 import { getProjectGithub, isGithubConfigured } from "@/modules/github";
 import { companyConnection, driveFolderLink, isGoogleConfigured } from "@/modules/google";
+import { listMeetings, meetingsAvailable } from "@/modules/google/calendar";
 import { type LinkView, listProjectLinks } from "@/modules/links";
 import { listTemplates } from "@/modules/templates";
 import { listCustomerOptions } from "@/modules/customers";
@@ -45,6 +48,7 @@ import {
   createDriveFolderAction,
   removeLinkAction,
   approveAction,
+  cancelMeetingAction,
   changeStatusAction,
   createMilestoneAction,
   healthOverrideAction,
@@ -61,6 +65,7 @@ import {
   uploadTaskFileAction,
   reopenAction,
   requestApprovalAction,
+  scheduleMeetingAction,
   taskProgressAction,
   updateAssignmentAction,
   updateProjectAction,
@@ -73,12 +78,14 @@ import { DeliveryHistory, TaskGithub } from "./github-panel";
 import {
   AddAssignmentForm,
   AssignmentRowActions,
+  CancelMeetingForm,
   CommentForm,
   CostForm,
   ProjectFinanceForm,
   VoidCostForm,
   RepoForm,
   HealthOverrideForm,
+  MeetingForm,
   MilestoneForm,
   MilestoneStatusForm,
   StatusControls,
@@ -137,7 +144,7 @@ export default async function ProjectWorkspacePage({
   const teamOptions = Array.from(new Map(ws.team.map((t) => [t.memberId, { id: t.memberId, name: t.memberName }])).values());
   const pct = project.splitMode === "PERCENTAGE";
   const workOpen = acceptsTaskUpdates(project.status);
-  const [payouts, discussion, github, files, finance, links, driveConnected] = await Promise.all([
+  const [payouts, discussion, github, files, finance, links, driveConnected, meetings, canMeet] = await Promise.all([
     getProjectPayouts(actor, project.id),
     listComments(actor, project.id),
     getProjectGithub(actor, project.id),
@@ -145,6 +152,8 @@ export default async function ProjectWorkspacePage({
     can(actor, "finance.view") ? getProjectFinance(actor, project.id) : Promise.resolve(null),
     listProjectLinks(actor, project.id),
     isGoogleConfigured() ? companyConnection(actor.orgId).then((c) => c !== null) : Promise.resolve(false),
+    listMeetings(actor, project.id),
+    isManager && workOpen ? meetingsAvailable(actor.orgId) : Promise.resolve(false),
   ]);
   const driveFolder = driveConnected ? await driveFolderLink(actor.orgId, "PROJECT", project.id) : null;
   const toLinks = (list: LinkView[]): LinkItem[] =>
@@ -459,19 +468,62 @@ export default async function ProjectWorkspacePage({
             )}
           </div>
 
-          {isManager && (
+          {(isManager || meetings.length > 0) && (
             <div className="space-y-6">
-              <Card title="Manage">
-                <div className="space-y-4">
-                  <StatusControls action={changeStatusAction.bind(null, project.id)} allowed={allowedManualTransitions(project.status)} />
-                  {can(actor, "project.overrideHealth") && ws.calculatedHealth && (
-                    <HealthOverrideForm action={healthOverrideAction.bind(null, project.id)} current={ws.healthOverride?.health ?? null} />
-                  )}
-                  <Disclosure summary={project.githubRepo ? "Change GitHub repository" : "Connect a GitHub repository"}>
-                    <RepoForm action={setRepoAction.bind(null, project.id)} current={project.githubRepo} />
-                  </Disclosure>
-                </div>
-              </Card>
+              {(meetings.length > 0 || canMeet) && (
+                <Card title="Meetings" aside={<Video className="size-4 text-muted" aria-hidden />}>
+                  <div className="space-y-4 text-sm">
+                    {meetings.length === 0 ? (
+                      <p className="text-muted">No upcoming meetings.</p>
+                    ) : (
+                      <ul className="divide-y divide-line">
+                        {meetings.map(({ meeting: m, by }) => (
+                          <li key={m.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
+                            <CalendarDays className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium">{m.title}</p>
+                              <p className="text-xs text-muted">
+                                {formatDateTime(m.startsAt)} · {Math.round((m.endsAt.getTime() - m.startsAt.getTime()) / 60_000)} min · by {by}
+                              </p>
+                              {m.agenda && <p className="mt-1 whitespace-pre-line break-words text-xs text-muted">{m.agenda}</p>}
+                              {m.meetUrl && (
+                                <a
+                                  href={m.meetUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
+                                >
+                                  Join with Google Meet <ExternalLink className="size-3" aria-hidden />
+                                </a>
+                              )}
+                            </div>
+                            {isManager && <CancelMeetingForm action={cancelMeetingAction.bind(null, project.id, m.id)} />}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {canMeet && (
+                      <Disclosure summary="Schedule a meeting">
+                        <p className="mb-3 text-xs text-muted">Google emails an invitation with a Meet link to the project owner, the team and everyone with a task here.</p>
+                        <MeetingForm action={scheduleMeetingAction.bind(null, project.id)} today={todayInOperatingZone()} />
+                      </Disclosure>
+                    )}
+                  </div>
+                </Card>
+              )}
+              {isManager && (
+                <Card title="Manage">
+                  <div className="space-y-4">
+                    <StatusControls action={changeStatusAction.bind(null, project.id)} allowed={allowedManualTransitions(project.status)} />
+                    {can(actor, "project.overrideHealth") && ws.calculatedHealth && (
+                      <HealthOverrideForm action={healthOverrideAction.bind(null, project.id)} current={ws.healthOverride?.health ?? null} />
+                    )}
+                    <Disclosure summary={project.githubRepo ? "Change GitHub repository" : "Connect a GitHub repository"}>
+                      <RepoForm action={setRepoAction.bind(null, project.id)} current={project.githubRepo} />
+                    </Disclosure>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
 

@@ -256,3 +256,13 @@ Phase 9 (file attachments in Vercel Blob).
 | Abuse limits | Per-IP limits: 5 sign-ups and 5 reset/verification emails an hour, 5 sign-in and reset attempts a minute. |
 | Not included | Social sign-in (Google), CAPTCHA, deleting unconfirmed accounts automatically, billing. |
 
+## Phase 24 decisions (2026-10-06): Google Calendar
+
+| Decision | Choice |
+|---|---|
+| Company calendar | One calendar per company, created by the app in the company Google account (the `calendar` permission already asked for in Phase 21): project target dates, open milestones, open task due dates, renewals and unpaid invoice due dates, as all-day events marked "free", from a month back to a year ahead. |
+| Who sees it | Shared view-only with active PMs and Admins only, because it shows every project; access the app gave is removed when someone stops being a manager. Team Members get their own calendar instead. |
+| Personal calendars | Optional, per person, from the Account page, with the narrow `calendar.app.created` permission (the app sees only the calendar it creates). Holds the person's own open tasks with due dates. Their Google address is then used for the company calendar and meeting invitations. |
+| Project meetings | Scheduled by managers on a project; a Google Calendar event in the company calendar with a Meet link, invitations sent by Google to the project owner, assigned team and task assignees. Recorded in `project_meetings` (visible to whoever can see the project). Cancel only, no editing; no deletion. |
+| Sync | Daily job, *Sync now* buttons and on connecting. The app keeps a mapping of the events it made and only rewrites changed ones; it never touches events it didn't create. Times use the operating time zone (Africa/Accra). |
+| Not included | Reading people's free/busy times, editing meetings, recurring meetings, two-way sync (changes made in Google aren't read back), meetings outside projects. |

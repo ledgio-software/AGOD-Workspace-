@@ -1,4 +1,4 @@
-import { CalendarClock, CircleCheck, CircleX, ExternalLink, FolderOpen, HardDrive, Mail, Plug, TriangleAlert, Webhook } from "lucide-react";
+import { CalendarClock, CalendarDays, CircleCheck, CircleX, ExternalLink, FolderOpen, HardDrive, Mail, Plug, TriangleAlert, Webhook } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge } from "@/components/badges";
 import { Callout, Card, EmptyState, PageHeader, buttonClass, compactTable as ct, table } from "@/components/ui";
@@ -10,12 +10,14 @@ import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { recentDeliveries } from "@/modules/github";
 import { googleStatus } from "@/modules/google";
+import { companyCalendarStatus } from "@/modules/google/calendar";
 import { type DailySummary, recentJobRuns } from "@/modules/jobs/daily";
 import { EmailActions } from "./email-actions";
 import { GoogleActions } from "./google-actions";
 
 const googleResult: Record<string, { tone: "good" | "warn" | "bad"; text: string }> = {
-  connected: { tone: "good", text: "Google connected. The company folder was created in its Drive and shared with the managers." },
+  connected: { tone: "good", text: "Google connected. The company folder and calendar were created in that account and shared with the managers." },
+  "no-calendar": { tone: "bad", text: "Google Calendar access was not allowed. Try again and leave the Calendar box ticked on Google's screen." },
   cancelled: { tone: "warn", text: "Connecting Google was cancelled on Google's screen. Nothing changed." },
   expired: { tone: "bad", text: "That sign-in took too long or was started in another browser. Try again." },
   "no-drive": { tone: "bad", text: "Google Drive access was not allowed. Try again and leave the Drive box ticked on Google's screen." },
@@ -27,7 +29,13 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const actor = await requireUser();
   if (!can(actor, "audit.viewAll")) return <AccessDenied what="integration settings" />;
   const config = githubConfig();
-  const [check, deliveries, runs, google] = await Promise.all([config ? checkGithubApp() : null, recentDeliveries(actor), recentJobRuns(actor), googleStatus(actor)]);
+  const [check, deliveries, runs, google, calendar] = await Promise.all([
+    config ? checkGithubApp() : null,
+    recentDeliveries(actor),
+    recentJobRuns(actor),
+    googleStatus(actor),
+    can(actor, "google.manage") ? companyCalendarStatus(actor.orgId) : null,
+  ]);
   const result = googleResult[(await searchParams).google ?? ""];
   const g = google.connection;
   const email = emailConfig();
@@ -41,7 +49,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         title="Integrations"
         description={
           <>
-            Daily email reminders, Google Drive, and GitHub (links tasks to issues and pull requests and records deployments). Setup guides:{" "}
+            Daily email reminders, Google Drive and Calendar, and GitHub (links tasks to issues and pull requests and records deployments). Setup guides:{" "}
             <code className="rounded bg-surface-muted px-1 text-xs">docs/EMAIL.md</code>,{" "}
             <code className="rounded bg-surface-muted px-1 text-xs">docs/GOOGLE.md</code> and{" "}
             <code className="rounded bg-surface-muted px-1 text-xs">docs/GITHUB_APP.md</code>.
@@ -76,7 +84,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         </div>
       </Card>
 
-      <Card title="Google Drive" aside={<HardDrive className="size-4 text-muted" aria-hidden />}>
+      <Card title="Google Drive and Calendar" aside={<HardDrive className="size-4 text-muted" aria-hidden />}>
         <div className="space-y-4 text-sm">
           {result && (
             <Callout tone={result.tone} icon={result.tone === "good" ? CircleCheck : TriangleAlert}>
@@ -92,7 +100,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
             <>
               <p className="text-muted">
                 Connect the team&apos;s Google account (for example your company Gmail). The app then keeps a <strong className="text-fg">{actor.orgName}</strong> folder in its Drive with a
-                folder per customer and project, saves uploads and issued invoices there, and shares each project folder with its team.
+                folder per customer and project, saves uploads and issued invoices there, and shares each project folder with its team. It also keeps a company calendar of
+                deadlines (shared with PMs and Admins) and creates project meetings with Google Meet links.
               </p>
               <a href="/api/google/connect" className={buttonClass("primary", "sm")}>
                 Connect Google
@@ -146,8 +155,48 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-1 text-xs">Drive can only share with Google accounts. People who sign in with another email need a Google account with that address (or will connect their own Google account in a later update).</p>
+                  <p className="mt-1 text-xs">Drive can only share with Google accounts. People who sign in with another email need a Google account with that address.</p>
                 </Callout>
+              )}
+              {calendar && (
+                <div className="space-y-2 rounded-lg border border-line p-3">
+                  <p className="flex items-center gap-2 font-medium">
+                    <CalendarDays className="size-4 text-muted" aria-hidden /> Company calendar
+                  </p>
+                  {!calendar.allowed ? (
+                    <p className="text-muted">Calendar access wasn&apos;t allowed when this account was connected. Reconnect and leave the Calendar box ticked to get the company calendar and project meetings.</p>
+                  ) : (
+                    <>
+                      <p className="text-muted">
+                        Project target dates, milestones, task due dates, subscription renewals and invoice due dates, kept up to date every morning. Shared (view only) with{" "}
+                        {calendar.sharedWith === 1 ? "1 person" : `${calendar.sharedWith} people`}: the company&apos;s PMs and Admins. Team Members get their own calendar from their Account page.
+                        {calendar.last && (
+                          <>
+                            {" "}
+                            Last sync: {calendar.last.created} added, {calendar.last.updated} updated, {calendar.last.removed} removed.
+                          </>
+                        )}
+                      </p>
+                      {calendar.url && (
+                        <a href={calendar.url} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "sm")}>
+                          <CalendarDays className="size-4" aria-hidden /> Open the calendar <ExternalLink className="size-3.5 opacity-60" aria-hidden />
+                        </a>
+                      )}
+                      {calendar.last && calendar.last.failures.length > 0 && (
+                        <Callout tone="warn" icon={TriangleAlert}>
+                          <p className="font-medium">Calendar problems in the last sync:</p>
+                          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs">
+                            {calendar.last.failures.map((f) => (
+                              <li key={f} className="break-words">
+                                {f}
+                              </li>
+                            ))}
+                          </ul>
+                        </Callout>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
               <GoogleActions />
             </>
@@ -195,6 +244,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                             s?.emailsSkipped ? `${s.emailsSkipped} people turned email off` : null,
                             s?.drive && "error" in s.drive ? `Drive: ${s.drive.error}` : null,
                             s?.drive && "failures" in s.drive && s.drive.failures ? `Drive: ${s.drive.failures} sharing problems` : null,
+                            s?.calendar && "error" in s.calendar ? `Calendar: ${s.calendar.error}` : null,
+                            s?.calendar && "failures" in s.calendar && s.calendar.failures ? `Calendar: ${s.calendar.failures} problems` : null,
                           ]
                             .filter(Boolean)
                             .join(" · ")}
