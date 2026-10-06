@@ -359,3 +359,15 @@ Phase 9 (file attachments in Vercel Blob).
 | Unread | Per person and conversation, from their last read time. The icon (sidebar and phone top bar) checks every 30 seconds while the page is visible; an open conversation refreshes every 10 seconds. No WebSockets or paid real-time service. |
 | Reminders | The daily job adds one notification a day when someone has messages unread for over an hour; it shows in My work and goes out in the daily email (which people can turn off), linking to the conversation. |
 | Not included | Attachments, reactions, editing, read receipts, typing indicators, push notifications, adding people to existing conversations, clients in conversations. |
+
+## Phase 31 decisions (2026-10-06): mentorship, tools & prompts library, project of the month
+
+| Decision | Choice |
+|---|---|
+| Who mentors | Reviewers who switch on "open to mentoring", for 1 to 5 people at once, with a note on what they help with. |
+| Matching | Simple and explainable: mentors with space first, then shared tools (2 points each) and the same city (1 point). The card says why it's a good match. No algorithmic profiling. |
+| Asking | A member asks with a goal (10 to 500 characters); at most 2 open requests or mentorships at a time; one open request per mentor. The mentor accepts (only with space) or declines, with an optional note. |
+| Contact | Accepting shares both email addresses (both agreed); before that, no email is shown. Meetings happen outside the app (call, WhatsApp, meet-up). |
+| Library | Tools and guides need a link; prompts need the text (no passwords or personal data, the form says). Tags, "works on slow internet", "free". "Useful" marks (one per member, not on your own). Organizers feature and hide; 10 new items a day per member. Public, so visitors learn too. |
+| Project of the month | One vote per member per month (Accra time), movable until the month ends, never for your own project. The month's leader wins; ties go to whoever reached the count first. Organizers can override with a note (shown). Settled by the daily job, and lazily by the first page that shows it. |
+| Not included | Mentorship sessions tracking, ratings of mentors, comments on library items, prizes. |

@@ -45,9 +45,8 @@ The product is also a community for people in Ghana who build software (`docs/CO
 Done: member sign-up without a company, profiles and member list, roles, code of conduct, reports
 (Phase 25); showcase with screenshots and video demo links, review requests and feedback (Phase 26).
 Teaching sessions with join, calendar files, reminders and a recordings archive (Phase 27).
-Next: mentorship matching,
-tools and prompts library, project of the month; later jobs board, team finder, badges, events
-calendar, partners page and metrics.
+Mentorship matching, the tools & prompts library and project of the month (Phase 31).
+Later: jobs board, team finder, badges, events calendar, partners page and metrics.
 
 ## Company workflow (Phase 28 onwards)
 

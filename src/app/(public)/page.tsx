@@ -10,6 +10,7 @@ import { listPosts } from "@/modules/community/showcase";
 import { MemberGrid } from "./members/member-grid";
 import { SessionList } from "./sessions/session-list";
 import { PostGrid } from "./showcase/post-grid";
+import { ProjectOfMonth } from "./showcase/project-of-month";
 
 // Phase 25: the front door. The community first; the company workspace (projects and payouts)
 // is offered to members who build with a team or for clients.
@@ -78,6 +79,8 @@ export default async function HomePage() {
           </div>
         ))}
       </section>
+
+      <ProjectOfMonth leaders={false} />
 
       {projects.posts.length > 0 && (
         <section className="space-y-4">

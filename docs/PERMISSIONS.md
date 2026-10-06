@@ -155,7 +155,12 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Join or leave a session (after the code of conduct); see its call link once joined | | ✓ | ✓ |
 | Host sessions (with the Reviewer badge); edit, cancel, add recordings to own sessions | | Reviewers | ✓ |
 | Cancel any session | | | ✓ |
-| See reports; hide or show profiles, projects, feedback and sessions; make or remove organizers | | | ✓ |
+| See mentors and the tools & prompts library | ✓ | ✓ | ✓ |
+| Ask a mentor (2 at a time); answer requests and offer to mentor (Reviewers); end a mentorship you are in | | ✓ | ✓ |
+| Share, edit, remove own library items; mark others' useful; report them | | ✓ | ✓ |
+| Vote for project of the month (one a month, not your own project) | | ✓ | ✓ |
+| Feature library items; pick a finished month's project of the month | | | ✓ |
+| See reports; hide or show profiles, projects, feedback, sessions and library items; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
 another, and no role ever reaches another company's data. An Admin sets a temporary password only for

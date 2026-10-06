@@ -67,6 +67,8 @@ rules, audit) lives behind these functions, not in the pages.
 | `/projects/[id]?tab=billing` | client project and `project.edit` or `invoice.view` | `getBilling` | `projects/[id]/billing-actions` (`project.edit`; invoicing `invoice.manage`) |
 | `/messages` (`?c=`, `?new=1`, `?to=`) | signed in to a company | `listConversations`, `openConversation`, `messageablePeople` | `messages/actions` (members of the conversation) |
 | `/api/messages/unread` | signed in to a company | `unreadMessageCount` | (GET, polled by the message icon) |
+| `/mentors`, `/library`, `/library/[id]` | everyone (public) | `listMentors`, `listItems`, `getItem` | `community/growth-actions` (signed-in members) |
+| `/community/mentoring`, `/community/library/new`, `/community/library/[id]/edit` | community members | `myMentorships`, `getItem` | `community/growth-actions` |
 | `/team/roles` | `team.view` | `listRoles`, `listJobTitles`, `needsTeamSetup` | `team/roles/actions` (`team.manage`; team type also `company.manage`) |
 | `/workload` | `workload.view` | `getWorkload` | |
 | `/summary` | `report.weekly` | `getWeeklySummary`, `summaryText` | |

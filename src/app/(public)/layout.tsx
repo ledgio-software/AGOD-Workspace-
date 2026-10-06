@@ -32,6 +32,12 @@ export default async function PublicLayout({ children }: { children: React.React
             <Link href="/sessions" className="rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
               Sessions
             </Link>
+            <Link href="/library" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
+              Tools &amp; prompts
+            </Link>
+            <Link href="/mentors" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
+              Mentors
+            </Link>
             <Link href="/members" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg sm:block">
               Members
             </Link>
