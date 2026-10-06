@@ -8,6 +8,7 @@ import { type Actor, assertCan } from "@/lib/permissions";
 import { ServiceError } from "@/modules/errors";
 import { buildDigest } from "@/modules/email/digest";
 import { refreshDeadlineAlerts } from "@/modules/notifications/deadlines";
+import { refreshInvoiceAlerts } from "@/modules/invoices";
 import { refreshRenewalAlerts } from "@/modules/subscriptions";
 
 // Phase 19: the daily job (Vercel Cron → /api/cron/daily). It creates every active person's task,
@@ -58,7 +59,7 @@ export async function runDailyReminders(
     for (const person of people) {
       const actor: Actor = { id: person.id, role: person.role };
       try {
-        summary.remindersCreated += (await refreshDeadlineAlerts(actor, now)) + (await refreshRenewalAlerts(actor));
+        summary.remindersCreated += (await refreshDeadlineAlerts(actor, now)) + (await refreshRenewalAlerts(actor)) + (await refreshInvoiceAlerts(actor));
       } catch (error) {
         summary.reminderFailures += 1;
         console.error("Daily reminders failed for a user", person.id, error instanceof Error ? error.message : error);

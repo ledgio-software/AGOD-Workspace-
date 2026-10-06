@@ -99,11 +99,12 @@ async function nextProjectCode(tx: Tx): Promise<string> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext('agod_project_code'))`);
   const year = todayInOperatingZone().slice(0, 4);
   const prefix = `AGOD-${year}-`;
+  // Compared as numbers: as text, "AGOD-2026-1000" would sort before "AGOD-2026-999".
   const [row] = await tx
-    .select({ max: sql<string | null>`max(${projects.code})` })
+    .select({ max: sql<string | null>`max(substring(${projects.code} from (${prefix.length + 1})::int)::int)::text` })
     .from(projects)
-    .where(sql`${projects.code} like ${prefix + "%"}`);
-  const last = row?.max ? Number(row.max.slice(prefix.length)) : 0;
+    .where(sql`${projects.code} ~ ${`^${prefix}[0-9]+$`}`);
+  const last = Number(row?.max ?? 0);
   return `${prefix}${String(last + 1).padStart(3, "0")}`;
 }
 

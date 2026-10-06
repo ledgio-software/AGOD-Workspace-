@@ -1,4 +1,4 @@
-import { customerStatusLabel, healthLabel, subscriptionStatusLabel, payoutQuestionStatusLabel, payoutStatusLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
+import { customerStatusLabel, healthLabel, invoiceStateLabel, subscriptionStatusLabel, payoutQuestionStatusLabel, payoutStatusLabel, projectStatusLabel, taskStatusLabel } from "@/lib/labels";
 import type { Health, Progress, ProjectStatus, TaskStatus } from "@/modules/projects/rules";
 
 const base = "inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset";
@@ -97,4 +97,10 @@ export function RenewalBadge({ renewal }: { renewal: Renewal }) {
   if (renewal.kind === "PAST_END") return <Badge tone="red">Past end date</Badge>;
   if (renewal.kind === "OVERDUE") return <Badge tone="red">Renewal overdue {-renewal.days}d</Badge>;
   return <Badge tone="amber">{renewal.days === 0 ? "Renewal due today" : `Renewal in ${renewal.days}d`}</Badge>;
+}
+
+const invoiceStateTone = { DRAFT: "gray", OPEN: "blue", PARTLY_PAID: "amber", PAID: "green", OVERDUE: "red", VOID: "gray" } as const;
+
+export function InvoiceStateBadge({ state }: { state: keyof typeof invoiceStateLabel }) {
+  return <Badge tone={invoiceStateTone[state]}>{invoiceStateLabel[state]}</Badge>;
 }

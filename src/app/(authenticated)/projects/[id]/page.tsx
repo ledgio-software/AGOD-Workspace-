@@ -28,6 +28,7 @@ import { getProjectFinance } from "@/modules/finance";
 import { getProjectGithub, isGithubConfigured } from "@/modules/github";
 import { listTemplates } from "@/modules/templates";
 import { listCustomerOptions } from "@/modules/customers";
+import { projectInvoicing } from "@/modules/invoices";
 import { getProjectWorkspace, listActiveMembers } from "@/modules/projects";
 import { acceptsTaskUpdates, allowedManualTransitions, isEditable, isTaskOverdue } from "@/modules/projects/rules";
 import { applyTemplateAction, saveAsTemplateAction } from "../../templates/actions";
@@ -123,6 +124,7 @@ export default async function ProjectWorkspacePage({
   const editable = isEditable(project.status);
   const canManage = isManager && editable;
   const members = isManager ? await listActiveMembers(actor) : [];
+  const invoicing = project.customerId ? await projectInvoicing(actor, project.id) : null;
   const customerOptions = canManage ? await listCustomerOptions(actor, project.customerId) : [];
   const teamOptions = Array.from(new Map(ws.team.map((t) => [t.memberId, { id: t.memberId, name: t.memberName }])).values());
   const pct = project.splitMode === "PERCENTAGE";
@@ -193,10 +195,18 @@ export default async function ProjectWorkspacePage({
           </ButtonLink>
         </div>
 
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-line bg-surface p-4 shadow-xs sm:grid-cols-3 lg:grid-cols-5">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-line bg-surface p-4 shadow-xs sm:grid-cols-3 lg:grid-cols-6">
           <Meta label="Project value">
             <span className="tabular-nums">{formatMoney(project.totalValueMinor, project.currency)}</span>
           </Meta>
+          {invoicing && (
+            <Meta label="Invoiced">
+              <Link href={`/invoices/new?customer=${project.customerId}`} className="tabular-nums hover:underline">
+                {formatMoney(invoicing.billedMinor, project.currency)}
+              </Link>
+              <span className="text-muted"> of {formatMoney(project.totalValueMinor, project.currency)}</span>
+            </Meta>
+          )}
           <Meta label="Split">
             {pct ? "Percentages" : "Fixed amounts"}
             {pct && project.agodShareBasisPoints > 0 && <span className="text-muted"> · AGOD {formatPercent(project.agodShareBasisPoints)}</span>}

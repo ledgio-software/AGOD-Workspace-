@@ -39,6 +39,10 @@ rules, audit) lives behind these functions, not in the pages.
 | `/services` | `subscription.view` | `listServices` | `createServiceAction`, `updateServiceAction`, `setServiceActiveAction` |
 | `/account` | everyone | `getDailyEmail` | `account/actions`: `setDailyEmailAction` |
 | `/integrations` | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction` |
+| `/invoices` | `invoice.view` | `listInvoices({ q, state, customerId })`, `invoiceTotals` | `invoices/actions`: `prepareAction` |
+| `/invoices/new` (`?customer=<id>`) | `invoice.manage` | `listCustomerOptions` | `createDraftAction` |
+| `/invoices/[id]` (+ `/invoices/[id]/pdf`) | `invoice.view` | `getInvoice`, `invoiceSources` (drafts) | `addLineAction`, `addPeriodAction`, `removeLineAction`, `notesAction`, `issueAction`, `deleteDraftAction`, `sendAction`, `voidAction`; `paymentAction`, `voidPaymentAction` (`invoice.recordPayment`) |
+| `/invoices/settings` | `invoice.settings` | `getInvoiceSettings` | `settingsAction` |
 | `/projects/[id]/statement` | anyone who can see the project | `getProjectStatement` | |
 | `/payouts/[id]` | the payee, managers | `getPayout`, `questionsForPayout`, `listPaymentReceipts` | `payouts/actions`: payments, adjustments, questions, receipts |
 | `/ledger` (+ `/ledger/export`) | `payout.viewAll` | `listLedger` | |

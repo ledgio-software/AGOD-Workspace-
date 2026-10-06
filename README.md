@@ -213,6 +213,9 @@ src/
 ### Phase 19 — Email reminders ✓
 - Daily job (Vercel Cron) creates everyone's reminders and emails one summary per person (SMTP via Nodemailer); opt-out on Account; run history and test email on Integrations (`docs/EMAIL.md`)
 
+### Phase 20 — Invoices ✓
+- Draft → issued → paid invoices from subscription periods, project amounts or manual lines; numbered PDFs, sent by email; payments (Admin) and overdue reminders; invoice settings
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
