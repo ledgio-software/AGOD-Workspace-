@@ -40,7 +40,9 @@ import { ServiceError } from "@/modules/errors";
 // Phase 22: each company connects its own Google account; everything here is per company.
 
 export type Connection = typeof googleConnections.$inferSelect;
+/** A Google account ready to call (any connection: the company's or a person's). */
 export type CompanyDrive = { config: GoogleConfig; connection: Connection; token: string };
+export type GoogleSession = CompanyDrive;
 
 const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
@@ -63,7 +65,7 @@ const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 /** Drops cached access tokens, so the next call refreshes (tests simulate an expired token with it). */
 export const clearGoogleTokenCache = () => tokenCache.clear();
 
-function describeError(error: unknown): string {
+export function describeError(error: unknown): string {
   if (error instanceof GoogleError && (error.reason === "invalid_grant" || error.status === 401)) {
     return "Google no longer accepts the saved sign-in (it was revoked, the password changed, or it expired). Connect the account again.";
   }
@@ -74,7 +76,7 @@ async function recordConnectionError(connectionId: string, error: unknown) {
   await db.update(googleConnections).set({ lastError: describeError(error), lastErrorAt: new Date() }).where(eq(googleConnections.id, connectionId));
 }
 
-async function accessTokenFor(config: GoogleConfig, connection: Connection): Promise<string> {
+export async function accessTokenFor(config: GoogleConfig, connection: Connection): Promise<string> {
   const cached = tokenCache.get(connection.id);
   if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
   try {
@@ -94,7 +96,7 @@ async function accessTokenFor(config: GoogleConfig, connection: Connection): Pro
  * Runs one Drive call; if Google says the access token is no longer valid, gets a new one and
  * tries once more (a refused refresh is recorded on the connection and thrown).
  */
-async function call<T>(drive: CompanyDrive, request: (token: string) => Promise<T>): Promise<T> {
+export async function call<T>(drive: CompanyDrive, request: (token: string) => Promise<T>): Promise<T> {
   try {
     return await request(drive.token);
   } catch (error) {
@@ -106,7 +108,7 @@ async function call<T>(drive: CompanyDrive, request: (token: string) => Promise<
 }
 
 /** Google refused the stored sign-in itself: no point trying the other folders. */
-const isSignInError = (error: unknown) => error instanceof GoogleError && (error.reason === "invalid_grant" || error.status === 401);
+export const isSignInError = (error: unknown) => error instanceof GoogleError && (error.reason === "invalid_grant" || error.status === 401);
 
 /** The company Drive, ready to call; null when Google isn't set up here or no account is connected. */
 export async function companyDrive(orgId: string): Promise<CompanyDrive | null> {
@@ -414,7 +416,7 @@ export async function saveInvoicePdf(orgId: string, customerId: string, file: { 
 export type DriveSyncSummary = { folders: number; shared: number; unshared: number; failures: string[] };
 
 /** Projects whose folders are kept and shared daily; finished projects keep theirs as they are. */
-const LIVE_STATUSES = ["DRAFT", "PLANNING", "IN_PROGRESS", "PENDING_APPROVAL", "CHANGES_REQUESTED"] as const;
+export const LIVE_STATUSES = ["DRAFT", "PLANNING", "IN_PROGRESS", "PENDING_APPROVAL", "CHANGES_REQUESTED"] as const;
 
 /**
  * Makes sure the folders exist and are shared as they should be: the company folder with every active PM and

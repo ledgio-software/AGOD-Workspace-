@@ -7,8 +7,11 @@ export const OAUTH_COOKIE = "agod_google_oauth";
 export const OAUTH_COOKIE_PATH = "/api/google";
 const TTL_MS = 10 * 60_000;
 
-/** Who started it and for which company (Phase 22): the callback must match both. */
-type Attempt = { state: string; verifier: string; userId: string; orgId: string; expires: number };
+/**
+ * Who started it and for which company (Phase 22): the callback must match both. `kind` (Phase 24):
+ * the company account (Admins) or someone's own calendar.
+ */
+type Attempt = { state: string; verifier: string; userId: string; orgId: string; kind?: "company" | "personal"; expires: number };
 
 export function sealAttempt(attempt: Omit<Attempt, "expires">, now = Date.now()): string {
   return sealSecret(JSON.stringify({ ...attempt, expires: now + TTL_MS }));

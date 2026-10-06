@@ -1091,6 +1091,10 @@ export const googleConnections = pgTable(
     // The last folder and sharing sync (COMPANY): when, and what it did.
     lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
     lastSync: jsonb("last_sync"),
+    // Phase 24: the calendar the app keeps in this account (COMPANY: the company calendar; PERSONAL:
+    // the person's work calendar) and who it is shared with (as the app last set it).
+    calendarId: text("calendar_id"),
+    calendarSharedWith: jsonb("calendar_shared_with").notNull().default(sql`'[]'::jsonb`),
   },
   (t) => [
     uniqueIndex("google_connections_one_company").on(t.organizationId).where(sql`${t.kind} = 'COMPANY' AND ${t.disconnectedAt} IS NULL`),
@@ -1150,3 +1154,58 @@ export const projectLinks = pgTable(
     check("project_links_removed_pair", sql`(${t.removedAt} IS NULL) = (${t.removedBy} IS NULL)`),
   ],
 );
+
+/** Phase 24: events the app keeps in a Google calendar, by what they show (one per item and calendar). */
+export const calendarEvents = pgTable(
+  "calendar_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => googleConnections.id, { onDelete: "restrict" }),
+    // PROJECT_TARGET, MILESTONE, TASK_DUE, RENEWAL, INVOICE_DUE
+    source: text("source").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    googleEventId: text("google_event_id").notNull(),
+    // What the event said when last written (title, date, details): unchanged items aren't rewritten.
+    fingerprint: text("fingerprint").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("calendar_events_item").on(t.connectionId, t.source, t.entityId),
+    check("calendar_events_source", sql`${t.source} IN ('PROJECT_TARGET', 'MILESTONE', 'TASK_DUE', 'RENEWAL', 'INVOICE_DUE')`),
+  ],
+);
+
+/** Phase 24: meetings scheduled on a project, as Google Calendar events with a Meet link. */
+export const projectMeetings = pgTable(
+  "project_meetings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    agenda: text("agenda"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    googleEventId: text("google_event_id"),
+    meetUrl: text("meet_url"),
+    createdBy: userRef("created_by").notNull(),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledBy: userRef("cancelled_by"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("project_meetings_project_idx").on(t.projectId, t.startsAt),
+    check("project_meetings_title", sql`length(btrim(${t.title})) BETWEEN 2 AND 200`),
+    check("project_meetings_times", sql`${t.endsAt} > ${t.startsAt} AND ${t.endsAt} <= ${t.startsAt} + interval '12 hours'`),
+    check("project_meetings_cancelled_pair", sql`(${t.cancelledAt} IS NULL) = (${t.cancelledBy} IS NULL)`),
+    check("project_meetings_meet_url", sql`${t.meetUrl} IS NULL OR ${t.meetUrl} ~ '^https://'`),
+  ],
+);
+

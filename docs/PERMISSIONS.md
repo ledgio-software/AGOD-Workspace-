@@ -72,6 +72,10 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Remove a link | own links | ✓ | ✓ |
 | Create a project's Drive folder now; save an invoice to Drive | | ✓ | ✓ |
 | Connect, disconnect or sync the team Google account (`google.manage`) | | | ✓ |
+| See the company calendar in Google (shared view only) | | ✓ | ✓ |
+| Connect, sync or disconnect your own Google Calendar (Account page) | ✓ | ✓ | ✓ |
+| See a project's meetings and join with Google Meet | own projects | ✓ | ✓ |
+| Schedule or cancel a project meeting (`project.edit`) | | ✓ | ✓ |
 | Company name and project code prefix (`company.manage`) | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in

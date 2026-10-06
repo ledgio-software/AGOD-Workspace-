@@ -8,7 +8,7 @@ export function GoogleActions() {
     <div className="flex flex-wrap items-start gap-3">
       <ActionForm action={syncDriveAction}>
         <SubmitButton size="sm" variant="secondary" pendingText="Syncing…">
-          Sync folders and sharing now
+          Sync Drive and Calendar now
         </SubmitButton>
       </ActionForm>
       <ActionForm

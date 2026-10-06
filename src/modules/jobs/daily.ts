@@ -8,6 +8,7 @@ import { type Actor, assertCan } from "@/lib/permissions";
 import { ServiceError } from "@/modules/errors";
 import { buildDigest } from "@/modules/email/digest";
 import { syncDrive } from "@/modules/google";
+import { syncCalendars } from "@/modules/google/calendar";
 import { refreshDeadlineAlerts } from "@/modules/notifications/deadlines";
 import { refreshInvoiceAlerts } from "@/modules/invoices";
 import { refreshRenewalAlerts } from "@/modules/subscriptions";
@@ -34,6 +35,8 @@ export type DailySummary = {
   emailsSkipped: number;
   /** Phase 21: Drive folder and sharing sync; absent when Google isn't connected. */
   drive?: { folders: number; shared: number; unshared: number; failures: number } | { error: string };
+  /** Phase 24: company and personal calendars; absent when there are none. */
+  calendar?: { created: number; updated: number; removed: number; failures: number } | { error: string };
 };
 
 export type DailyRunOptions = {
@@ -72,6 +75,13 @@ export async function runDailyReminders(options: DailyRunOptions = {}): Promise<
         "error" in s.drive
           ? { ...d, failures: d.failures + 1 }
           : { folders: d.folders + s.drive.folders, shared: d.shared + s.drive.shared, unshared: d.unshared + s.drive.unshared, failures: d.failures + s.drive.failures };
+    }
+    if (s.calendar) {
+      const c = total.calendar && "created" in total.calendar ? total.calendar : { created: 0, updated: 0, removed: 0, failures: 0 };
+      total.calendar =
+        "error" in s.calendar
+          ? { ...c, failures: c.failures + 1 }
+          : { created: c.created + s.calendar.created, updated: c.updated + s.calendar.updated, removed: c.removed + s.calendar.removed, failures: c.failures + s.calendar.failures };
     }
   }
   return total;
@@ -132,11 +142,18 @@ async function runCompany(company: { id: string; name: string }, options: DailyR
         summary.drive = { error: error instanceof Error ? error.message.slice(0, 300) : String(error) };
         console.error("Drive sync failed", company.id, summary.drive.error);
       }
+      try {
+        const calendar = await syncCalendars(company.id);
+        if (calendar) summary.calendar = { created: calendar.created, updated: calendar.updated, removed: calendar.removed, failures: calendar.failures.length };
+      } catch (error) {
+        summary.calendar = { error: error instanceof Error ? error.message.slice(0, 300) : String(error) };
+        console.error("Calendar sync failed", company.id, summary.calendar.error);
+      }
     }
 
     await db
       .update(jobRuns)
-      .set({ finishedAt: new Date(), ok: summary.reminderFailures === 0 && summary.emailFailures === 0 && !(summary.drive && "error" in summary.drive), summary })
+      .set({ finishedAt: new Date(), ok: summary.reminderFailures === 0 && summary.emailFailures === 0 && !(summary.drive && "error" in summary.drive) && !(summary.calendar && "error" in summary.calendar), summary })
       .where(eq(jobRuns.id, run.id));
     return summary;
   } catch (error) {

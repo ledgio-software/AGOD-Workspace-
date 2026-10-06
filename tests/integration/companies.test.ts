@@ -3,7 +3,7 @@ import { eq, getTableColumns, getTableName, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { withActor } from "@/lib/db/actor";
 import * as schema from "@/lib/db/schema";
-import { memberships, organizations, payoutLedgerEntries, projects, tasks } from "@/lib/db/schema";
+import { memberships, organizations, payoutLedgerEntries, projectMeetings, projects, tasks } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { PermissionError } from "@/lib/permissions";
 import { approveProject, requestApproval } from "@/modules/approvals";
@@ -72,6 +72,7 @@ async function companyWithData() {
   });
   const invoice = await createDraftInvoice(pm, { customerId: customer.id });
   await addInvoiceLine(pm, invoice.id, { description: "Setup", quantity: 1, unitPrice: "100" });
+  await db.insert(projectMeetings).values({ projectId: project.id, title: "Secret meeting", startsAt: new Date(), endsAt: new Date(Date.now() + 3_600_000), createdBy: pm.id });
   return { admin, pm, member, customer, project, task, entry, invoice };
 }
 
