@@ -44,7 +44,8 @@ export type Action =
   | "invoice.view"
   | "invoice.manage"
   | "invoice.recordPayment"
-  | "invoice.settings";
+  | "invoice.settings"
+  | "google.manage";
 
 /** Facts about the record being acted on, when the rule depends on it. */
 export type ResourceContext = {
@@ -108,6 +109,8 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   "invoice.manage": isManager,
   "invoice.recordPayment": isAdmin,
   "invoice.settings": isAdmin,
+  // Phase 21: connecting or disconnecting the company Google account.
+  "google.manage": isAdmin,
 };
 
 export function can(actor: Actor, action: Action, resource: ResourceContext = {}): boolean {

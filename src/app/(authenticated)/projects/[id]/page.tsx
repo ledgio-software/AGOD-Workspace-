@@ -5,7 +5,10 @@ import {
   ArrowLeft,
   CircleCheck,
   CircleX,
+  ExternalLink,
   FileText,
+  FolderOpen,
+  Link2,
   Lock,
   MessagesSquare,
   Paperclip,
@@ -14,8 +17,8 @@ import {
   Users,
 } from "lucide-react";
 import { Badge, HealthBadge, ProgressBar, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
-import { FileList, type FileItem, FileUploadForm } from "@/components/files";
-import { Avatar, ButtonLink, Callout, Card, Disclosure, EmptyState, cx, table } from "@/components/ui";
+import { AddLinkForm, DriveFolderButton, FileList, type FileItem, FileUploadForm, LinkList, type LinkItem } from "@/components/files";
+import { Avatar, ButtonLink, Callout, Card, Disclosure, EmptyState, buttonClass, cx, table } from "@/components/ui";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
 import { costCategoryLabel, describeAuditAction, healthLabel, milestoneStatusLabel, payoutStatusLabel, projectCategoryLabel } from "@/lib/labels";
 import { formatMoney, formatPercent, minorToInput } from "@/lib/money";
@@ -26,6 +29,8 @@ import { type AttachmentView, attachmentsAvailable, listProjectAttachments } fro
 import { listComments } from "@/modules/comments";
 import { getProjectFinance } from "@/modules/finance";
 import { getProjectGithub, isGithubConfigured } from "@/modules/github";
+import { companyConnection, driveFolderLink, isGoogleConfigured } from "@/modules/google";
+import { type LinkView, listProjectLinks } from "@/modules/links";
 import { listTemplates } from "@/modules/templates";
 import { listCustomerOptions } from "@/modules/customers";
 import { projectInvoicing } from "@/modules/invoices";
@@ -36,6 +41,9 @@ import { ApplyTemplateForm, SaveAsTemplateForm } from "../../templates/template-
 import {
   addAssignmentAction,
   addCommentAction,
+  addLinkAction,
+  createDriveFolderAction,
+  removeLinkAction,
   approveAction,
   changeStatusAction,
   createMilestoneAction,
@@ -129,15 +137,28 @@ export default async function ProjectWorkspacePage({
   const teamOptions = Array.from(new Map(ws.team.map((t) => [t.memberId, { id: t.memberId, name: t.memberName }])).values());
   const pct = project.splitMode === "PERCENTAGE";
   const workOpen = acceptsTaskUpdates(project.status);
-  const [payouts, discussion, github, files, finance] = await Promise.all([
+  const [payouts, discussion, github, files, finance, links, driveConnected] = await Promise.all([
     getProjectPayouts(actor, project.id),
     listComments(actor, project.id),
     getProjectGithub(actor, project.id),
     listProjectAttachments(actor, project.id),
     can(actor, "finance.view") ? getProjectFinance(actor, project.id) : Promise.resolve(null),
+    listProjectLinks(actor, project.id),
+    isGoogleConfigured() ? companyConnection().then((c) => c !== null) : Promise.resolve(false),
   ]);
+  const driveFolder = driveConnected ? await driveFolderLink("PROJECT", project.id) : null;
+  const toLinks = (list: LinkView[]): LinkItem[] =>
+    list.map((l) => ({
+      id: l.id,
+      url: l.url,
+      title: l.title,
+      provider: l.provider,
+      addedByName: l.addedByName,
+      createdAt: formatDateTime(l.createdAt),
+      remove: isManager || l.addedBy === actor.id ? removeLinkAction.bind(null, project.id, l.id) : undefined,
+    }));
   const githubReady = isGithubConfigured();
-  const uploadsReady = attachmentsAvailable();
+  const uploadsReady = await attachmentsAvailable();
   const toItems = (list: AttachmentView[]): FileItem[] =>
     list.map((f) => ({
       id: f.id,
@@ -152,13 +173,14 @@ export default async function ProjectWorkspacePage({
   const canRequest = project.status === "IN_PROGRESS" || project.status === "CHANGES_REQUESTED";
   const doneTasks = ws.tasks.filter((t) => t.status === "DONE" || t.status === "WAIVED").length;
   const taskFileCount = [...files.byTask.values()].reduce((n, list) => n + list.length, 0);
+  const taskLinkCount = [...links.byTask.values()].reduce((n, list) => n + list.length, 0);
   const href = (t: Tab) => (t === "overview" ? `/projects/${project.id}` : `/projects/${project.id}?tab=${t}`);
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "overview", label: "Overview" },
     { key: "tasks", label: "Tasks", count: ws.tasks.length },
     { key: "team", label: isManager ? "Team & money" : "Team" },
     { key: "discussion", label: "Discussion", count: discussion.length },
-    { key: "files", label: "Files", count: files.project.length + taskFileCount },
+    { key: "files", label: "Files", count: files.project.length + taskFileCount + links.project.length + taskLinkCount },
     { key: "activity", label: "Activity" },
   ];
 
@@ -578,11 +600,13 @@ export default async function ProjectWorkspacePage({
                           canCreateIssue={isManager && githubReady && !!project.githubRepo}
                         />
                         <FileList files={taskFiles} />
-                        {(isManager || mine) && uploadsReady && (
+                        <LinkList links={toLinks(links.byTask.get(task.id) ?? [])} />
+                        {(isManager || mine) && (
                           <details className="text-xs">
-                            <summary className="cursor-pointer text-muted hover:text-fg">Attach a file</summary>
-                            <div className="mt-2">
-                              <FileUploadForm action={uploadTaskFileAction.bind(null, project.id, task.id)} label="Attach" />
+                            <summary className="cursor-pointer text-muted hover:text-fg">{uploadsReady ? "Attach a file or link" : "Add a link"}</summary>
+                            <div className="mt-2 space-y-2">
+                              {uploadsReady && <FileUploadForm action={uploadTaskFileAction.bind(null, project.id, task.id)} label="Attach" />}
+                              <AddLinkForm action={addLinkAction.bind(null, project.id, task.id)} />
                             </div>
                           </details>
                         )}
@@ -897,6 +921,25 @@ export default async function ProjectWorkspacePage({
       {/* Files */}
       {tab === "files" && (
         <div className="space-y-6">
+          {driveConnected && (driveFolder || isManager) && (
+            <Card title="Google Drive folder" aside={<FolderOpen className="size-4 text-muted" aria-hidden />}>
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                {driveFolder ? (
+                  <>
+                    <a href={driveFolder} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "sm")}>
+                      <FolderOpen className="size-4" aria-hidden /> Open in Google Drive <ExternalLink className="size-3.5 opacity-60" aria-hidden />
+                    </a>
+                    <p className="text-muted">Shared with the project team. Files uploaded here are saved in this folder.</p>
+                  </>
+                ) : (
+                  <>
+                    <DriveFolderButton action={createDriveFolderAction.bind(null, project.id)} />
+                    <p className="text-muted">It is also created with the first upload, and every morning for active projects.</p>
+                  </>
+                )}
+              </div>
+            </Card>
+          )}
           <Card title="Project documents" aside={<Paperclip className="size-4 text-muted" aria-hidden />}>
             <div className="space-y-4">
               {files.project.length === 0 ? (
@@ -916,17 +959,34 @@ export default async function ProjectWorkspacePage({
                 ))}
             </div>
           </Card>
-          {taskFileCount > 0 && (
-            <Card title="Task files">
+          <Card title="Links" description="Google Docs, Sheets and Drive files (or other pages) the project uses." aside={<Link2 className="size-4 text-muted" aria-hidden />}>
+            <div className="space-y-4">
+              {links.project.length === 0 ? (
+                <EmptyState icon={Link2} title="No links yet">
+                  {isManager ? "Paste a link to a Google Doc, Sheet or Drive folder." : undefined}
+                </EmptyState>
+              ) : (
+                <LinkList links={toLinks(links.project)} />
+              )}
+              {isManager && (
+                <div className="border-t border-line pt-4">
+                  <AddLinkForm action={addLinkAction.bind(null, project.id, null)} />
+                </div>
+              )}
+            </div>
+          </Card>
+          {taskFileCount + taskLinkCount > 0 && (
+            <Card title="Task files and links">
               <ul className="-my-2 divide-y divide-line">
                 {ws.tasks
-                  .filter((t) => (files.byTask.get(t.id) ?? []).length > 0)
+                  .filter((t) => (files.byTask.get(t.id) ?? []).length + (links.byTask.get(t.id) ?? []).length > 0)
                   .map((t) => (
                     <li key={t.id} className="space-y-1.5 py-3">
                       <p className="text-sm font-medium">
                         <span className="font-mono text-xs text-muted">T{t.number}</span> {t.title}
                       </p>
                       <FileList files={toItems(files.byTask.get(t.id) ?? [])} />
+                      <LinkList links={toLinks(links.byTask.get(t.id) ?? [])} />
                     </li>
                   ))}
               </ul>

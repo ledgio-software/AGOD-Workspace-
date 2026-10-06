@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowLeft, Download, FileText, Lock, Mail } from "lucide-react";
+import { Activity, ArrowLeft, Download, ExternalLink, FileText, FolderOpen, Lock, Mail } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge, InvoiceStateBadge } from "@/components/badges";
-import { ButtonLink, Callout, Card, Disclosure, EmptyState, StatCard, table } from "@/components/ui";
+import { ButtonLink, Callout, Card, Disclosure, EmptyState, StatCard, buttonClass, table } from "@/components/ui";
 import { emailConfig } from "@/lib/email";
 import { formatCalendarDate, formatDateTime, todayInOperatingZone } from "@/lib/dates";
 import { describeAuditAction, paymentMethodLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
+import { driveFileUrl } from "@/lib/google/client";
+import { companyConnection, isGoogleConfigured } from "@/modules/google";
 import { getInvoice, invoiceSources } from "@/modules/invoices";
 import {
   addLineAction,
@@ -19,6 +21,7 @@ import {
   notesAction,
   paymentAction,
   removeLineAction,
+  saveToDriveAction,
   sendAction,
   voidAction,
   voidPaymentAction,
@@ -31,6 +34,7 @@ import {
   PaymentForm,
   PeriodForm,
   RemoveLineButton,
+  SaveToDriveButton,
   SendForm,
   VoidForm,
   VoidPaymentForm,
@@ -50,6 +54,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const today = todayInOperatingZone();
   const sources = draft && canManage ? await invoiceSources(actor, invoice.customerId) : null;
   const livePayments = payments.filter((p) => !p.voidedAt);
+  const canSaveToDrive = issued && canManage && !invoice.driveFileId && isGoogleConfigured() && (await companyConnection()) !== null;
 
   return (
     <div className="space-y-6">
@@ -72,9 +77,17 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             {invoice.dueDate && <> · Due {formatCalendarDate(invoice.dueDate)}</>}
           </p>
         </div>
-        <ButtonLink href={`/invoices/${invoice.id}/pdf`}>
-          <Download className="size-4" aria-hidden /> PDF
-        </ButtonLink>
+        <div className="flex flex-wrap gap-2">
+          {invoice.driveFileId && (
+            <a href={driveFileUrl(invoice.driveFileId)} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary")}>
+              <FolderOpen className="size-4" aria-hidden /> In Drive <ExternalLink className="size-3.5 opacity-60" aria-hidden />
+            </a>
+          )}
+          {canSaveToDrive && <SaveToDriveButton action={saveToDriveAction.bind(null, invoice.id)} />}
+          <ButtonLink href={`/invoices/${invoice.id}/pdf`}>
+            <Download className="size-4" aria-hidden /> PDF
+          </ButtonLink>
+        </div>
       </div>
 
       {invoice.status === "VOID" && (

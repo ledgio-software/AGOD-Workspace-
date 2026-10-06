@@ -21,6 +21,7 @@ import {
   voidInvoice,
   voidInvoicePayment,
 } from "@/modules/invoices";
+import { type DriveSave, saveInvoiceToDrive, trySaveInvoiceToDrive } from "@/modules/invoices/drive";
 import { sendInvoiceEmail } from "@/modules/invoices/send";
 
 type Result = ActionResult<undefined>;
@@ -128,9 +129,30 @@ export async function issueAction(invoiceId: string, _prev: Result | null, form:
   const actor = await requireUser();
   const result = await runAction(async () => {
     await issueInvoice(actor, invoiceId, { issueDate: text(form, "issueDate"), dueDate: text(form, "dueDate"), version: text(form, "version") as never }, await getRequestMeta());
+    return trySaveInvoiceToDrive(actor, invoiceId);
+  });
+  if (!result.ok) return result;
+  refresh(invoiceId);
+  const saved: DriveSave = result.data;
+  return {
+    ok: true,
+    data: undefined,
+    message:
+      saved === "saved"
+        ? "Invoice issued and saved to Google Drive."
+        : saved === "failed"
+          ? "Invoice issued. Saving it to Google Drive failed; use “Save to Drive” to try again."
+          : "Invoice issued.",
+  };
+}
+
+export async function saveToDriveAction(invoiceId: string): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    if ((await saveInvoiceToDrive(actor, invoiceId)) === "off") throw new ServiceError("Google Drive is not connected. An Admin connects it on the Integrations page.");
     return undefined;
-  }, "Invoice issued.");
-  if (result.ok) refresh(invoiceId);
+  }, "Saved to Google Drive.");
+  refresh(invoiceId);
   return result;
 }
 

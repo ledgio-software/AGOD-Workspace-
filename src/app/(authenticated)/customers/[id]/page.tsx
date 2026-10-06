@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowLeft, Archive, FileText, FolderKanban, Mail, Phone, Plus, Repeat, UserRound } from "lucide-react";
+import { Activity, ArrowLeft, Archive, ExternalLink, FileText, FolderKanban, FolderOpen, Mail, Phone, Plus, Repeat, UserRound } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge, CustomerStatusBadge, InvoiceStateBadge, ProjectStatusBadge, RenewalBadge, SubscriptionStatusBadge } from "@/components/badges";
-import { ButtonLink, Callout, Card, Disclosure, EmptyState, StatCard, table } from "@/components/ui";
+import { ButtonLink, Callout, Card, Disclosure, EmptyState, StatCard, buttonClass, table } from "@/components/ui";
 import { formatCalendarDate, formatDateTime, todayInOperatingZone } from "@/lib/dates";
 import { billingCadenceSuffix, contactChannelLabel, customerTypeLabel, describeAuditAction } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getCustomer } from "@/modules/customers";
+import { driveFolderLink } from "@/modules/google";
 import { listActiveMembers } from "@/modules/projects";
 import { invoiceTotals, listInvoices } from "@/modules/invoices";
 import { listSubscriptions, recurringTotals } from "@/modules/subscriptions";
@@ -39,6 +40,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   const mrr = subs ? recurringTotals(subs) : [];
   const invs = can(actor, "invoice.view") ? await listInvoices(actor, { customerId: customer.id }) : null;
   const owners = canEdit ? (await listActiveMembers(actor)).filter((m) => m.role !== "TEAM_MEMBER") : [];
+  const driveFolder = await driveFolderLink("CUSTOMER", customer.id);
 
   const live = projects.filter((p) => p.status !== "CANCELLED");
   const open = projects.filter((p) => p.status !== "COMPLETED" && p.status !== "CANCELLED");
@@ -64,11 +66,18 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             {customer.externalReference && <> · Ref {customer.externalReference}</>}
           </p>
         </div>
-        {canEdit && can(actor, "project.create") && (
-          <ButtonLink href={`/projects/new?customer=${customer.id}`} variant="primary">
-            <Plus className="size-4" aria-hidden /> New project
-          </ButtonLink>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {driveFolder && (
+            <a href={driveFolder} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary")}>
+              <FolderOpen className="size-4" aria-hidden /> Drive folder <ExternalLink className="size-3.5 opacity-60" aria-hidden />
+            </a>
+          )}
+          {canEdit && can(actor, "project.create") && (
+            <ButtonLink href={`/projects/new?customer=${customer.id}`} variant="primary">
+              <Plus className="size-4" aria-hidden /> New project
+            </ButtonLink>
+          )}
+        </div>
       </div>
 
       {archived && (

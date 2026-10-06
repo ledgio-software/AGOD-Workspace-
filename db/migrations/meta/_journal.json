@@ -190,6 +190,20 @@
       "when": 1791250937321,
       "tag": "20261006014217_invoices_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791253602530,
+      "tag": "20261006022642_google_drive",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791253603500,
+      "tag": "20261006022643_google_drive_rules",
+      "breakpoints": true
     }
   ]
 }

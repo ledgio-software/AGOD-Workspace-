@@ -6,19 +6,24 @@ import { checkFile } from "@/lib/files";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { storage } from "@/lib/storage";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
+import { companyConnection, getFromDrive, isDriveKey, isGoogleConfigured, putInDrive, removeFromDrive } from "@/modules/google";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
 
 // File attachments (roadmap Stage 2; "payment receipt upload with controlled access").
 // Who may upload: managers (project documents), managers and the assignee (task files),
 // Admins (payment receipts). Who may see: like the thing the file is attached to. Files are
 // stored privately and served only through /files/<id>, which checks access every time.
+// Phase 21: when the company Google Drive is connected, new files go to the project's Drive
+// folder (receipts to "Payment receipts"); earlier files stay where they were stored.
 
 export type AttachmentTarget =
   | { kind: "PROJECT"; projectId: string }
   | { kind: "TASK"; taskId: string }
   | { kind: "PAYMENT"; paymentId: string };
 
-export const attachmentsAvailable = () => storage() !== null;
+export const attachmentsAvailable = async () => storage() !== null || (isGoogleConfigured() && (await companyConnection()) !== null);
+
+const removeStored = (key: string) => (isDriveKey(key) ? removeFromDrive(key) : (storage()?.remove(key) ?? Promise.resolve()));
 
 /** Resolves the project and checks the uploader's role before anything is stored. */
 async function resolveTarget(actor: Actor, target: AttachmentTarget) {
@@ -50,14 +55,30 @@ export async function uploadAttachment(
   file: { name: string; bytes: Uint8Array },
   request?: RequestMeta,
 ) {
-  const store = storage();
-  if (!store) throw new ServiceError("File uploads are not set up in this environment yet.");
   const checked = checkFile(file.name, file.bytes);
   if ("error" in checked) throw new ServiceError(checked.error);
   const resolved = await resolveTarget(actor, target);
+  const store = storage();
 
-  const key = `projects/${resolved.projectId}/${randomUUID()}/${checked.fileName.replace(/[^A-Za-z0-9._-]/g, "_")}`;
-  const storageKey = await store.put(key, file.bytes, checked.contentType);
+  let storageKey: string | null = null;
+  try {
+    storageKey = await putInDrive(target.kind === "PAYMENT" ? { kind: "PAYMENT" } : { kind: target.kind, projectId: resolved.projectId }, {
+      name: checked.fileName,
+      bytes: file.bytes,
+      contentType: checked.contentType,
+      description: "Uploaded through the AGOD Payout Tracker",
+    });
+  } catch (error) {
+    // Google is down or refused: use the usual storage if there is one.
+    console.error("Drive upload failed", error instanceof Error ? error.message : error);
+    if (!store) throw new ServiceError("Google Drive refused the upload. Try again, or ask an Admin to check Google on the Integrations page.");
+  }
+  if (!storageKey) {
+    if (!store) throw new ServiceError("File uploads are not set up in this environment yet.");
+    const key = `projects/${resolved.projectId}/${randomUUID()}/${checked.fileName.replace(/[^A-Za-z0-9._-]/g, "_")}`;
+    storageKey = await store.put(key, file.bytes, checked.contentType);
+  }
+  const stored = storageKey;
   try {
     return await withActor(actor, async (tx) => {
       const [row] = await tx
@@ -86,7 +107,7 @@ export async function uploadAttachment(
     });
   } catch (error) {
     // Refused by the database (e.g. row-level security): don't leave an orphaned file behind.
-    await store.remove(storageKey).catch(() => undefined);
+    await removeStored(stored).catch(() => undefined);
     throw error;
   }
 }
@@ -154,6 +175,13 @@ export async function listPaymentReceipts(actor: Actor, paymentIds: string[]) {
 export async function openAttachment(actor: Actor, id: string) {
   const row = await withActor(actor, async (tx) => (await tx.select().from(attachments).where(eq(attachments.id, id)))[0]);
   if (!row || row.removedAt) return null;
+  if (isDriveKey(row.storageKey)) {
+    const bytes = await getFromDrive(row.storageKey).catch((error) => {
+      console.error("Drive download failed", error instanceof Error ? error.message : error);
+      return null;
+    });
+    return bytes ? { row, body: bytes } : null;
+  }
   const store = storage();
   if (!store) return null;
   const file = await store.get(row.storageKey);
