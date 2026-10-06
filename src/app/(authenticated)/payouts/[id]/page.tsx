@@ -27,7 +27,7 @@ export default async function PayoutPage({ params }: { params: Promise<{ id: str
     questionsForPayout(actor, entry.id),
     listPaymentReceipts(actor, payout.payments.map((p) => p.id)),
   ]);
-  const canAttachReceipt = can(actor, "payment.record") && (await attachmentsAvailable());
+  const canAttachReceipt = can(actor, "payment.record") && (await attachmentsAvailable(actor.orgId));
   const isOwn = entry.memberId === actor.id;
   const money = (m: number) => formatMoney(m, entry.currency);
   const paidShare = balance.effectiveOwedMinor > 0 ? Math.min(100, Math.round((balance.paidMinor / balance.effectiveOwedMinor) * 100)) : 0;

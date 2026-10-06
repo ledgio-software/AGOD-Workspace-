@@ -19,6 +19,17 @@ function RoleSelect({ defaultValue }: { defaultValue: Role }) {
   );
 }
 
+/** The email didn't go out: why, and what the Admin does instead. */
+function EmailFailed({ error, fallback }: { error: string; fallback: boolean }) {
+  return (
+    <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      The email could not be sent: {error}
+      {fallback ? " Give them the temporary password below instead (they change it after signing in)." : ""} Fix email on the Integrations page, then use
+      “Send test email” to check it.
+    </p>
+  );
+}
+
 export function CreateMemberForm() {
   return (
     <section>
@@ -28,8 +39,21 @@ export function CreateMemberForm() {
         className="grid gap-3 sm:grid-cols-4 sm:items-end"
         renderResult={(state) =>
           state.ok && (
-            <div className="sm:col-span-4">
-              <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+            <div className="space-y-2 sm:col-span-4">
+              {state.data.emailError && <EmailFailed error={state.data.emailError} fallback={!!state.data.temporaryPassword} />}
+              {state.data.temporaryPassword ? (
+                <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+              ) : state.data.existing ? (
+                <p className="rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
+                  {state.data.email} already has an account, so they were added to this company
+                  {state.data.emailed && " and told by email"}. They sign in with their own password and choose this company from the
+                  company menu.
+                </p>
+              ) : (
+                <p className="rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
+                  Invitation sent to {state.data.email}. They choose their password with the link in the email (it works for 7 days).
+                </p>
+              )}
             </div>
           )
         }
@@ -54,7 +78,7 @@ export function CreateMemberForm() {
 
 type Member = { id: string; email: string; role: Role; active: boolean; weeklyCapacityHours: number };
 
-export function MemberActions({ member }: { member: Member }) {
+export function MemberActions({ member, viaEmail }: { member: Member; viaEmail: boolean }) {
   return (
     <details className="text-sm">
       <summary className="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">Manage</summary>
@@ -89,15 +113,29 @@ export function MemberActions({ member }: { member: Member }) {
 
         <ActionForm
           action={resetPasswordAction}
-          confirmMessage={`Reset the password for ${member.email}? They will be signed out.`}
+          confirmMessage={
+            viaEmail
+              ? `Email ${member.email} a link to choose a new password?`
+              : `Reset the password for ${member.email}? They will be signed out.`
+          }
           className="space-y-2"
           renderResult={(state) =>
-            state.ok && <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+            state.ok &&
+            (state.data.temporaryPassword ? (
+              <div className="space-y-2">
+                {state.data.emailError && <EmailFailed error={state.data.emailError} fallback />}
+                <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+              </div>
+            ) : (
+              <p className="text-xs text-muted">Password link sent to {state.data.email}.</p>
+            ))
           }
         >
           <input type="hidden" name="userId" value={member.id} />
           <input type="hidden" name="email" value={member.email} />
-          <SubmitButton size="sm" variant="secondary" pendingText="Resetting…">Reset password</SubmitButton>
+          <SubmitButton size="sm" variant="secondary" pendingText={viaEmail ? "Sending…" : "Resetting…"}>
+            {viaEmail ? "Send a password link" : "Reset password"}
+          </SubmitButton>
         </ActionForm>
       </div>
     </details>

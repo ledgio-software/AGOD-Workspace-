@@ -98,11 +98,11 @@ export function StatCard({
           </span>
         )}
       </div>
-      <div className={cx("whitespace-nowrap text-xl font-semibold tracking-tight tabular-nums xl:text-[1.375rem]", styles.value)}>{value}</div>
+      <div className={cx("text-xl font-semibold tracking-tight tabular-nums xl:text-[1.375rem]", styles.value)}>{value}</div>
       {hint && <div className="text-xs text-muted">{hint}</div>}
     </div>
   );
-  const cls = "block rounded-xl border border-line bg-surface p-4 shadow-xs";
+  const cls = "block min-w-0 rounded-xl border border-line bg-surface p-4 shadow-xs";
   return href ? (
     <Link href={href} className={cx(cls, "transition hover:border-brand-300 hover:shadow-sm dark:hover:border-brand-700")}>
       {body}

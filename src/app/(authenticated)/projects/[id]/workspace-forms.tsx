@@ -399,3 +399,46 @@ export function VoidCostForm({ action }: { action: Action }) {
     </ActionForm>
   );
 }
+
+export function MeetingForm({ action, today }: { action: Action; today: string }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="grid gap-3 sm:grid-cols-2 sm:items-end">
+      <Field label="Title">
+        <input name="title" required minLength={2} maxLength={200} placeholder="Weekly check-in" className={inputClass} />
+      </Field>
+      <Field label="Date">
+        <input name="date" type="date" required min={today} defaultValue={today} className={inputClass} />
+      </Field>
+      <Field label="Start time">
+        <input name="time" type="time" required defaultValue="10:00" className={inputClass} />
+      </Field>
+      <Field label="Length">
+        <select name="durationMinutes" defaultValue="30" className={inputClass}>
+          {[15, 30, 45, 60, 90, 120].map((m) => (
+            <option key={m} value={m}>
+              {m < 60 ? `${m} minutes` : m === 60 ? "1 hour" : `${m / 60} hours`}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <div className="sm:col-span-2">
+        <Field label="Agenda (optional)">
+          <textarea name="agenda" rows={2} maxLength={2000} className={inputClass} />
+        </Field>
+      </div>
+      <div className="sm:col-span-2">
+        <SubmitButton pendingText="Scheduling…">Schedule with Google Meet</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+export function CancelMeetingForm({ action }: { action: Action }) {
+  return (
+    <ActionForm action={action} confirmMessage="Cancel this meeting? Google emails everyone invited.">
+      <SubmitButton size="sm" variant="secondary" pendingText="Cancelling…">
+        Cancel
+      </SubmitButton>
+    </ActionForm>
+  );
+}

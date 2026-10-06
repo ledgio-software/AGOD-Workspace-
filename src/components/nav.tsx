@@ -46,10 +46,24 @@ export function navGroups(actor: Actor): NavGroup[] {
         { href: "/team", label: "Team", icon: "team", show: can(actor, "team.view") },
         { href: "/audit", label: "Audit log", icon: "audit", show: can(actor, "audit.viewProject") },
         { href: "/integrations", label: "Integrations", icon: "integrations", show: can(actor, "audit.viewAll") },
+        { href: "/company", label: "Company", icon: "company", show: can(actor, "company.manage") },
       ],
     },
   ];
   return groups
     .map((g) => ({ label: g.label, items: g.items.filter((i) => i.show).map(({ href, label, icon }) => ({ href, label, icon })) }))
     .filter((g) => g.items.length > 0);
+}
+
+/** Phase 25: the community, for every signed-in person (organizers also see reports). */
+export function communityGroup(o: { organizer: boolean }): NavGroup {
+  const items: NavItem[] = [
+    { href: "/community", label: "Community home", icon: "community" },
+    { href: "/showcase", label: "Showcase", icon: "showcase" },
+    { href: "/sessions", label: "Sessions", icon: "sessions" },
+    { href: "/members", label: "Members", icon: "members" },
+    { href: "/community/profile", label: "My profile", icon: "profile" },
+  ];
+  if (o.organizer) items.push({ href: "/community/reports", label: "Reports", icon: "reports" });
+  return { label: "Community", items };
 }

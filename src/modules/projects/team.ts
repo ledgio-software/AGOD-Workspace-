@@ -1,7 +1,7 @@
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import { withActor } from "@/lib/db/actor";
-import { milestones, projectAssignments, users } from "@/lib/db/schema";
+import { milestones, projectAssignments, orgMembers } from "@/lib/db/schema";
 import { parseMoney, parsePercent } from "@/lib/money";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
@@ -50,7 +50,7 @@ export async function addAssignment(
     return await withActor(actor, async (tx) => {
       const project = await lockProject(tx, projectId);
       assertEditable(project);
-      const [member] = await tx.select({ active: users.active, name: users.name }).from(users).where(eq(users.id, input.memberId));
+      const [member] = await tx.select({ active: orgMembers.active, name: orgMembers.name }).from(orgMembers).where(eq(orgMembers.id, input.memberId));
       if (!member) throw new ServiceError("Member not found.");
       if (!member.active) throw new ServiceError("Inactive members cannot be added to projects.");
 

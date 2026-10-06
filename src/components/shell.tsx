@@ -4,12 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  Building,
   Building2,
   CalendarCheck,
   CircleHelp,
+  Contact,
   FileText,
+  Flag,
   FolderKanban,
   Gauge,
+  HeartHandshake,
+  Lightbulb,
+  Presentation,
   LayoutDashboard,
   ListChecks,
   Menu,
@@ -19,6 +25,7 @@ import {
   Repeat,
   ScrollText,
   TrendingUp,
+  UserRound,
   Users,
   Wallet,
   X,
@@ -43,6 +50,13 @@ const icons = {
   team: Users,
   audit: ScrollText,
   integrations: Plug,
+  company: Building,
+  community: HeartHandshake,
+  showcase: Lightbulb,
+  sessions: Presentation,
+  members: Contact,
+  profile: UserRound,
+  reports: Flag,
 } as const;
 
 export type IconName = keyof typeof icons;
@@ -51,19 +65,27 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function Brand() {
+/** The current company (Phase 22): its initial and name, above the product's purpose. */
+function Brand({ company, href, subtitle }: { company: string; href: string; subtitle: string }) {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2.5 px-2">
-      <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white shadow-sm">A</span>
-      <span className="leading-tight">
-        <span className="block text-sm font-semibold text-fg">AGOD</span>
-        <span className="block text-[11px] text-muted">Projects &amp; Payouts</span>
+    <Link href={href} className="flex min-w-0 items-center gap-2.5 px-2">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white shadow-sm">
+        {(company.trim()[0] ?? "?").toUpperCase()}
+      </span>
+      <span className="min-w-0 leading-tight">
+        <span className="block truncate text-sm font-semibold text-fg">{company}</span>
+        <span className="block text-[11px] text-muted">{subtitle}</span>
       </span>
     </Link>
   );
 }
 
 function SidebarNav({ groups, pathname }: { groups: NavGroup[]; pathname: string }) {
+  // The most specific matching link is the current one (/community/profile, not /community).
+  const current = groups
+    .flatMap((g) => g.items.map((i) => i.href))
+    .filter((href) => isActive(pathname, href))
+    .sort((a, b) => b.length - a.length)[0];
   return (
     <nav aria-label="Main" className="space-y-6">
       {groups.map((group) => (
@@ -72,7 +94,7 @@ function SidebarNav({ groups, pathname }: { groups: NavGroup[]; pathname: string
           <ul className="space-y-0.5">
             {group.items.map((item) => {
               const Icon = icons[item.icon];
-              const active = isActive(pathname, item.href);
+              const active = item.href === current;
               return (
                 <li key={item.href}>
                   <Link
@@ -99,7 +121,25 @@ function SidebarNav({ groups, pathname }: { groups: NavGroup[]; pathname: string
 }
 
 /** The signed-in layout: sidebar on large screens, a top bar with a slide-in menu on small ones. */
-export function AppShell({ groups, user, children }: { groups: NavGroup[]; user: React.ReactNode; children: React.ReactNode }) {
+export function AppShell({
+  groups,
+  user,
+  company,
+  switcher,
+  homeHref = "/dashboard",
+  subtitle = "Projects & Payouts",
+  children,
+}: {
+  groups: NavGroup[];
+  user: React.ReactNode;
+  company: string;
+  /** Phase 25: community members without a company start at /community. */
+  homeHref?: string;
+  subtitle?: string;
+  /** Shown under the company name when the person belongs to several companies. */
+  switcher?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [lastPath, setLastPath] = useState(pathname);
@@ -118,7 +158,10 @@ export function AppShell({ groups, user, children }: { groups: NavGroup[]; user:
 
   const sidebar = (
     <div className="flex h-full flex-col gap-6 px-3 py-5">
-      <Brand />
+      <div className="space-y-3">
+        <Brand company={company} href={homeHref} subtitle={subtitle} />
+        {switcher}
+      </div>
       <div className="flex-1 overflow-y-auto">
         <SidebarNav groups={groups} pathname={pathname} />
       </div>
@@ -157,7 +200,7 @@ export function AppShell({ groups, user, children }: { groups: NavGroup[]; user:
           >
             <Menu className="size-5" aria-hidden />
           </button>
-          <Brand />
+          <Brand company={company} href={homeHref} subtitle={subtitle} />
         </header>
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>

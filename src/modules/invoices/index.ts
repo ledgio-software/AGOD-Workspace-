@@ -288,7 +288,8 @@ export const issueInput = z.object({
 });
 
 async function nextInvoiceNumber(tx: Tx, issueDate: string): Promise<string> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('agod_invoice_number'))`);
+  // Numbers run per company (row-level security limits the search below to it).
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('invoice_number:' || app_org_id()::text))`);
   const year = issueDate.slice(0, 4);
   const prefix = `INV-${year}-`;
   const [row] = await tx
@@ -601,7 +602,7 @@ export async function getInvoice(actor: Actor, invoiceId: string) {
       .where(and(eq(auditEvents.entityType, "invoice"), eq(auditEvents.entityId, invoiceId)))
       .orderBy(desc(auditEvents.createdAt))
       .limit(50);
-    const [settings] = await tx.select().from(invoiceSettings).where(eq(invoiceSettings.id, 1));
+    const [settings] = await tx.select().from(invoiceSettings);
     const today = todayInOperatingZone();
     const contact = row.i.status === "DRAFT" ? await billingContact(tx, row.i.customerId) : null;
     return {
@@ -676,7 +677,7 @@ export const settingsInput = z.object({
 
 export async function getInvoiceSettings(actor: Actor) {
   assertCan(actor, "invoice.view");
-  return withActor(actor, async (tx) => (await tx.select().from(invoiceSettings).where(eq(invoiceSettings.id, 1)))[0] ?? null);
+  return withActor(actor, async (tx) => (await tx.select().from(invoiceSettings))[0] ?? null);
 }
 
 export async function updateInvoiceSettings(actor: Actor, raw: z.input<typeof settingsInput>, request?: RequestMeta) {
@@ -694,7 +695,7 @@ export async function updateInvoiceSettings(actor: Actor, raw: z.input<typeof se
       updatedBy: actor.id,
       updatedAt: new Date(),
     };
-    await tx.insert(invoiceSettings).values({ id: 1, ...values }).onConflictDoUpdate({ target: invoiceSettings.id, set: values });
+    await tx.insert(invoiceSettings).values({ organizationId: actor.orgId, ...values }).onConflictDoUpdate({ target: invoiceSettings.organizationId, set: values });
     await recordAudit(tx, { actorId: actor.id, entityType: "invoice_settings", entityId: actor.id, action: "invoice.settings_updated", after: values, request });
   });
 }

@@ -4,7 +4,8 @@
 
 export type Role = "TEAM_MEMBER" | "PROJECT_MANAGER" | "ADMIN";
 
-export type Actor = { id: string; role: Role };
+/** Who is acting, in which company (Phase 22), with their role in that company. */
+export type Actor = { id: string; role: Role; orgId: string };
 
 export type Action =
   | "project.view"
@@ -45,7 +46,8 @@ export type Action =
   | "invoice.manage"
   | "invoice.recordPayment"
   | "invoice.settings"
-  | "google.manage";
+  | "google.manage"
+  | "company.manage";
 
 /** Facts about the record being acted on, when the rule depends on it. */
 export type ResourceContext = {
@@ -111,6 +113,8 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   "invoice.settings": isAdmin,
   // Phase 21: connecting or disconnecting the company Google account.
   "google.manage": isAdmin,
+  // Phase 22: the company's name and project code prefix.
+  "company.manage": isAdmin,
 };
 
 export function can(actor: Actor, action: Action, resource: ResourceContext = {}): boolean {

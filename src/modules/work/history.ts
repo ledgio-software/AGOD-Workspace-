@@ -7,7 +7,7 @@ import {
   projectAssignments,
   projects,
   tasks,
-  users,
+  orgMembers,
 } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { type Actor, PermissionError, can } from "@/lib/permissions";
@@ -23,9 +23,9 @@ export async function getContributionHistory(actor: Actor, memberId: string) {
   if (memberId !== actor.id && !can(actor, "team.view")) throw new PermissionError("team.view");
   return withActor(actor, async (tx) => {
     const [member] = await tx
-      .select({ id: users.id, name: users.name, email: users.email, role: users.role, active: users.active, createdAt: users.createdAt })
-      .from(users)
-      .where(eq(users.id, memberId));
+      .select({ id: orgMembers.id, name: orgMembers.name, email: orgMembers.email, role: orgMembers.role, active: orgMembers.active, createdAt: orgMembers.createdAt })
+      .from(orgMembers)
+      .where(eq(orgMembers.id, memberId));
     if (!member) return null;
     const today = todayInOperatingZone();
 

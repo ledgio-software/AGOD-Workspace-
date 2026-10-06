@@ -34,6 +34,25 @@ Email goes out over **SMTP** (Nodemailer), so any mailbox that allows SMTP works
 5. **Check** — Integrations page: the Email card should say *Sending through smtp.gmail.com:587*. Click
    *Send me a test email*, then *Run daily reminders now* and look at *Recent daily runs*.
 
+### If the email says "535-5.7.8 Username and Password not accepted"
+
+Gmail refused the login: `SMTP_PASS` is not a valid **App password** for `SMTP_USER`. Common causes:
+
+- the normal Google password was used (it never works for SMTP);
+- the App password was copied with spaces (remove them: 16 letters only) or for another Google account;
+- `SMTP_USER` is not the full address (`name@gmail.com`), or differs from the account that made the App
+  password;
+- 2-Step Verification was turned off (which deletes App passwords), or the password was revoked.
+
+Create a new App password for the same account, paste it into `SMTP_PASS`, **redeploy**, and click *Send
+me a test email* on Integrations. Then use *Send a password link* on the Team page for anyone who was
+waiting. Until email works, adding a person or sending a password link shows a **temporary password**
+for the Admin to pass on instead (Phase 26.2), and people who signed up themselves can't confirm their
+email.
+
+The same job also sends **session reminders** (Phase 27) to people who joined a community teaching
+session starting within the next 24 hours.
+
 Gmail sends up to about 500 emails a day (Google Workspace about 2,000), which is plenty for one summary
 per person per day. **Other providers** (Zoho Mail, Microsoft 365, your web host's mail server) work the
 same way with their SMTP host, port (587, or 465 with `SMTP_SECURE=true`), username and password. If the

@@ -22,10 +22,14 @@ GitHub, Vercel or Neon; nothing here can be done from the repository alone.
 7. Vercel builds `main`. Open the production deployment's build log: it must not contain *Base URL is not
    set* or *You are using the default secret*. If the variables from step 2 were added after the build,
    **Redeploy**.
-8. **Actions → Create first Admin → Run workflow**, target `production`. Sign in at
+8. **Actions → Create a company and its first Admin → Run workflow**, target `production`, company `AGOD`,
+   prefix `AGOD`. Sign in at
    https://agod-workspace.vercel.app with the printed temporary password and change it on **Account**
    immediately.
-9. As that Admin, add the team on **Team** and hand each person their temporary password privately.
+9. As that Admin, add the team on **Team**. With email set up they get an invitation email to choose their
+   password; otherwise hand each person their temporary password privately.
+   To let other companies sign up themselves, add `ALLOW_SIGNUP=true` to Production in Vercel and redeploy
+   (needs the SMTP settings; `docs/COMPANIES.md`). Leave it out to keep sign-up closed.
 
 ## After
 

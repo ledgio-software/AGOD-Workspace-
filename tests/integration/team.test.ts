@@ -1,11 +1,11 @@
 import { verifyPassword } from "better-auth/crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { accounts, auditEvents, sessions, users } from "@/lib/db/schema";
+import { accounts, auditEvents, memberships, sessions } from "@/lib/db/schema";
 import { PermissionError } from "@/lib/permissions";
 import { ServiceError } from "@/modules/errors";
 import { changeRole, createMember, listTeam, resetPassword, setActive } from "@/modules/team";
-import { createSession, createUser, db } from "./fixtures";
+import { TEST_ORG_ID, createCompany, createSession, createUser, db, expectDbError } from "./fixtures";
 
 const newEmail = () => `new-${crypto.randomUUID()}@agod.test`;
 
@@ -52,14 +52,14 @@ describe("team management by an Admin", () => {
 
     expect(member.email).toBe(email);
     const [account] = await db.select().from(accounts).where(eq(accounts.userId, member.id));
-    expect(await verifyPassword({ hash: account.password!, password: temporaryPassword })).toBe(true);
+    expect(await verifyPassword({ hash: account.password!, password: temporaryPassword! })).toBe(true);
 
     const [event] = await db
       .select()
       .from(auditEvents)
       .where(and(eq(auditEvents.entityId, member.id), eq(auditEvents.action, "user.created")));
     expect(event.actorId).toBe(admin.id);
-    expect(JSON.stringify(event.afterJson)).not.toContain(temporaryPassword);
+    expect(JSON.stringify(event.afterJson)).not.toContain(temporaryPassword!);
   });
 
   it("rejects a duplicate email regardless of case", async () => {
@@ -76,8 +76,8 @@ describe("team management by an Admin", () => {
     const target = await createUser("TEAM_MEMBER");
     await changeRole(admin, { userId: target.id, role: "PROJECT_MANAGER", reason: "Leads the payroll project" });
 
-    const [user] = await db.select().from(users).where(eq(users.id, target.id));
-    expect(user.role).toBe("PROJECT_MANAGER");
+    const [membership] = await db.select().from(memberships).where(and(eq(memberships.userId, target.id), eq(memberships.organizationId, TEST_ORG_ID)));
+    expect(membership.role).toBe("PROJECT_MANAGER");
     const [event] = await db
       .select()
       .from(auditEvents)
@@ -103,14 +103,17 @@ describe("team management by an Admin", () => {
     );
   });
 
-  it("deactivation signs the member out; history and reactivation still work", async () => {
+  it("deactivation ends access to this company only; history and reactivation still work", async () => {
     const admin = await createUser("ADMIN");
     const target = await createUser("TEAM_MEMBER");
     await createSession(target.id);
 
     await setActive(admin, { userId: target.id, active: false, reason: "Contract ended" });
-    expect(await db.select().from(sessions).where(eq(sessions.userId, target.id))).toHaveLength(0);
+    // Their login stays (they may work for other companies); this company's data is closed to them.
+    expect(await db.select().from(sessions).where(eq(sessions.userId, target.id))).toHaveLength(1);
     expect((await listTeam(admin)).find((m) => m.id === target.id)?.active).toBe(false);
+    // Even claiming to be an Admin, they read nothing of this company any more.
+    expect(await listTeam({ ...target, role: "ADMIN" })).toEqual([]);
 
     await setActive(admin, { userId: target.id, active: true, reason: "Rejoined" });
     const actions = (
@@ -126,7 +129,47 @@ describe("team management by an Admin", () => {
 
     const { temporaryPassword } = await resetPassword(admin, { userId: member.id });
     const [account] = await db.select().from(accounts).where(eq(accounts.userId, member.id));
-    expect(await verifyPassword({ hash: account.password!, password: temporaryPassword })).toBe(true);
+    expect(await verifyPassword({ hash: account.password!, password: temporaryPassword! })).toBe(true);
     expect(await db.select().from(sessions).where(eq(sessions.userId, member.id))).toHaveLength(0);
+  });
+});
+
+describe("people in several companies (Phase 22)", () => {
+  it("adds someone who already has a login without touching their password, and only they can change it", async () => {
+    const admin = await createUser("ADMIN");
+    const { org, owner } = await createCompany();
+    const { member, temporaryPassword } = await createMember(admin, { name: "Kofi", email: newEmail(), role: "TEAM_MEMBER" });
+    const [before] = await db.select().from(accounts).where(eq(accounts.userId, member.id));
+
+    // The other company adds the same person by email: a membership, no new password.
+    const added = await createMember(owner, { name: "Ignored", email: member.email, role: "PROJECT_MANAGER" });
+    expect(added.temporaryPassword).toBeNull();
+    expect(added.member).toMatchObject({ id: member.id, role: "PROJECT_MANAGER" });
+    const [after] = await db.select().from(accounts).where(eq(accounts.userId, member.id));
+    expect(after.password).toBe(before.password);
+    expect(temporaryPassword).toBeTruthy();
+    await expect(createMember(owner, { name: "Again", email: member.email, role: "TEAM_MEMBER" })).rejects.toThrow(/already in the team/);
+
+    // Neither company can now reset the shared login, not even straight in the database.
+    await expect(resetPassword(admin, { userId: member.id })).rejects.toThrow(/another company/);
+    await expect(resetPassword(owner, { userId: member.id })).rejects.toThrow(/another company/);
+    const { withActor } = await import("@/lib/db/actor");
+    const changed = await withActor(admin, (tx) => tx.update(accounts).set({ password: "x" }).where(eq(accounts.userId, member.id)).returning());
+    expect(changed).toHaveLength(0);
+
+    // Each company sees its own role for them.
+    expect((await listTeam(admin)).find((m) => m.id === member.id)?.role).toBe("TEAM_MEMBER");
+    expect((await listTeam(owner)).find((m) => m.id === member.id)?.role).toBe("PROJECT_MANAGER");
+    expect((await listTeam(owner)).some((m) => m.id === admin.id)).toBe(false);
+    expect(org.projectCodePrefix).toBe("ACME");
+  });
+
+  it("every company keeps an active Admin", async () => {
+    const { owner } = await createCompany();
+    const { withActor } = await import("@/lib/db/actor");
+    await expectDbError(
+      withActor(owner, (tx) => tx.update(memberships).set({ role: "TEAM_MEMBER" }).where(eq(memberships.userId, owner.id))),
+      /at least one active Admin/,
+    );
   });
 });

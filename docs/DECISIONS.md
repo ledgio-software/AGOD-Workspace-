@@ -26,8 +26,8 @@ Changing any of these later needs a PR that updates this file.
 
 ## Consequences for the design document
 
-- Row Level Security: the design doc relies on Supabase's `auth.uid()`. With Neon, domain queries run as a restricted `agod_app` role with the acting user's id in a per-transaction setting (`app.user_id`); policies look up that user's role and active flag in `users`. See `docs/PERMISSIONS.md`.
-- Roles are stored on `users.role` (`TEAM_MEMBER`, `PROJECT_MANAGER`, `ADMIN`); clients can never set them through the auth API.
+- Row Level Security: the design doc relies on Supabase's `auth.uid()`. With Neon, domain queries run as a restricted `agod_app` role with the acting user's id in a per-transaction setting (`app.user_id`); policies look up that user's role and active flag (since Phase 22: in their membership of the current company, `app.org_id`). See `docs/PERMISSIONS.md`.
+- Roles (`TEAM_MEMBER`, `PROJECT_MANAGER`, `ADMIN`) were stored on `users.role`; since Phase 22 they are per company on `memberships.role`. Clients can never set them through the auth API.
 
 ## Initial team and roles
 
@@ -228,3 +228,97 @@ Phase 9 (file attachments in Vercel Blob).
 | Links | Links (https only) to Google Docs/Sheets/Slides/Drive or other pages on a project (managers) or a task (managers and the assignee); removed softly by whoever added them or a manager; visible with the project. |
 | Security | The refresh token is encrypted (AES-256-GCM, key derived from `BETTER_AUTH_SECRET`). Tokens and folder ids live in tables the app role cannot read at all; the server reads them through the owner connection after its own permission checks. The OAuth attempt (state, PKCE verifier, who started it) is kept in an encrypted, httpOnly, 10-minute cookie. |
 | Not included | Shared drives (Google Workspace), browsing Drive from the app, two-way sync of files added in Drive, per-person Drive accounts (Phase 22 adds personal Google connections for calendars). |
+
+## Phase 22 decisions (2026-10-06): companies (multi-tenant)
+
+| Decision | Choice |
+|---|---|
+| Why now | The product will be offered to other companies and developers. Done before go-live, while there is no real data, with AGOD as the first company (all existing data moved into it). |
+| Model | One shared database. Every company-owned table has `organization_id`, defaulted from the current company. A person has one login and a **membership** per company with its own role, active flag and capacity. |
+| Separation | Enforced by PostgreSQL for the app role: a restrictive policy per table (`organization_id = app_org_id()`), roles read from the membership in the current company, a trigger refusing cross-company references, and company checks inside functions that bypass row-level security. An integration test checks every company-owned table. |
+| Membership | People can belong to several companies, with a company switcher (choice remembered per browser; default is the company joined first). Deactivating someone ends access to that company only. |
+| Accounts | Admins add people by email; an existing login is added without a new password. Admins reset passwords only for people in no other company. Every company keeps at least one active Admin. |
+| Numbering | Project codes use a per-company prefix (default from the company name, editable by Admins; existing codes unchanged), sequential per company and year. Invoice numbers are sequential per company. |
+| System work | The daily job runs per company (one run record and one email per person per company). GitHub webhook rows go to each affected project's company. Google Drive is connected per company. GitHub deliveries are platform-wide; each company sees only its own repositories'. |
+| Creating companies | `npm run admin:create` or the GitHub workflow (company + first Admin) until self sign-up (Phase 23). New companies get the starter templates and invoice settings. |
+| Product name | Will become **Ghana Vibe Coders & Developers** (Phase 23 sign-up pages); inside the app the sidebar shows the company's name. |
+| Not included | Self sign-up, invitations by email and password reset by email (Phase 23); billing; a platform admin view; per-company time zone and currency (still Africa/Accra and GHS by default). |
+
+## Phase 23 decisions (2026-10-06): sign-up, invitations, password reset
+
+| Decision | Choice |
+|---|---|
+| Product name | **Ghana Vibe Coders & Developers** on public pages, the browser title and account emails (`src/lib/brand.ts`). Inside the app the sidebar shows the company's name. |
+| Sign-up | Open when `ALLOW_SIGNUP=true` and email works. Name, company, email, password (10+ characters). The company is created only when the email is confirmed (Better Auth email verification, link valid 24 hours), so unconfirmed or borrowed addresses never get a company. Unconfirmed accounts can't sign in; trying sends a new link. |
+| Existing emails | Sign-up with an address that already has an account shows the same message and changes nothing; the owner is emailed. |
+| Invitations | With email set up, new people get an invitation link to choose their password (7 days, single use, Better Auth's password-reset tokens) instead of an Admin-relayed temporary password; existing logins get an "added to company" email; "Send a password link" replaces "Reset password". Without email, temporary passwords as before. |
+| Forgot password | Self-service by email (link 1 hour, single use); resetting signs out other sessions. |
+| Abuse limits | Per-IP limits: 5 sign-ups and 5 reset/verification emails an hour, 5 sign-in and reset attempts a minute. |
+| Not included | Social sign-in (Google), CAPTCHA, deleting unconfirmed accounts automatically, billing. |
+
+## Phase 24 decisions (2026-10-06): Google Calendar
+
+| Decision | Choice |
+|---|---|
+| Company calendar | One calendar per company, created by the app in the company Google account (the `calendar` permission already asked for in Phase 21): project target dates, open milestones, open task due dates, renewals and unpaid invoice due dates, as all-day events marked "free", from a month back to a year ahead. |
+| Who sees it | Shared view-only with active PMs and Admins only, because it shows every project; access the app gave is removed when someone stops being a manager. Team Members get their own calendar instead. |
+| Personal calendars | Optional, per person, from the Account page, with the narrow `calendar.app.created` permission (the app sees only the calendar it creates). Holds the person's own open tasks with due dates. Their Google address is then used for the company calendar and meeting invitations. |
+| Project meetings | Scheduled by managers on a project; a Google Calendar event in the company calendar with a Meet link, invitations sent by Google to the project owner, assigned team and task assignees. Recorded in `project_meetings` (visible to whoever can see the project). Cancel only, no editing; no deletion. |
+| Sync | Daily job, *Sync now* buttons and on connecting. The app keeps a mapping of the events it made and only rewrites changed ones; it never touches events it didn't create. Times use the operating time zone (Africa/Accra). |
+| Not included | Reading people's free/busy times, editing meetings, recurring meetings, two-way sync (changes made in Google aren't read back), meetings outside projects. |
+
+## Phase 25 decisions (2026-10-06): community foundation
+
+| Decision | Choice |
+|---|---|
+| Where | In the same app, not a separate site: one login, one brand, and reuse of sign-up, email, Google Meet and files. The public pages (home, members, profiles, code of conduct) are the front door; company workspaces stay private behind them. |
+| Joining | Sign-up makes a community member; a company workspace is optional (at sign-up or later from the community home). Agreeing to the code of conduct is part of sign-up. |
+| Profiles | One per person, platform-wide. Self-joined members start public; people added to a company start visible to signed-in members only. Email never shown. Links must be https and open with `nofollow ugc`. |
+| Roles | Builder (everyone), Reviewer (self-selected), Organizer (first ones from `COMMUNITY_ORGANIZER_EMAILS`, then appointed by organizers). Separate from company roles. |
+| Moderation | Reports with a reason; organizers hide (with a note) or dismiss; hidden profiles remain visible to their owner and organizers. |
+| Data | `member_profiles`, `community_reports`: no company, server-only (no app-role access). |
+| Chat | Stays on Discord and WhatsApp (links configurable); not built into the app. |
+| Marketing | The community is free; the company workspace is offered where it helps (community home, sign-up option, home page), free while testing. |
+| Not included | Showcase posts, review requests, teaching sessions, mentorship matching, library (next phases); profile photos; blocking members. |
+
+## Phase 26 decisions (2026-10-06): showcase and reviews
+
+| Decision | Choice |
+|---|---|
+| Posts | The handbook's template (name, one-line pitch, audience, built with, AI-built, links, video demo, feedback areas and questions, what they need). A live preview card on the form. Five posts a day per member. |
+| Media | Up to four screenshots (images only, 4 MB, signature-checked) in the existing file storage, served through the app with a locked-down policy. Video demos are links (Loom, YouTube, Drive), not embeds or uploads: cheaper on data and storage. |
+| Safety | The handbook's code safety checklist is required on every post and edit. |
+| Review status | Needs review → Reviewed (automatically on first feedback) → Shipped (author). |
+| Feedback | Structured as the handbook says (what works, to improve, next step); one per person and project; author can reply once; author emailed on new feedback. |
+| Give back | Counts shown, not enforced (posting isn't blocked when you haven't reviewed). |
+| Moderation | Reports extended to projects and feedback; organizers hide or dismiss; authors take their own projects down. |
+| Not included | Comments threads, likes or votes (project of the month comes in Phase 28), embedded video, editing feedback. |
+
+## Phase 26.1 decisions (2026-10-06): storage savings
+
+| Decision | Choice |
+|---|---|
+| Compression | In the browser before upload (1600 px, WebP; JPEG fallback; GIF unchanged). Free (no server work), saves members' data, strips photo metadata. The server still checks type, signature and the 4 MB limit; no server-side image processing (no native image library available on the platform build). |
+| Duplicates | SHA-256 fingerprint per showcase screenshot; identical pictures share one stored file (content-addressed key); stored showcase files are never deleted, so sharing is safe. Company attachments keep one file each (they can be deleted). |
+| Storage | S3-compatible driver (Cloudflare R2 recommended: free allowance, no download fees) selected by settings, ahead of Vercel Blob; keys prefixed `s3:` so older Blob files remain readable. Signed with `aws4fetch` (small, no AWS SDK). |
+| Video | Links only (YouTube unlisted, Loom, Drive), as in Phase 26. |
+
+## Phase 26.2 (2026-10-06): when email fails
+
+| Decision | Choice |
+|---|---|
+| Invitation email fails | The new person gets a temporary password the Admin passes on (as without email), so nobody is locked out; the Admin sees why the email failed. |
+| Password link fails | Same fallback, except for people who also belong to another company (no company may set their password): they use *Forgot password* once email works. |
+| Error message | A refused SMTP login explains the fix (Gmail: an App password in `SMTP_PASS`, full address in `SMTP_USER`, redeploy). |
+
+## Phase 27 decisions (2026-10-06): teaching sessions
+
+| Decision | Choice |
+|---|---|
+| Who hosts | Reviewers (self-chosen badge) and organizers, after the code of conduct; five upcoming sessions per host. |
+| Calls | The host's own Google Meet, Zoom or Discord link, as the handbook says; the app doesn't create calls (members without a company have no Google connection). |
+| Privacy | The call link is shown only to the host, people who joined and organizers, to keep strangers out of calls. |
+| Calendar | A standard .ics file (attached to emails and downloadable), so it works with any calendar without connecting accounts. |
+| Emails | Confirmation on joining, a reminder from the daily job for sessions in the next 24 hours, and emails on time/link changes and cancellations. |
+| Archive | The host adds a recording link and notes after the session; past sessions are listed with them. |
+| Not included | Waitlists, recurring sessions, in-app video, attendance tracking. |

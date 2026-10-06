@@ -77,6 +77,7 @@ Settings that must stay as they are:
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | optional, the production GitHub App (`docs/GITHUB_APP.md`) | optional, the staging GitHub App | key and secret: yes |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | optional, turns on email reminders (`docs/EMAIL.md`) | optional (same mailbox is fine while testing) | `SMTP_PASS`: yes |
 | `CRON_SECRET` | needed for the daily reminders job | needed to run it on demand | yes |
+| `ALLOW_SIGNUP` | `true` to let new companies sign up (needs SMTP) | `true` to test sign-up | no |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional, turns on Google Drive (`docs/GOOGLE.md`) | optional (same OAuth client, its own redirect URI) | secret: yes |
 
 Generate a secret in PowerShell:
@@ -115,20 +116,23 @@ Configured on 2026-10-04: Environments `staging` and `production` (required revi
 - `.github/workflows/deploy.yml` applies migrations: automatically to staging on every push to `integration`;
   to production only by a manual run from `main` that a reviewer approves. Run the production migration before
   promoting the matching app build.
-- `.github/workflows/create-admin.yml` creates the first Admin of an environment (see below).
+- `.github/workflows/create-admin.yml` creates a company and its first Admin (see below).
 
 Branch protection and other repository settings: `docs/GIT_WORKFLOW.md`.
 
-## Creating the first Admin
+## Creating a company and its first Admin
 
-An environment with no Admin (e.g. production at go-live) needs one created outside the app. After that,
-Admins add and manage everyone on the **Team** page.
+Each company (Phase 22, `docs/COMPANIES.md`) starts with one Admin created outside the app. After that,
+its Admins add and manage everyone on the **Team** page.
 
-- From GitHub: **Actions → Create first Admin → Run workflow**, choose the environment, enter name and email.
-- Locally: `ADMIN_NAME="..." ADMIN_EMAIL=... npm run admin:create` with `DATABASE_URL` pointing at the target.
+- From GitHub: **Actions → Create a company and its first Admin → Run workflow**, choose the environment, enter
+  the company name (optional project code prefix) and the Admin's name and email.
+- Locally: `COMPANY_NAME="..." ADMIN_NAME="..." ADMIN_EMAIL=... npm run admin:create` with `DATABASE_URL`
+  pointing at the target.
 
-Both refuse if an active Admin already exists. The temporary password is printed once (in the workflow log,
-which repo collaborators can read), so sign in and change it on the **Account** page immediately.
+Both refuse if a company with that name already exists. For a new login the temporary password is printed once
+(in the workflow log, which repo collaborators can read), so sign in and change it on the **Account** page
+immediately. An email that already has a login keeps its password and gets the new company in its company menu.
 
 ## Restore exercises
 

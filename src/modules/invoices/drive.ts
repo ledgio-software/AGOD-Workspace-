@@ -22,7 +22,7 @@ export async function saveInvoiceToDrive(actor: Actor, invoiceId: string): Promi
   if (i.status !== "ISSUED") throw new ServiceError("Only issued invoices are saved to Drive.");
   if (i.driveFileId) return "already";
   const bytes = await invoicePdf(pdfInputFor(data));
-  const fileId = await saveInvoicePdf(i.customerId, {
+  const fileId = await saveInvoicePdf(actor.orgId, i.customerId, {
     name: invoiceFilename(i.number),
     bytes,
     description: `Invoice ${i.number} for ${data.customerName}, issued ${i.issueDate}`,

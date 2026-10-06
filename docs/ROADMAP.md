@@ -32,8 +32,19 @@ Still to do before Stage 1 is "in production": the pilot sign-off (`docs/PILOT.m
 |---|---|---|
 | 2. Team operations | **Done (Phases 6–9):** comments and mentions, templates, workload and capacity, approval reminders, overdue alerts, weekly summary, contribution history, GitHub issues/PRs/reviews, deployment and release history, file attachments (incl. payment receipts, also section 14). Notifications are in-app, plus a daily email summary since Phase 19 (`docs/EMAIL.md`). | |
 | 3. Profitability | **Done (Phase 10, backend-first):** project costs and cost budgets, estimated vs actual profit and margin, revenue and profit by client and by project type, payout forecast and aging, utilisation, CSV export. | Pages are plain tables until the frontend redesign (`docs/FRONTEND_CONTRACT.md`). |
-| Customers | **Done (Phases 16–18):** customer records with contacts, projects linked to customers; service catalogue and subscriptions with amendments, monthly recurring value and renewal-due flags. Renewal reminders, recorded renewals, renewals on the Dashboard and recurring revenue in Profitability (Phase 18). Daily email summaries (Phase 19). Invoices with PDFs, email, payments and overdue reminders (Phase 20). Google Drive folders, uploads, links and invoice copies (Phase 21, `docs/GOOGLE.md`). | Customers, Subscriptions, Services, Profitability |
+| Customers | **Done (Phases 16–18):** customer records with contacts, projects linked to customers; service catalogue and subscriptions with amendments, monthly recurring value and renewal-due flags. Renewal reminders, recorded renewals, renewals on the Dashboard and recurring revenue in Profitability (Phase 18). Daily email summaries (Phase 19). Invoices with PDFs, email, payments and overdue reminders (Phase 20). Google Drive folders, uploads, links and invoice copies (Phase 21, `docs/GOOGLE.md`). Google Calendar: company deadlines calendar, personal task calendars and project meetings with Google Meet (Phase 24). | Customers, Subscriptions, Services, Profitability |
+| Platform | **Done (Phases 22–23):** several companies on one installation, each fully separate (database-enforced), people in several companies with a role in each, per-company project and invoice numbering; self sign-up confirmed by email, invitations and password reset by email (`docs/COMPANIES.md`). Next: billing. | Company switcher, Company page |
 | 4. Accounting integration | Export approved payouts, import payment confirmations, accounting period locking | The month close and CSV exports are the starting point. |
 | 5. Automated payments | MoMo/bank APIs, batches, multi-level authorisation, reconciliation | Separate project with its own security and reconciliation design. |
 | 6. Portals | Client and contractor access | Only after the internal workflow is stable. |
 | 7. Business operating system | CRM to profitability | Long term. |
+
+## Community (Phase 25 onwards)
+
+The product is also a community for people in Ghana who build software (`docs/COMMUNITY.md`).
+Done: member sign-up without a company, profiles and member list, roles, code of conduct, reports
+(Phase 25); showcase with screenshots and video demo links, review requests and feedback (Phase 26).
+Teaching sessions with join, calendar files, reminders and a recordings archive (Phase 27).
+Next: mentorship matching,
+tools and prompts library, project of the month (28); later jobs board, team finder, badges, events
+calendar, partners page and metrics.

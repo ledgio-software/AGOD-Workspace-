@@ -7,18 +7,22 @@ export const OAUTH_COOKIE = "agod_google_oauth";
 export const OAUTH_COOKIE_PATH = "/api/google";
 const TTL_MS = 10 * 60_000;
 
-type Attempt = { state: string; verifier: string; userId: string; expires: number };
+/**
+ * Who started it and for which company (Phase 22): the callback must match both. `kind` (Phase 24):
+ * the company account (Admins) or someone's own calendar.
+ */
+type Attempt = { state: string; verifier: string; userId: string; orgId: string; kind?: "company" | "personal"; expires: number };
 
 export function sealAttempt(attempt: Omit<Attempt, "expires">, now = Date.now()): string {
   return sealSecret(JSON.stringify({ ...attempt, expires: now + TTL_MS }));
 }
 
 /** The attempt, if the cookie is genuine, not expired, and matches this callback and person. */
-export function openAttempt(cookie: string | undefined, o: { state: string | null; userId: string }, now = Date.now()): Attempt | null {
+export function openAttempt(cookie: string | undefined, o: { state: string | null; userId: string; orgId: string }, now = Date.now()): Attempt | null {
   if (!cookie || !o.state) return null;
   try {
     const attempt = JSON.parse(openSecret(cookie)) as Attempt;
-    if (attempt.expires < now || attempt.state !== o.state || attempt.userId !== o.userId) return null;
+    if (attempt.expires < now || attempt.state !== o.state || attempt.userId !== o.userId || attempt.orgId !== o.orgId) return null;
     return attempt;
   } catch {
     return null;

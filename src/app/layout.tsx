@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { PRODUCT_NAME } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AGOD Payout Tracker",
-  description: "Internal project and payout tracking for AGOD Software Solutions",
+  title: PRODUCT_NAME,
+  description: "Projects, tasks, invoices and team payouts for software teams",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

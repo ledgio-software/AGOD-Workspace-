@@ -9,6 +9,8 @@ import {
   projects,
   tasks,
   users,
+  orgMembers,
+  organizations,
 } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { DEFAULT_CURRENCY, parseMoney, parsePercent } from "@/lib/money";
@@ -89,17 +91,19 @@ export const projectInput = z
 export type ProjectInput = z.input<typeof projectInput>;
 
 async function assertActiveUser(tx: Tx, userId: string, what: string) {
-  const [user] = await tx.select({ active: users.active }).from(users).where(eq(users.id, userId));
+  const [user] = await tx.select({ active: orgMembers.active }).from(orgMembers).where(eq(orgMembers.id, userId));
   if (!user) throw new ServiceError(`${what} not found.`);
   if (!user.active) throw new ServiceError(`${what} is inactive and cannot be given new work.`);
 }
 
-/** Human-readable code AGOD-<year>-<nnn>, sequential per year. */
+/** Human-readable code <company prefix>-<year>-<nnn> (e.g. AGOD-2026-001), sequential per company and year. */
 async function nextProjectCode(tx: Tx): Promise<string> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('agod_project_code'))`);
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('project_code:' || app_org_id()::text))`);
+  const [org] = await tx.select({ prefix: organizations.projectCodePrefix }).from(organizations);
   const year = todayInOperatingZone().slice(0, 4);
-  const prefix = `AGOD-${year}-`;
-  // Compared as numbers: as text, "AGOD-2026-1000" would sort before "AGOD-2026-999".
+  const prefix = `${org.prefix}-${year}-`;
+  // Compared as numbers: as text, "AGOD-2026-1000" would sort before "AGOD-2026-999". Row-level
+  // security limits this to the company's own projects.
   const [row] = await tx
     .select({ max: sql<string | null>`max(substring(${projects.code} from (${prefix.length + 1})::int)::int)::text` })
     .from(projects)
@@ -482,9 +486,9 @@ export async function getProjectWorkspace(actor: Actor, projectId: string) {
 async function loadTeam(tx: Tx, projectId: string, isManager: boolean): Promise<TeamEntry[]> {
   if (isManager) {
     const rows = await tx
-      .select({ a: projectAssignments, name: users.name, active: users.active })
+      .select({ a: projectAssignments, name: orgMembers.name, active: orgMembers.active })
       .from(projectAssignments)
-      .innerJoin(users, eq(users.id, projectAssignments.memberId))
+      .innerJoin(orgMembers, eq(orgMembers.id, projectAssignments.memberId))
       .where(and(eq(projectAssignments.projectId, projectId), eq(projectAssignments.active, true)))
       .orderBy(asc(projectAssignments.createdAt));
     return rows.map(({ a, name, active }) => ({
@@ -545,9 +549,9 @@ export async function previewCompensationTx(tx: Tx, project: ProjectRow): Promis
 export async function listActiveMembers(actor: Actor) {
   return withActor(actor, (tx) =>
     tx
-      .select({ id: users.id, name: users.name, role: users.role })
-      .from(users)
-      .where(eq(users.active, true))
-      .orderBy(asc(users.name)),
+      .select({ id: orgMembers.id, name: orgMembers.name, role: orgMembers.role })
+      .from(orgMembers)
+      .where(eq(orgMembers.active, true))
+      .orderBy(asc(orgMembers.name)),
   );
 }

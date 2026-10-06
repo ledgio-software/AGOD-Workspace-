@@ -2,7 +2,7 @@ import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { auditEvents, customerContacts, customers, projects, users } from "@/lib/db/schema";
+import { auditEvents, customerContacts, customers, projects, orgMembers, users } from "@/lib/db/schema";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { isUniqueViolation } from "@/modules/db-errors";
@@ -96,7 +96,7 @@ function duplicateName(name: string): ServiceError {
 }
 
 async function assertActiveOwner(tx: Tx, userId: string) {
-  const [user] = await tx.select({ active: users.active, role: users.role }).from(users).where(eq(users.id, userId));
+  const [user] = await tx.select({ active: orgMembers.active, role: orgMembers.role }).from(orgMembers).where(eq(orgMembers.id, userId));
   if (!user) throw new ServiceError("The account owner was not found.");
   if (!user.active) throw new ServiceError("The account owner is inactive.");
   if (user.role === "TEAM_MEMBER") throw new ServiceError("The account owner must be a Project Manager or Admin.");
@@ -514,7 +514,7 @@ export async function resolveProjectCustomer(
   }
   assertCan(actor, "customer.manage");
   // The new customer's account owner is the project owner when they can own accounts, else the actor.
-  const [owner] = await tx.select({ role: users.role, active: users.active }).from(users).where(eq(users.id, input.ownerId));
+  const [owner] = await tx.select({ role: orgMembers.role, active: orgMembers.active }).from(orgMembers).where(eq(orgMembers.id, input.ownerId));
   const ownerId = owner && owner.active && owner.role !== "TEAM_MEMBER" ? input.ownerId : actor.id;
   const [created] = await guarded(name, () =>
     tx.insert(customers).values({ name, ownerId, createdBy: actor.id }).returning(),

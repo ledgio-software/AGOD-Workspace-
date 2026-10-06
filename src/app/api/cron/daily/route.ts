@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { sendSessionReminders } from "@/modules/community/sessions";
 import { runDailyReminders } from "@/modules/jobs/daily";
 
 // Phase 19: called once a day by Vercel Cron (vercel.json). Vercel sends
@@ -18,7 +19,13 @@ export async function GET(request: Request) {
   if (!secret || secret.length < 16) return Response.json({ error: "CRON_SECRET is not configured" }, { status: 503 });
   if (!authorized(request.headers.get("authorization"), secret)) return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    return Response.json(await runDailyReminders());
+    const companies = await runDailyReminders();
+    // Phase 27: reminders for community sessions in the next 24 hours (platform-wide).
+    const sessions = await sendSessionReminders().catch((error) => {
+      console.error("Session reminders failed", error instanceof Error ? error.message : error);
+      return { sent: 0, failed: -1 };
+    });
+    return Response.json({ ...companies, sessionReminders: sessions });
   } catch (error) {
     console.error("Daily reminders job failed", error instanceof Error ? error.message : error);
     return Response.json({ error: "Job failed" }, { status: 500 });

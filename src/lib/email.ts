@@ -66,10 +66,20 @@ export async function sendEmail(config: EmailConfig, message: EmailMessage): Pro
     });
     return { id: info.messageId };
   } catch (error) {
-    throw new Error(`The mail server refused the message: ${error instanceof Error ? error.message : String(error)}`);
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`The mail server refused the message: ${detail}${smtpHint(config.host, detail)}`);
   } finally {
     transport.close();
   }
+}
+
+/** What to do about the commonest SMTP refusal: a login the server doesn't accept. */
+export function smtpHint(host: string, detail: string): string {
+  if (!/\b535\b|Invalid login|Username and Password not accepted|authentication failed/i.test(detail)) return "";
+  if (/gmail\.com|googlemail\.com/i.test(host)) {
+    return " Gmail needs an App Password, not your normal password: turn on 2-Step Verification on that Google account, create an App Password (Google Account → Security → App passwords), and put those 16 letters (no spaces) in SMTP_PASS, with the full Gmail address in SMTP_USER. Then redeploy.";
+  }
+  return " Check SMTP_USER and SMTP_PASS (many providers need an app-specific password), then redeploy.";
 }
 
 /** Where email goes, for the Integrations page (never includes the password). */

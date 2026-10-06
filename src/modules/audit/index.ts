@@ -15,6 +15,8 @@ export type AuditInput = {
   after?: unknown;
   reason?: string | null;
   request?: RequestMeta;
+  /** Only for system writes outside withActor (the GitHub webhook); otherwise the current company. */
+  organizationId?: string;
 };
 
 /** Keyed hash: lets us correlate requests from the same IP without storing the IP itself. */
@@ -30,6 +32,7 @@ export async function recordAudit(tx: Tx, input: AuditInput): Promise<void> {
   const secret = process.env.BETTER_AUTH_SECRET;
   const ip = input.request?.ip;
   await tx.insert(auditEvents).values({
+    ...(input.organizationId ? { organizationId: input.organizationId } : {}),
     actorId: input.actorId,
     entityType: input.entityType,
     entityId: input.entityId,

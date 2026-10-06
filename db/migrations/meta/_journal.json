@@ -204,6 +204,97 @@
       "when": 1791253603500,
       "tag": "20261006022643_google_drive_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791255989557,
+      "tag": "20261006030629_organizations",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791255994504,
+      "tag": "20261006030634_invoice_settings_per_org",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791256129694,
+      "tag": "20261006030849_organizations_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791278263326,
+      "tag": "20261006091743_signup_pending_company",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791279489412,
+      "tag": "20261006093809_google_calendar",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791279490612,
+      "tag": "20261006093810_google_calendar_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791282582600,
+      "tag": "20261006102942_community",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791282583661,
+      "tag": "20261006102943_community_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791284493971,
+      "tag": "20261006110133_showcase",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791284494964,
+      "tag": "20261006110134_showcase_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791286884039,
+      "tag": "20261006114124_showcase_image_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791302455601,
+      "tag": "20261006160055_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791302456737,
+      "tag": "20261006160056_sessions_rules",
+      "breakpoints": true
     }
   ]
 }

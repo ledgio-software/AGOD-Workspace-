@@ -219,6 +219,27 @@ src/
 ### Phase 21 — Google Drive ✓
 - Admin connects the team Google account; folders per customer and project (shared with the team), uploads and issued invoices saved in Drive, links to Docs/Sheets/Drive files on projects and tasks (`docs/GOOGLE.md`)
 
+### Phase 22 — Companies (multi-tenant foundation) ✓
+- Several companies on one installation, each seeing only its own data (enforced by PostgreSQL); one login can belong to several companies with a role in each; company switcher and Company page; per-company project code prefix and invoice numbers (`docs/COMPANIES.md`)
+
+### Phase 23 — Sign-up, invitations and password reset ✓
+- Companies sign up themselves (confirmed by email, switch: `ALLOW_SIGNUP`); invitations and password links by email; "Forgot password"; product name Ghana Vibe Coders & Developers (`docs/COMPANIES.md`)
+
+### Phase 24 — Google Calendar ✓
+- Company calendar of deadlines shared with managers, personal calendars of each person's tasks, and project meetings with Google Meet links and invitations (`docs/GOOGLE.md`)
+
+### Phase 25 — Community foundation ✓
+- Public home page, member list and profiles, code of conduct; join without a company (workspace optional); Builder, Reviewer and Organizer roles; reports and moderation (`docs/COMMUNITY.md`)
+
+### Phase 27 — Teaching sessions ✓
+- Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
+
+### Phase 26.1 — Storage savings ✓
+- Pictures made smaller in the browser before upload (WebP, 1600 px), fingerprints so identical screenshots are stored once, and an optional Cloudflare R2 (S3-compatible) storage switch (`docs/STORAGE.md`)
+
+### Phase 26 — Showcase and reviews ✓
+- Share projects with a live preview, screenshots and a video demo link; review requests with structured feedback (what works, to improve, next step), author replies, shipped status, give-back counts (`docs/COMMUNITY.md`)
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
@@ -235,7 +256,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive](docs/GOOGLE.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive and Calendar](docs/GOOGLE.md) · [Companies and sign-up](docs/COMPANIES.md) · [Community](docs/COMMUNITY.md) · [File storage](docs/STORAGE.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)

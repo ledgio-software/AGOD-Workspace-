@@ -2,7 +2,7 @@ import { type SQL, aliasedTable, and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { payoutLedgerEntries, payoutQuestions, projects, users } from "@/lib/db/schema";
+import { payoutLedgerEntries, payoutQuestions, projects, orgMembers, users } from "@/lib/db/schema";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
@@ -40,7 +40,7 @@ async function loadQuestion(tx: Tx, questionId: string) {
 }
 
 async function activeAdmins(tx: Tx) {
-  return tx.select({ id: users.id }).from(users).where(and(eq(users.role, "ADMIN"), eq(users.active, true)));
+  return tx.select({ id: orgMembers.id }).from(orgMembers).where(and(eq(orgMembers.role, "ADMIN"), eq(orgMembers.active, true)));
 }
 
 /** A member asks about one of their own payouts. */
