@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
+import { ImageInput } from "@/components/image-input";
 import type { ActionResult } from "@/lib/action-result";
 
 // Phase 26: small forms on a project page.
@@ -42,8 +43,8 @@ export function ReplyForm({ action }: { action: Action }) {
 export function ScreenshotForm({ action }: { action: Action }) {
   return (
     <ActionForm action={action} resetOnSuccess className="flex flex-wrap items-end gap-3">
-      <Field label="Add a screenshot" hint="PNG, JPG, WebP or GIF, up to 4 MB.">
-        <input name="screenshot" type="file" required accept="image/png,image/jpeg,image/webp,image/gif" className="block w-full text-sm" />
+      <Field label="Add a screenshot" hint="PNG, JPG, WebP or GIF. Made smaller before upload.">
+        <ImageInput name="screenshot" required />
       </Field>
       <SubmitButton size="sm" variant="secondary" pendingText="Uploading…">
         Upload

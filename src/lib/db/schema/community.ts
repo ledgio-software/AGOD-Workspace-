@@ -155,12 +155,16 @@ export const showcaseImages = pgTable(
     storageKey: text("storage_key").notNull(),
     contentType: text("content_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
+    // Phase 26.1: SHA-256 of the bytes (hex). The same picture is stored once and shared.
+    sha256: text("sha256"),
     position: integer("position").notNull(),
     removedAt: timestamp("removed_at", { withTimezone: true }),
     createdAt,
   },
   (t) => [
     index("showcase_images_post_idx").on(t.postId, t.position),
+    index("showcase_images_sha256_idx").on(t.sha256),
+    check("showcase_images_sha256", sql`${t.sha256} IS NULL OR ${t.sha256} ~ '^[0-9a-f]{64}$'`),
     check("showcase_images_type", sql`${t.contentType} IN ('image/png', 'image/jpeg', 'image/webp', 'image/gif')`),
     check("showcase_images_size", sql`${t.sizeBytes} BETWEEN 1 AND 4194304`),
   ],

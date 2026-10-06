@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -140,14 +140,25 @@ export async function addScreenshot(member: Member, postId: string, file: { name
   if ("error" in checked) throw new ServiceError(checked.error);
   if (!IMAGE_TYPES.includes(checked.contentType)) throw new ServiceError("Screenshots must be PNG, JPG, WebP or GIF images.");
   const existing = await db
-    .select({ position: showcaseImages.position })
+    .select({ position: showcaseImages.position, sha256: showcaseImages.sha256 })
     .from(showcaseImages)
     .where(and(eq(showcaseImages.postId, postId), isNull(showcaseImages.removedAt)));
   if (existing.length >= MAX_IMAGES) throw new ServiceError(`A project can have ${MAX_IMAGES} screenshots. Remove one first.`);
+  // Phase 26.1: identical pictures are stored once (stored files are never deleted, so sharing is safe).
+  const sha256 = createHash("sha256").update(file.bytes).digest("hex");
+  if (existing.some((r) => r.sha256 === sha256)) throw new ServiceError("This screenshot is already on the project.");
+  const [same] = await db
+    .select({ storageKey: showcaseImages.storageKey })
+    .from(showcaseImages)
+    .where(and(eq(showcaseImages.sha256, sha256), eq(showcaseImages.contentType, checked.contentType)))
+    .limit(1);
   const ext = checked.contentType.split("/")[1].replace("jpeg", "jpg");
-  const key = await store.put(`community/showcase/${postId}/${randomUUID()}.${ext}`, file.bytes, checked.contentType);
+  const key = same?.storageKey ?? (await store.put(`community/showcase/${sha256.slice(0, 2)}/${sha256}.${ext}`, file.bytes, checked.contentType));
   const position = existing.reduce((max, r) => Math.max(max, r.position), -1) + 1;
-  const [image] = await db.insert(showcaseImages).values({ postId, storageKey: key, contentType: checked.contentType, sizeBytes: checked.sizeBytes, position }).returning();
+  const [image] = await db
+    .insert(showcaseImages)
+    .values({ postId, storageKey: key, contentType: checked.contentType, sizeBytes: checked.sizeBytes, sha256, position })
+    .returning();
   return image;
 }
 

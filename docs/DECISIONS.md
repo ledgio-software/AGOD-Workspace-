@@ -293,3 +293,12 @@ Phase 9 (file attachments in Vercel Blob).
 | Give back | Counts shown, not enforced (posting isn't blocked when you haven't reviewed). |
 | Moderation | Reports extended to projects and feedback; organizers hide or dismiss; authors take their own projects down. |
 | Not included | Comments threads, likes or votes (project of the month comes in Phase 28), embedded video, editing feedback. |
+
+## Phase 26.1 decisions (2026-10-06): storage savings
+
+| Decision | Choice |
+|---|---|
+| Compression | In the browser before upload (1600 px, WebP; JPEG fallback; GIF unchanged). Free (no server work), saves members' data, strips photo metadata. The server still checks type, signature and the 4 MB limit; no server-side image processing (no native image library available on the platform build). |
+| Duplicates | SHA-256 fingerprint per showcase screenshot; identical pictures share one stored file (content-addressed key); stored showcase files are never deleted, so sharing is safe. Company attachments keep one file each (they can be deleted). |
+| Storage | S3-compatible driver (Cloudflare R2 recommended: free allowance, no download fees) selected by settings, ahead of Vercel Blob; keys prefixed `s3:` so older Blob files remain readable. Signed with `aws4fetch` (small, no AWS SDK). |
+| Video | Links only (YouTube unlisted, Loom, Drive), as in Phase 26. |

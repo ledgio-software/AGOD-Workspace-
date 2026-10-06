@@ -2,19 +2,28 @@ import "server-only";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { del, get, put } from "@vercel/blob";
+import { AwsClient } from "aws4fetch";
 
-// Private file storage for attachments. On Vercel: a Vercel Blob store with private access
-// (BLOB_READ_WRITE_TOKEN, added when the store is connected to the project). Elsewhere (local
-// development and tests): a folder on disk. Files are only ever served through the app.
+// Private file storage for attachments and community screenshots. Files are only ever served
+// through the app. Where new files go:
+//  - S3-compatible storage (Phase 26.1: Cloudflare R2, Backblaze B2, ...) when S3_* is set: the
+//    cheapest at scale (R2 has a free allowance and no charge for downloads);
+//  - else a Vercel Blob store (BLOB_READ_WRITE_TOKEN, added when the store is connected);
+//  - else, off Vercel (local development and tests), a folder on disk.
+// Files are read from wherever they were saved: S3 keys carry an "s3:" prefix, so switching to R2
+// keeps older Blob files readable as long as BLOB_READ_WRITE_TOKEN stays set.
 
 export type StoredFile = { body: ReadableStream<Uint8Array> | Uint8Array };
 
 export type Storage = {
-  name: "vercel-blob" | "local";
+  name: "s3" | "vercel-blob" | "local";
+  /** Saves the file and returns the key to keep (it may differ from the one asked for). */
   put(key: string, bytes: Uint8Array, contentType: string): Promise<string>;
   get(key: string): Promise<StoredFile | null>;
   remove(key: string): Promise<void>;
 };
+
+type Env = Record<string, string | undefined>;
 
 const blob = (token: string): Storage => ({
   name: "vercel-blob",
@@ -59,10 +68,73 @@ const local = (root: string): Storage => {
   };
 };
 
-/** The configured storage, or null when attachments are not available in this environment. */
-export function storage(source: Record<string, string | undefined> = process.env): Storage | null {
+export type S3Config = { endpoint: string; bucket: string; accessKeyId: string; secretAccessKey: string; region: string };
+
+/** S3-compatible storage settings, or null when not (fully) configured. */
+export function s3Config(source: Env = process.env): S3Config | null {
+  const endpoint = source.S3_ENDPOINT?.trim().replace(/\/+$/, "");
+  const bucket = source.S3_BUCKET?.trim();
+  const accessKeyId = source.S3_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = source.S3_SECRET_ACCESS_KEY?.trim();
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+  // Plain http only for a local test server.
+  if (!/^https:\/\//.test(endpoint) && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(endpoint)) return null;
+  return { endpoint, bucket, accessKeyId, secretAccessKey, region: source.S3_REGION?.trim() || "auto" };
+}
+
+const S3_PREFIX = "s3:";
+const TIMEOUT = 30_000;
+
+function s3(config: S3Config): Storage {
+  const client = new AwsClient({ accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey, service: "s3", region: config.region });
+  const url = (key: string) => `${config.endpoint}/${encodeURIComponent(config.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  const objectKey = (stored: string) => (stored.startsWith(S3_PREFIX) ? stored.slice(S3_PREFIX.length) : stored);
+  return {
+    name: "s3",
+    async put(key, bytes, contentType) {
+      const response = await client.fetch(url(key), {
+        method: "PUT",
+        body: Buffer.from(bytes),
+        headers: { "Content-Type": contentType, "Content-Length": String(bytes.length) },
+        signal: AbortSignal.timeout(TIMEOUT),
+      });
+      if (!response.ok) throw new Error(`File storage refused the upload (${response.status})`);
+      return `${S3_PREFIX}${key}`;
+    },
+    async get(stored) {
+      const response = await client.fetch(url(objectKey(stored)), { signal: AbortSignal.timeout(TIMEOUT) });
+      if (response.status === 404) return null;
+      if (!response.ok || !response.body) throw new Error(`File storage refused the download (${response.status})`);
+      return { body: response.body };
+    },
+    async remove(stored) {
+      const response = await client.fetch(url(objectKey(stored)), { method: "DELETE", signal: AbortSignal.timeout(TIMEOUT) });
+      if (!response.ok && response.status !== 404) throw new Error(`File storage refused the removal (${response.status})`);
+    },
+  };
+}
+
+/** Where files saved without the "s3:" prefix live (Blob on Vercel, a folder elsewhere). */
+function legacy(source: Env): Storage | null {
   if (source.BLOB_READ_WRITE_TOKEN) return blob(source.BLOB_READ_WRITE_TOKEN);
   // Never fall back to the (ephemeral) local disk on Vercel.
   if (source.VERCEL) return null;
   return local(source.LOCAL_UPLOAD_DIR || path.join(process.cwd(), ".data", "uploads"));
+}
+
+/** The configured storage, or null when uploads are not available in this environment. */
+export function storage(source: Env = process.env): Storage | null {
+  const config = s3Config(source);
+  const older = legacy(source);
+  if (!config) return older;
+  const primary = s3(config);
+  const route = (key: string) => (key.startsWith(S3_PREFIX) ? primary : older);
+  return {
+    name: "s3",
+    put: (key, bytes, contentType) => primary.put(key, bytes, contentType),
+    get: async (key) => (await route(key)?.get(key)) ?? null,
+    remove: async (key) => {
+      await route(key)?.remove(key);
+    },
+  };
 }

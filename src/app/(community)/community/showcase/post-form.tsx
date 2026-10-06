@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { ActionForm, Field, SubmitButton, inputClass } from "@/components/form";
+import { ImageInput } from "@/components/image-input";
 import type { ActionResult } from "@/lib/action-result";
 import { FEEDBACK_AREAS, NEEDS, videoHost } from "@/modules/community/showcase-labels";
 import { type CardData, PostCardView } from "../../../(public)/showcase/post-card";
@@ -136,8 +137,8 @@ export function PostForm({
               <input name="videoUrl" defaultValue={defaults.videoUrl ?? ""} placeholder="https://www.loom.com/share/…" className={inputClass} />
             </Field>
             {withScreenshot && (
-              <Field label="Screenshot (optional)" hint="PNG, JPG, WebP or GIF, up to 4 MB. You can add up to four on the project page.">
-                <input name="screenshot" type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="block w-full text-sm" />
+              <Field label="Screenshot (optional)" hint="PNG, JPG, WebP or GIF. Pictures are made smaller before upload. You can add up to four on the project page.">
+                <ImageInput name="screenshot" />
               </Field>
             )}
           </section>

@@ -231,6 +231,9 @@ src/
 ### Phase 25 — Community foundation ✓
 - Public home page, member list and profiles, code of conduct; join without a company (workspace optional); Builder, Reviewer and Organizer roles; reports and moderation (`docs/COMMUNITY.md`)
 
+### Phase 26.1 — Storage savings ✓
+- Pictures made smaller in the browser before upload (WebP, 1600 px), fingerprints so identical screenshots are stored once, and an optional Cloudflare R2 (S3-compatible) storage switch (`docs/STORAGE.md`)
+
 ### Phase 26 — Showcase and reviews ✓
 - Share projects with a live preview, screenshots and a video demo link; review requests with structured feedback (what works, to improve, next step), author replies, shipped status, give-back counts (`docs/COMMUNITY.md`)
 
@@ -250,7 +253,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive and Calendar](docs/GOOGLE.md) · [Companies and sign-up](docs/COMPANIES.md) · [Community](docs/COMMUNITY.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive and Calendar](docs/GOOGLE.md) · [Companies and sign-up](docs/COMPANIES.md) · [Community](docs/COMMUNITY.md) · [File storage](docs/STORAGE.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)
