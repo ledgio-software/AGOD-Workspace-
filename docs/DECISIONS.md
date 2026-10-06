@@ -302,3 +302,12 @@ Phase 9 (file attachments in Vercel Blob).
 | Duplicates | SHA-256 fingerprint per showcase screenshot; identical pictures share one stored file (content-addressed key); stored showcase files are never deleted, so sharing is safe. Company attachments keep one file each (they can be deleted). |
 | Storage | S3-compatible driver (Cloudflare R2 recommended: free allowance, no download fees) selected by settings, ahead of Vercel Blob; keys prefixed `s3:` so older Blob files remain readable. Signed with `aws4fetch` (small, no AWS SDK). |
 | Video | Links only (YouTube unlisted, Loom, Drive), as in Phase 26. |
+
+## Phase 26.2 (2026-10-06): when email fails
+
+| Decision | Choice |
+|---|---|
+| Invitation email fails | The new person gets a temporary password the Admin passes on (as without email), so nobody is locked out; the Admin sees why the email failed. |
+| Password link fails | Same fallback, except for people who also belong to another company (no company may set their password): they use *Forgot password* once email works. |
+| Error message | A refused SMTP login explains the fix (Gmail: an App password in `SMTP_PASS`, full address in `SMTP_USER`, redeploy). |
+

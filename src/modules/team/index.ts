@@ -69,7 +69,7 @@ export async function createMember(
   actor: Actor,
   rawInput: z.input<typeof createMemberInput>,
   request?: RequestMeta,
-): Promise<{ member: TeamMember; temporaryPassword: string | null; emailed: boolean; existing: boolean }> {
+): Promise<{ member: TeamMember; temporaryPassword: string | null; emailed: boolean; existing: boolean; emailError: string | null }> {
   assertCan(actor, "team.manage");
   const input = createMemberInput.parse(rawInput);
   // Phase 23: with email set up, people get an email (an invitation with a link to choose their
@@ -93,8 +93,8 @@ export async function createMember(
       });
       return loadMember(tx, existing.id);
     });
-    const emailed = viaEmail && (await notify(actor, member, (who) => addedToCompanyMessage({ name: member.name, ...who, url: appUrl("/sign-in") })));
-    return { member, temporaryPassword: null, emailed, existing: true };
+    const emailError = viaEmail ? await tryNotify(actor, member, (who) => addedToCompanyMessage({ name: member.name, ...who, url: appUrl("/sign-in") })) : null;
+    return { member, temporaryPassword: null, emailed: viaEmail && !emailError, existing: true, emailError };
   }
 
   const temporaryPassword = viaEmail ? null : generateTemporaryPassword();
@@ -123,10 +123,33 @@ export async function createMember(
     });
     return loadMember(tx, created.id);
   });
-  if (!viaEmail) return { member, temporaryPassword, emailed: false, existing: false };
+  if (!viaEmail) return { member, temporaryPassword, emailed: false, existing: false, emailError: null };
   const url = await createPasswordLink(member.id);
-  await notify(actor, member, (who) => inviteMessage({ name: member.name, ...who, url }));
-  return { member, temporaryPassword: null, emailed: true, existing: false };
+  const emailError = await tryNotify(actor, member, (who) => inviteMessage({ name: member.name, ...who, url }));
+  if (!emailError) return { member, temporaryPassword: null, emailed: true, existing: false, emailError: null };
+  // The invitation didn't go out (e.g. the mail server refused the login): rather than leave them
+  // without a way in, they get a temporary password the Admin passes on, as without email.
+  const fallback = generateTemporaryPassword();
+  await withActor(actor, async (tx) => {
+    await tx.insert(accounts).values({ userId: member.id, accountId: member.id, providerId: "credential", password: await hashPassword(fallback) });
+    await recordAudit(tx, { actorId: actor.id, entityType: "user", entityId: member.id, action: "user.password_reset", after: { reason: "invitation email failed" }, request });
+  });
+  return { member, temporaryPassword: fallback, emailed: false, existing: false, emailError };
+}
+
+/** Emails a person about this company; returns why it failed, or null when it was sent. */
+async function tryNotify(
+  actor: Actor,
+  member: { name: string; email: string },
+  build: (who: { company: string; invitedBy: string }) => { subject: string; text: string; html: string },
+): Promise<string | null> {
+  try {
+    await notify(actor, member, build);
+    return null;
+  } catch (error) {
+    console.error("Account email failed", member.email, error instanceof Error ? error.message : error);
+    return error instanceof Error ? error.message : "unknown error";
+  }
 }
 
 /** Emails a person about this company; a failure is reported, with how to send it again. */
@@ -140,9 +163,7 @@ async function notify(
   try {
     return await sendAccountEmail(member.email, build({ company: org.name, invitedBy: me.name }));
   } catch (error) {
-    throw new ServiceError(
-      `${member.name} was added, but the email could not be sent (${error instanceof Error ? error.message : "unknown error"}). Use “Send a password link” on the Team page to try again.`,
-    );
+    throw new ServiceError(error instanceof Error ? error.message : "unknown error");
   }
 }
 
@@ -213,9 +234,10 @@ export async function resetPassword(
   actor: Actor,
   rawInput: z.input<typeof resetPasswordInput>,
   request?: RequestMeta,
-): Promise<{ temporaryPassword: string | null; emailed: boolean }> {
+): Promise<{ temporaryPassword: string | null; emailed: boolean; emailError: string | null }> {
   assertCan(actor, "team.manage");
   const input = resetPasswordInput.parse(rawInput);
+  let emailError: string | null = null;
   // Phase 23: with email set up, the person gets a link at their own address (safe for anyone,
   // even people in several companies, since only they can open it).
   if (emailConfig()) {
@@ -225,20 +247,29 @@ export async function resetPassword(
       .from(accounts)
       .where(and(eq(accounts.userId, input.userId), eq(accounts.providerId, "credential")));
     const url = await createPasswordLink(input.userId, credential ? 1 : 7);
-    await notify(actor, member, (who) =>
+    emailError = await tryNotify(actor, member, (who) =>
       credential ? resetPasswordMessage({ name: member.name, url }) : inviteMessage({ name: member.name, ...who, url }),
     );
-    await withActor(actor, (tx) =>
-      recordAudit(tx, { actorId: actor.id, entityType: "user", entityId: input.userId, action: "user.password_link_sent", request }),
-    );
-    return { temporaryPassword: null, emailed: true };
+    if (!emailError) {
+      await withActor(actor, (tx) =>
+        recordAudit(tx, { actorId: actor.id, entityType: "user", entityId: input.userId, action: "user.password_link_sent", request }),
+      );
+      return { temporaryPassword: null, emailed: true, emailError: null };
+    }
+    // The email didn't go out: fall back to a temporary password below (when this company may).
   }
   // A login shared with another company is that person's own: no company may take it over.
   const [elsewhere] = await db
     .select({ id: memberships.id })
     .from(memberships)
     .where(and(eq(memberships.userId, input.userId), ne(memberships.organizationId, actor.orgId)));
-  if (elsewhere) throw new ServiceError("This person also works with another company, so only they can change their password.");
+  if (elsewhere) {
+    throw new ServiceError(
+      emailError
+        ? `The email could not be sent (${emailError}). This person also works with another company, so they can use "Forgot password" on the sign-in page once email works.`
+        : "This person also works with another company, so only they can change their password.",
+    );
+  }
   const temporaryPassword = generateTemporaryPassword();
   const passwordHash = await hashPassword(temporaryPassword);
 
@@ -267,7 +298,7 @@ export async function resetPassword(
     });
   });
 
-  return { temporaryPassword, emailed: false };
+  return { temporaryPassword, emailed: false, emailError };
 }
 
 /** Roadmap 2.6: hours a week a person has for project work (0 for someone on leave). */

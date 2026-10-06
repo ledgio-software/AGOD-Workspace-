@@ -98,7 +98,7 @@ describe("invitations by email", () => {
     const [row] = await db.select({ email: users.email }).from(users).where(eq(users.id, person.id));
     await createMember(owner, { name: "Shared Person", email: row.email, role: "TEAM_MEMBER" });
     const result = await resetPassword(owner, { userId: person.id });
-    expect(result).toEqual({ temporaryPassword: null, emailed: true });
+    expect(result).toEqual({ temporaryPassword: null, emailed: true, emailError: null });
     // They never chose a password, so this is an invitation-style email with the link.
     expect(mails().some((m) => m.to === row.email && m.text.includes("/api/auth/reset-password/"))).toBe(true);
     const tokens = await db.select().from(verifications).where(and(eq(verifications.value, person.id), like(verifications.identifier, "reset-password:%")));
@@ -109,5 +109,41 @@ describe("invitations by email", () => {
     const userId = await signedUp(null);
     const url = await createPasswordLink(userId, 1);
     expect(url).toMatch(/^http:\/\/localhost:3000\/api\/auth\/reset-password\/[A-Za-z0-9_-]{32}\?callbackURL=http%3A%2F%2Flocalhost%3A3000%2Freset-password%3Fwelcome%3D1$/);
+  });
+});
+
+describe("when the mail server refuses (e.g. a wrong Gmail password)", () => {
+  // A closed port: every send fails straight away, like a refused login.
+  const brokenMail = () => {
+    vi.stubEnv("EMAIL_OUTBOX_DIR", "");
+    vi.stubEnv("SMTP_HOST", "127.0.0.1");
+    vi.stubEnv("SMTP_PORT", "1");
+    vi.stubEnv("EMAIL_FROM", "team@agod.test");
+  };
+
+  it("gives a new person a temporary password instead of leaving them without a way in", async () => {
+    const admin = await createUser("ADMIN");
+    brokenMail();
+    const email = `nomail-${randomUUID()}@agod.test`;
+    const result = await createMember(admin, { name: "Sandra Mensah", email, role: "TEAM_MEMBER" });
+    expect(result).toMatchObject({ emailed: false, existing: false });
+    expect(result.emailError).toMatch(/mail server refused/);
+    expect(result.temporaryPassword).toMatch(/.{12,}/);
+    expect(await db.select().from(accounts).where(eq(accounts.userId, result.member.id))).toHaveLength(1);
+  });
+
+  it("falls back to a temporary password for a password link, except for people in another company", async () => {
+    const admin = await createUser("ADMIN");
+    const person = await createUser("TEAM_MEMBER");
+    brokenMail();
+    const reset = await resetPassword(admin, { userId: person.id });
+    expect(reset.emailed).toBe(false);
+    expect(reset.emailError).toMatch(/mail server refused/);
+    expect(reset.temporaryPassword).toBeTruthy();
+
+    const { owner } = await createCompany();
+    const [row] = await db.select({ email: users.email }).from(users).where(eq(users.id, person.id));
+    await createMember(owner, { name: "Shared Person", email: row.email, role: "TEAM_MEMBER" });
+    await expect(resetPassword(admin, { userId: person.id })).rejects.toThrow(/could not be sent.*Forgot password/);
   });
 });
