@@ -19,6 +19,7 @@ import { formatMoney } from "@/lib/money";
 import { requireUser } from "@/lib/session";
 import { acceptsTaskUpdates } from "@/modules/projects/rules";
 import { refreshDeadlineAlertsQuietly } from "@/modules/notifications/deadlines";
+import { refreshRenewalAlertsQuietly } from "@/modules/subscriptions";
 import { getMyWork } from "@/modules/work";
 import { taskProgressAction } from "../projects/actions";
 import { TaskProgressForm } from "../projects/[id]/workspace-forms";
@@ -32,7 +33,7 @@ const payoutTone = { OWED: "amber", PARTIALLY_PAID: "blue", PAID: "green", DISPU
 
 export default async function MyWorkPage() {
   const actor = await requireUser();
-  await refreshDeadlineAlertsQuietly(actor);
+  await Promise.all([refreshDeadlineAlertsQuietly(actor), refreshRenewalAlertsQuietly(actor)]);
   const work = await getMyWork(actor);
   const openTasks = work.tasks.filter((t) => t.status !== "DONE" && t.status !== "WAIVED");
 
@@ -122,8 +123,8 @@ export default async function MyWorkPage() {
                   </p>
                   <p className="text-xs text-muted">{formatDateTime(n.createdAt)}</p>
                 </div>
-                {n.entityType === "project" && n.entityId && (
-                  <Link href={`/projects/${n.entityId}`} className="shrink-0 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                {(n.entityType === "project" || n.entityType === "subscription") && n.entityId && (
+                  <Link href={`/${n.entityType === "project" ? "projects" : "subscriptions"}/${n.entityId}`} className="shrink-0 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
                     Open
                   </Link>
                 )}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banknote, Clock, Download, Gauge, Hourglass, Percent, Receipt, TrendingUp, Wallet } from "lucide-react";
+import { Banknote, Clock, Download, Gauge, Hourglass, Percent, Receipt, Repeat, TrendingUp, Wallet } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge } from "@/components/badges";
 import { BarList, StackedColumns, compactMoney } from "@/components/charts";
@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { PROJECT_CATEGORIES, getPayoutAging, getPayoutForecast, getProfitability, getUtilisation } from "@/modules/finance";
+import { getRecurringRevenue } from "@/modules/subscriptions";
 
 type Search = { view?: string; scope?: string; category?: string; month?: string };
 const pct = (v: number | null) => (v === null ? "—" : `${v}%`);
@@ -24,9 +25,10 @@ export default async function ProfitabilityPage({ searchParams }: { searchParams
   const actor = await requireUser();
   if (!can(actor, "finance.view")) return <AccessDenied what="profitability" />;
   const q = await searchParams;
-  const view = q.view === "payouts" || q.view === "utilisation" ? q.view : "overview";
+  const view = q.view === "payouts" || q.view === "utilisation" || q.view === "recurring" ? q.view : "overview";
   const tabs = [
     ["overview", "Profit by project, client and type", TrendingUp],
+    ["recurring", "Recurring revenue", Repeat],
     ["payouts", "Payout forecast and ageing", Wallet],
     ["utilisation", "Team utilisation", Gauge],
   ] as const;
@@ -40,6 +42,7 @@ export default async function ProfitabilityPage({ searchParams }: { searchParams
       />
       <TabNav label="Profitability views" items={tabs.map(([key, label, icon]) => ({ href: `/profitability?view=${key}`, label, icon, active: view === key }))} />
       {view === "overview" && <Overview q={q} />}
+      {view === "recurring" && <Recurring />}
       {view === "payouts" && <Payouts />}
       {view === "utilisation" && <Utilisation month={q.month} />}
     </div>
@@ -466,6 +469,51 @@ async function Utilisation({ month }: { month?: string }) {
           </table>
         </div>
       </Card>
+    </div>
+  );
+}
+
+async function Recurring() {
+  const actor = await requireUser();
+  const r = await getRecurringRevenue(actor);
+  if (!r) return <EmptyState icon={Repeat} title="Subscriptions are not available to you" />;
+  const sum = (key: "monthlyMinor" | "annualMinor") => (r.totals.length === 0 ? "—" : r.totals.map((t) => formatMoney(t[key], t.currency)).join(" + "));
+  const bars = (groups: typeof r.byService) =>
+    groups.map((g) => ({
+      key: g.name,
+      label: g.name,
+      value: g.monthlyMinor,
+      display: `${formatMoney(g.monthlyMinor)} / month`,
+      note: `${g.subscriptions} subscription${g.subscriptions === 1 ? "" : "s"}`,
+    }));
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted">
+        From active subscriptions (paused ones excluded). Quarterly and annual prices are spread per month; one-time and custom billing are not
+        included. This is agreed value, not invoiced or collected money.
+      </p>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Monthly recurring" value={sum("monthlyMinor")} icon={Repeat} href="/subscriptions" />
+        <StatCard label="Annual run rate" value={sum("annualMinor")} hint="Monthly × 12" icon={TrendingUp} />
+        <StatCard label="Active subscriptions" value={r.activeCount} icon={Receipt} />
+        <StatCard
+          label="Renewing in 90 days"
+          value={r.renewingIn90Days}
+          hint={`${formatMoney(r.renewingMonthlyMinor)} / month at stake${r.needsAttention ? ` · ${r.needsAttention} need action` : ""}`}
+          icon={Clock}
+          tone={r.needsAttention ? "warn" : "default"}
+          href="/subscriptions?within=90"
+        />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card title="By service" description="Monthly recurring value">
+          {r.byService.length === 0 ? <EmptyState icon={Repeat} title="No active subscriptions" /> : <BarList items={bars(r.byService)} />}
+        </Card>
+        <Card title="By customer" description="Monthly recurring value">
+          {r.byCustomer.length === 0 ? <EmptyState icon={Repeat} title="No active subscriptions" /> : <BarList items={bars(r.byCustomer)} />}
+        </Card>
+      </div>
     </div>
   );
 }

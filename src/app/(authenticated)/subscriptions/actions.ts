@@ -10,6 +10,7 @@ import {
   changeSubscriptionStatus,
   createService,
   createSubscription,
+  renewSubscription,
   setServiceActive,
   updateDraftSubscription,
   updateService,
@@ -109,6 +110,27 @@ export async function amendAction(subscriptionId: string, _prev: Result | null, 
     );
     return undefined;
   }, "Amendment recorded.");
+  if (result.ok) refresh(subscriptionId);
+  return result;
+}
+
+export async function renewAction(subscriptionId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await renewSubscription(
+      actor,
+      subscriptionId,
+      {
+        renewalDate: text(form, "renewalDate"),
+        endDate: text(form, "endDate"),
+        price: text(form, "price"),
+        reason: text(form, "reason"),
+        version: text(form, "version"),
+      },
+      await getRequestMeta(),
+    );
+    return undefined;
+  }, "Renewal recorded.");
   if (result.ok) refresh(subscriptionId);
   return result;
 }

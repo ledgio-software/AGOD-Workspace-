@@ -99,3 +99,110 @@ export function diffTerms(before: Terms, after: Terms): Partial<Record<Amendable
   }
   return changes;
 }
+
+/** Adds whole months to a calendar date, keeping the day where possible (31 Jan + 1 month = 28/29 Feb). */
+export function addMonths(date: string, months: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+/** Months in one billing period; one-time and custom billing renew yearly by default. */
+export function cadenceMonths(cadence: BillingCadence): number {
+  return cadence === "MONTHLY" ? 1 : cadence === "QUARTERLY" ? 3 : 12;
+}
+
+/**
+ * The suggested terms for a renewal: the renewal date (and end date, if any) move forward by one
+ * billing period. Only a suggestion; the person renewing can change it.
+ */
+export function suggestRenewal(
+  s: { billingCadence: BillingCadence; renewalDate: string | null; endDate: string | null },
+  today: string,
+): { renewalDate: string; endDate: string | null } {
+  const months = cadenceMonths(s.billingCadence);
+  const base = s.renewalDate ?? s.endDate ?? today;
+  return { renewalDate: addMonths(base, months), endDate: s.endDate ? addMonths(s.endDate, months) : null };
+}
+
+/** Days a renewal may be overdue before Admins are told too. */
+export const RENEWAL_ESCALATION_DAYS = 7;
+
+export type RenewalAlert = {
+  recipientId: string;
+  type: "subscription.renewal_due" | "subscription.renewal_overdue" | "subscription.past_end" | "subscription.renewal_escalated";
+  title: string;
+  message: string;
+  subscriptionId: string;
+  dedupeKey: string;
+};
+
+type AlertSubscription = {
+  id: string;
+  customerName: string;
+  serviceName: string;
+  status: SubscriptionStatus;
+  renewalDate: string | null;
+  endDate: string | null;
+  noticePeriodDays: number;
+  ownerId: string;
+  renewalOwnerId: string | null;
+};
+
+/**
+ * Pure: renewal reminders for one user. The renewal owner (or the owner when none is set) is told
+ * when the notice period starts, when the date passes, and when the end date passes; Admins are
+ * told about anything a week overdue. Keys include the date, so a renewal (which moves the date)
+ * starts a fresh cycle, and each alert is otherwise sent once.
+ */
+export function renewalAlerts(userId: string, isAdmin: boolean, subs: AlertSubscription[], today: string): RenewalAlert[] {
+  const alerts: RenewalAlert[] = [];
+  for (const s of subs) {
+    const state = renewalState(s, today);
+    if (!state) continue;
+    const name = `${s.serviceName} for ${s.customerName}`;
+    const responsible = s.renewalOwnerId ?? s.ownerId;
+    if (responsible === userId) {
+      if (state.kind === "DUE") {
+        alerts.push({
+          recipientId: userId,
+          type: "subscription.renewal_due",
+          title: `Renewal due: ${name}`,
+          message: `Renews ${state.date} (${state.days === 0 ? "today" : `in ${state.days} days`}). Contact the customer and record the renewal, an amendment or the end.`,
+          subscriptionId: s.id,
+          dedupeKey: `subscription.renewal_due:${s.id}:${state.date}`,
+        });
+      } else if (state.kind === "OVERDUE") {
+        alerts.push({
+          recipientId: userId,
+          type: "subscription.renewal_overdue",
+          title: `Renewal overdue: ${name}`,
+          message: `The renewal date ${state.date} has passed without a decision. Renew, amend or end it.`,
+          subscriptionId: s.id,
+          dedupeKey: `subscription.renewal_overdue:${s.id}:${state.date}`,
+        });
+      } else {
+        alerts.push({
+          recipientId: userId,
+          type: "subscription.past_end",
+          title: `Past its end date: ${name}`,
+          message: `It ended ${state.date} but is still ${s.status.toLowerCase()}. Renew it or end it.`,
+          subscriptionId: s.id,
+          dedupeKey: `subscription.past_end:${s.id}:${state.date}`,
+        });
+      }
+    } else if (isAdmin && state.kind !== "DUE" && -state.days >= RENEWAL_ESCALATION_DAYS) {
+      alerts.push({
+        recipientId: userId,
+        type: "subscription.renewal_escalated",
+        title: `Renewal ${-state.days} days overdue: ${name}`,
+        message: `No decision since ${state.date}. Its renewal owner has been reminded.`,
+        subscriptionId: s.id,
+        dedupeKey: `subscription.renewal_escalated:${s.id}:${state.date}`,
+      });
+    }
+  }
+  return alerts;
+}

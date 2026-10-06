@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { withActor } from "@/lib/db/actor";
-import { auditEvents, services, subscriptionAmendments, subscriptions } from "@/lib/db/schema";
+import { and } from "drizzle-orm";
+import { auditEvents, notifications, services, subscriptionAmendments, subscriptions } from "@/lib/db/schema";
 import { PermissionError } from "@/lib/permissions";
 import { archiveCustomer, createCustomer } from "@/modules/customers";
 import {
@@ -11,9 +12,12 @@ import {
   createService,
   createSubscription,
   getSubscription,
+  getRecurringRevenue,
   listServices,
   listSubscriptions,
   recurringTotals,
+  refreshRenewalAlerts,
+  renewSubscription,
   setServiceActive,
   updateDraftSubscription,
   updateService,
@@ -185,5 +189,62 @@ describe("subscriptions", () => {
     const sub = await subscribe(pm, customer.id, service.id);
     const events = await withActor(other, (tx) => tx.select().from(auditEvents).where(eq(auditEvents.entityId, sub.id)));
     expect(events.map((e) => e.action)).toContain("subscription.created");
+  });
+});
+
+const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+
+describe("renewals (Phase 18)", () => {
+  it("records a renewal as a marked amendment that moves the dates forward", async () => {
+    const { pm, customer, service } = await setup();
+    const sub = await subscribe(pm, customer.id, service.id, { startDate: day(-300), renewalDate: day(10), endDate: day(40), billingCadence: "ANNUAL", price: "1200" });
+    await expect(
+      renewSubscription(pm, sub.id, { renewalDate: day(5), price: "1200", reason: "Too early", version: sub.version }),
+    ).rejects.toThrow(/after the current one/);
+    const renewed = await renewSubscription(pm, sub.id, {
+      renewalDate: day(375),
+      endDate: day(405),
+      price: "1320",
+      reason: "Renewed by email, 10% increase",
+      version: sub.version,
+    });
+    expect(renewed.renewalDate).toBe(day(375));
+    expect(renewed.priceMinor).toBe(132_000);
+    const [row] = await db.select().from(subscriptionAmendments).where(eq(subscriptionAmendments.subscriptionId, sub.id));
+    expect(row.kind).toBe("RENEWAL");
+    expect(row.effectiveDate).toBe(day(10));
+    const [event] = await db.select().from(auditEvents).where(and(eq(auditEvents.entityId, sub.id), eq(auditEvents.action, "subscription.renewed")));
+    expect(event).toBeDefined();
+  });
+
+  it("reminds the renewal owner once, and a renewal starts a fresh cycle", async () => {
+    const { pm, customer, service } = await setup();
+    const rep = await createUser("PROJECT_MANAGER");
+    const sub = await subscribe(pm, customer.id, service.id, { startDate: day(-30), renewalDate: day(7), renewalOwnerId: rep.id });
+    const mine = (userId: string) =>
+      db.select().from(notifications).where(and(eq(notifications.recipientId, userId), eq(notifications.entityId, sub.id)));
+
+    expect(await refreshRenewalAlerts(rep)).toBe(1);
+    expect(await refreshRenewalAlerts(rep)).toBe(0); // idempotent
+    expect(await refreshRenewalAlerts(pm)).toBe(0); // the owner isn't the renewal owner
+    expect((await mine(rep.id)).map((n) => n.type)).toEqual(["subscription.renewal_due"]);
+
+    await renewSubscription(pm, sub.id, { renewalDate: day(20), price: "450", reason: "Renewed for another month", version: sub.version });
+    expect(await refreshRenewalAlerts(rep)).toBe(1); // new date, new reminder
+    // Members get none (they can't see subscriptions).
+    const member = await createUser("TEAM_MEMBER");
+    expect(await refreshRenewalAlerts(member)).toBe(0);
+  });
+
+  it("filters by renewal window and sums recurring revenue for Profitability", async () => {
+    const { pm, customer, service } = await setup();
+    await subscribe(pm, customer.id, service.id, { startDate: day(-10), renewalDate: day(20), price: "300" });
+    await subscribe(pm, customer.id, service.id, { startDate: day(-10), renewalDate: day(200), billingCadence: "ANNUAL", price: "2400" });
+    const soon = await listSubscriptions(pm, { customerId: customer.id, within: 30 });
+    expect(soon).toHaveLength(1);
+    const r = await getRecurringRevenue(pm);
+    expect(r?.byCustomer.find((g) => g.name === customer.name)).toEqual({ name: customer.name, monthlyMinor: 50_000, subscriptions: 2 });
+    const member = await createUser("TEAM_MEMBER");
+    await expect(getRecurringRevenue(member)).rejects.toThrow(PermissionError);
   });
 });

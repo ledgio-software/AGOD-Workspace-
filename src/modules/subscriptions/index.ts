@@ -3,10 +3,11 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { auditEvents, customers, services, subscriptionAmendments, subscriptions, users } from "@/lib/db/schema";
+import { auditEvents, customers, notifications, services, subscriptionAmendments, subscriptions, users } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { DEFAULT_CURRENCY, parseMoney } from "@/lib/money";
-import { type Actor, assertCan } from "@/lib/permissions";
+import { addDays } from "@/modules/notifications/deadlines";
+import { type Actor, assertCan, can } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { isUniqueViolation } from "@/modules/db-errors";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
@@ -17,7 +18,9 @@ import {
   diffTerms,
   isLive,
   monthlyValueMinor,
+  renewalAlerts,
   renewalState,
+  suggestRenewal,
   transitionNeedsReason,
 } from "./rules";
 
@@ -452,37 +455,95 @@ export async function amendSubscription(
   const input = amendInput.parse(raw);
   return withActor(actor, async (tx) => {
     const sub = await lockSubscription(tx, subscriptionId, raw.version);
-    if (!isLive(sub.status)) throw new ServiceError("Only active or paused subscriptions are amended. Edit the draft instead.");
-    if (input.effectiveDate < sub.startDate) throw new ServiceError("The change cannot take effect before the subscription starts.");
-    assertDates(sub.startDate, input);
-    const next = termsColumns(input);
-    const changes = diffTerms(sub, next);
-    if (Object.keys(changes).length === 0) throw new ServiceError("Nothing changed: adjust at least one term.");
-    await tx.insert(subscriptionAmendments).values({
-      subscriptionId,
-      effectiveDate: input.effectiveDate,
-      changes,
-      reason: input.reason,
-      createdBy: actor.id,
-    });
-    const [updated] = await tx
-      .update(subscriptions)
-      .set({ ...next, version: sub.version + 1 })
-      .where(eq(subscriptions.id, subscriptionId))
-      .returning()
-      .catch(rethrowDbGuard);
-    await recordAudit(tx, {
-      actorId: actor.id,
-      entityType: "subscription",
-      entityId: subscriptionId,
-      action: "subscription.amended",
-      before: Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.from])),
-      after: Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.to])),
-      reason: `${input.reason} (effective ${input.effectiveDate})`,
-      request,
-    });
-    return updated;
+    return changeTerms(tx, actor, sub, termsColumns(input), input.effectiveDate, input.reason, "AMENDMENT", request);
   });
+}
+
+async function changeTerms(
+  tx: Tx,
+  actor: Actor,
+  sub: SubscriptionRow,
+  next: ReturnType<typeof termsColumns>,
+  effectiveDate: string,
+  reason: string,
+  kind: "AMENDMENT" | "RENEWAL",
+  request?: RequestMeta,
+) {
+  if (!isLive(sub.status)) throw new ServiceError("Only active or paused subscriptions are amended. Edit the draft instead.");
+  if (effectiveDate < sub.startDate) throw new ServiceError("The change cannot take effect before the subscription starts.");
+  assertDates(sub.startDate, next);
+  const changes = diffTerms(sub, next);
+  if (Object.keys(changes).length === 0) throw new ServiceError("Nothing changed: adjust at least one term.");
+  await tx.insert(subscriptionAmendments).values({
+    subscriptionId: sub.id,
+    kind,
+    effectiveDate,
+    changes,
+    reason,
+    createdBy: actor.id,
+  });
+  const [updated] = await tx
+    .update(subscriptions)
+    .set({ ...next, version: sub.version + 1 })
+    .where(eq(subscriptions.id, sub.id))
+    .returning()
+    .catch(rethrowDbGuard);
+  await recordAudit(tx, {
+    actorId: actor.id,
+    entityType: "subscription",
+    entityId: sub.id,
+    action: kind === "RENEWAL" ? "subscription.renewed" : "subscription.amended",
+    before: Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.from])),
+    after: Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.to])),
+    reason: `${reason} (effective ${effectiveDate})`,
+    request,
+  });
+  return updated;
+}
+
+export const renewInput = z.object({
+  renewalDate: z.iso.date("Enter the next renewal date"),
+  endDate: optionalDate,
+  price: requiredMoney("price"),
+  reason: z.string().trim().min(3, "Say what was agreed (at least 3 characters)").max(1000),
+});
+
+/**
+ * Records a renewal decision: the renewal date (and end date) move forward, optionally at a new
+ * price. Kept as an amendment marked "renewal", so the previous terms stay visible. Sending a
+ * reminder never renews anything by itself.
+ */
+export async function renewSubscription(
+  actor: Actor,
+  subscriptionId: string,
+  raw: z.input<typeof renewInput> & { version: number | string },
+  request?: RequestMeta,
+) {
+  assertCan(actor, "subscription.manage");
+  const input = renewInput.parse(raw);
+  return withActor(actor, async (tx) => {
+    const sub = await lockSubscription(tx, subscriptionId, raw.version);
+    const current = sub.renewalDate ?? sub.endDate;
+    if (current && input.renewalDate <= current) {
+      throw new ServiceError("The new renewal date must be after the current one.");
+    }
+    const next = {
+      billingCadence: sub.billingCadence,
+      priceMinor: input.price,
+      pricingBasis: sub.pricingBasis,
+      quantity: sub.quantity,
+      endDate: input.endDate ?? null,
+      renewalDate: input.renewalDate,
+      noticePeriodDays: sub.noticePeriodDays,
+      paymentTerms: sub.paymentTerms,
+    };
+    return changeTerms(tx, actor, sub, next, current ?? todayInOperatingZone(), input.reason, "RENEWAL", request);
+  });
+}
+
+/** Suggested renewal terms for the Renew form. */
+export function renewalSuggestion(s: Pick<SubscriptionRow, "billingCadence" | "renewalDate" | "endDate">) {
+  return suggestRenewal(s, todayInOperatingZone());
 }
 
 export async function changeSubscriptionStatus(
@@ -532,6 +593,8 @@ export const subscriptionFilters = z.object({
   attention: z.boolean().optional(),
   customerId: z.uuid().optional(),
   serviceId: z.uuid().optional(),
+  /** Live subscriptions whose next renewal (or end) date is within this many days, or already past. */
+  within: z.coerce.number().int().min(1).max(366).optional().catch(undefined),
 });
 
 export type SubscriptionSummary = {
@@ -591,7 +654,15 @@ export async function listSubscriptions(actor: Actor, raw: z.input<typeof subscr
       ownerName,
       renewal: renewalState(s, today),
     }));
-    return filters.attention ? out.filter((s) => s.renewal) : out;
+    let result = filters.attention ? out.filter((s) => s.renewal) : out;
+    if (filters.within) {
+      const limit = addDays(today, filters.within);
+      result = result.filter((s) => {
+        const next = s.renewalDate ?? s.endDate;
+        return isLive(s.status) && next !== null && next <= limit;
+      });
+    }
+    return result;
   });
 }
 
@@ -671,4 +742,92 @@ export async function openSubscriptionCount(tx: Tx, customerId: string): Promise
     .from(subscriptions)
     .where(and(eq(subscriptions.customerId, customerId), inArray(subscriptions.status, ["DRAFT", "ACTIVE", "PAUSED"])));
   return row?.n ?? 0;
+}
+
+/**
+ * Creates the renewal reminders the signed-in manager is missing (same approach as the task and
+ * approval alerts: generated when they open the app, each sent once).
+ */
+export async function refreshRenewalAlerts(actor: Actor): Promise<number> {
+  if (!can(actor, "subscription.view")) return 0;
+  const today = todayInOperatingZone();
+  return withActor(actor, async (tx) => {
+    const rows = await tx
+      .select({
+        id: subscriptions.id,
+        customerName: customers.name,
+        serviceName: subscriptions.serviceName,
+        status: subscriptions.status,
+        renewalDate: subscriptions.renewalDate,
+        endDate: subscriptions.endDate,
+        noticePeriodDays: subscriptions.noticePeriodDays,
+        ownerId: subscriptions.ownerId,
+        renewalOwnerId: subscriptions.renewalOwnerId,
+      })
+      .from(subscriptions)
+      .innerJoin(customers, eq(customers.id, subscriptions.customerId))
+      .where(inArray(subscriptions.status, ["ACTIVE", "PAUSED"]));
+    const alerts = renewalAlerts(actor.id, actor.role === "ADMIN", rows, today);
+    if (alerts.length === 0) return 0;
+    const inserted = await tx
+      .insert(notifications)
+      .values(
+        alerts.map((a) => ({
+          recipientId: a.recipientId,
+          type: a.type,
+          title: a.title,
+          message: a.message,
+          entityType: "subscription",
+          entityId: a.subscriptionId,
+          dedupeKey: a.dedupeKey,
+        })),
+      )
+      .onConflictDoNothing({ target: [notifications.recipientId, notifications.dedupeKey], where: sql`${notifications.dedupeKey} IS NOT NULL` })
+      .returning({ id: notifications.id });
+    return inserted.length;
+  });
+}
+
+export type RecurringGroup = { name: string; monthlyMinor: number; subscriptions: number };
+
+/** Recurring revenue for Profitability: active subscriptions, monthly and annual, by service and customer. */
+export async function getRecurringRevenue(actor: Actor) {
+  assertCan(actor, "finance.view");
+  if (!can(actor, "subscription.view")) return null;
+  const live = await listSubscriptions(actor);
+  const active = live.filter((s) => s.status === "ACTIVE" && s.monthlyValueMinor !== null);
+  const group = (key: (s: SubscriptionSummary) => string): RecurringGroup[] => {
+    const map = new Map<string, RecurringGroup>();
+    for (const s of active) {
+      const g = map.get(key(s)) ?? { name: key(s), monthlyMinor: 0, subscriptions: 0 };
+      g.monthlyMinor += s.monthlyValueMinor ?? 0;
+      g.subscriptions += 1;
+      map.set(g.name, g);
+    }
+    return [...map.values()].sort((a, b) => b.monthlyMinor - a.monthlyMinor);
+  };
+  const today = todayInOperatingZone();
+  const in90 = addDays(today, 90);
+  const renewing = live.filter((s) => {
+    const next = s.renewalDate ?? s.endDate;
+    return next !== null && next <= in90;
+  });
+  return {
+    totals: recurringTotals(live).map((t) => ({ ...t, annualMinor: t.monthlyMinor * 12 })),
+    activeCount: active.length,
+    byService: group((s) => s.serviceName),
+    byCustomer: group((s) => s.customerName),
+    renewingIn90Days: renewing.length,
+    renewingMonthlyMinor: renewing.reduce((n, s) => n + (s.status === "ACTIVE" ? (s.monthlyValueMinor ?? 0) : 0), 0),
+    needsAttention: live.filter((s) => s.renewal).length,
+  };
+}
+
+/** For page loads: reminders are a convenience, so a failure is logged and never blocks the page. */
+export async function refreshRenewalAlertsQuietly(actor: Actor): Promise<void> {
+  try {
+    await refreshRenewalAlerts(actor);
+  } catch (error) {
+    console.error("Renewal alerts failed", error instanceof Error ? error.message : error);
+  }
 }

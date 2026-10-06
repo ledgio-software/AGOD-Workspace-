@@ -14,18 +14,18 @@ import { listSubscriptions, recurringTotals } from "@/modules/subscriptions";
 export default async function SubscriptionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; attention?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; attention?: string; within?: string }>;
 }) {
   const actor = await requireUser();
   if (!can(actor, "subscription.view")) return <AccessDenied what="subscriptions" />;
-  const { q, status, attention } = await searchParams;
+  const { q, status, attention, within } = await searchParams;
   const needsAttention = attention === "1";
-  const rows = await listSubscriptions(actor, { q, status: status as never, attention: needsAttention });
+  const rows = await listSubscriptions(actor, { q, status: status as never, attention: needsAttention, within: within as never });
   // Headline numbers always describe all live subscriptions, whatever the filters.
-  const live = q || status || needsAttention ? await listSubscriptions(actor) : rows;
+  const live = q || status || needsAttention || within ? await listSubscriptions(actor) : rows;
   const mrr = recurringTotals(live);
   const due = live.filter((s) => s.renewal);
-  const filtered = Boolean(q || status || needsAttention);
+  const filtered = Boolean(q || status || needsAttention || within);
 
   return (
     <div className="space-y-6">
@@ -74,6 +74,12 @@ export default async function SubscriptionsPage({
                 {label}
               </option>
             ))}
+          </select>
+          <select name="within" defaultValue={within ?? ""} aria-label="Renewing within" className={`${inputClass} w-auto`}>
+            <option value="">Any renewal date</option>
+            <option value="30">Renewing within 30 days</option>
+            <option value="60">Renewing within 60 days</option>
+            <option value="90">Renewing within 90 days</option>
           </select>
           <label className="inline-flex items-center gap-2 text-sm">
             <input type="checkbox" name="attention" value="1" defaultChecked={needsAttention} className="size-4 accent-brand-600" />

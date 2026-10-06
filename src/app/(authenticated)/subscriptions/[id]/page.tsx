@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowLeft, FilePen, Lock } from "lucide-react";
+import { Activity, ArrowLeft, FilePen, Lock, RefreshCw } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
-import { RenewalBadge, SubscriptionStatusBadge } from "@/components/badges";
+import { Badge, RenewalBadge, SubscriptionStatusBadge } from "@/components/badges";
 import { Callout, Card, Disclosure, EmptyState, StatCard } from "@/components/ui";
 import { formatCalendarDate, formatDateTime, todayInOperatingZone } from "@/lib/dates";
 import {
@@ -16,10 +16,10 @@ import { formatMoney, minorToInput } from "@/lib/money";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { listActiveMembers } from "@/modules/projects";
-import { getSubscription } from "@/modules/subscriptions";
+import { getSubscription, renewalSuggestion } from "@/modules/subscriptions";
 import { allowedSubscriptionTransitions, isLive } from "@/modules/subscriptions/rules";
-import { amendAction, changeStatusAction, updateDetailsAction, updateDraftAction } from "../actions";
-import { AmendForm, DetailsForm, DraftEditForm, StatusForm } from "../subscription-forms";
+import { amendAction, changeStatusAction, renewAction, updateDetailsAction, updateDraftAction } from "../actions";
+import { AmendForm, DetailsForm, DraftEditForm, RenewForm, StatusForm } from "../subscription-forms";
 
 function Meta({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -140,15 +140,18 @@ export default async function SubscriptionPage({ params }: { params: Promise<{ i
             {s.notes && <p className="mt-4 whitespace-pre-line border-t border-line pt-4 text-sm">{s.notes}</p>}
           </Card>
 
-          <Card title="Amendments" description="Changes to the agreed terms after activation, oldest values kept.">
+          <Card title="Renewals and amendments" description="Changes to the agreed terms after activation, previous values kept.">
             {data.amendments.length === 0 ? (
-              <EmptyState icon={FilePen} title="No amendments yet" />
+              <EmptyState icon={FilePen} title="No renewals or amendments yet" />
             ) : (
               <ul className="-my-2 divide-y divide-line">
                 {data.amendments.map((a) => (
                   <li key={a.id} className="space-y-1.5 py-3 text-sm">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium">Effective {formatCalendarDate(a.effectiveDate)}</span>
+                      <span className="inline-flex items-center gap-2 font-medium">
+                        {a.kind === "RENEWAL" ? <Badge tone="green">Renewal</Badge> : <Badge tone="blue">Amendment</Badge>}
+                        Effective {formatCalendarDate(a.effectiveDate)}
+                      </span>
                       <span className="text-xs text-muted">
                         {a.actorName} · {formatDateTime(a.createdAt)}
                       </span>
@@ -207,6 +210,20 @@ export default async function SubscriptionPage({ params }: { params: Promise<{ i
           ) : (
             isLive(s.status) && (
               <>
+                <Disclosure
+                  summary={
+                    <span className="inline-flex items-center gap-2">
+                      <RefreshCw className="size-4 text-muted" aria-hidden /> Record a renewal
+                      {data.renewal && <Badge tone="amber">Due</Badge>}
+                    </span>
+                  }
+                  className="bg-surface shadow-xs"
+                >
+                  <RenewForm
+                    action={renewAction.bind(null, s.id)}
+                    defaults={{ ...renewalSuggestion(s), price: minorToInput(s.priceMinor), hasEndDate: s.endDate !== null, version: s.version }}
+                  />
+                </Disclosure>
                 <Disclosure summary="Amend terms (price, billing, dates)" className="bg-surface shadow-xs">
                   <AmendForm action={amendAction.bind(null, s.id)} defaults={{ ...terms, version: s.version }} today={todayInOperatingZone()} />
                 </Disclosure>

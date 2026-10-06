@@ -355,3 +355,35 @@ export function ServiceActiveForm({ action, active }: { action: Action; active: 
     </ActionForm>
   );
 }
+
+export function RenewForm({
+  action,
+  defaults,
+}: {
+  action: Action;
+  defaults: { renewalDate: string; endDate: string | null; price: string; hasEndDate: boolean; version: number };
+}) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="grid gap-4 sm:grid-cols-2">
+      <input type="hidden" name="version" value={defaults.version} />
+      <p className="text-sm text-muted sm:col-span-2">
+        Record what the customer agreed. The dates are moved forward by one billing period; change them if needed. The previous terms stay in the history.
+      </p>
+      <Field label="Next renewal date">
+        <input name="renewalDate" type="date" required defaultValue={defaults.renewalDate} className={inputClass} />
+      </Field>
+      <Field label={defaults.hasEndDate ? "New end date" : "End date (optional)"} hint={defaults.hasEndDate ? undefined : "Leave empty to stay open-ended."}>
+        <input name="endDate" type="date" defaultValue={defaults.endDate ?? ""} className={inputClass} />
+      </Field>
+      <Field label="Price (GHS)" hint="Change it only if a new price was agreed.">
+        <input name="price" required inputMode="decimal" defaultValue={defaults.price} className={inputClass} />
+      </Field>
+      <Field label="What was agreed">
+        <input name="reason" required minLength={3} placeholder="e.g. Renewed for 2027 by email, same terms" className={inputClass} />
+      </Field>
+      <div className="sm:col-span-2">
+        <SubmitButton>Record renewal</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
