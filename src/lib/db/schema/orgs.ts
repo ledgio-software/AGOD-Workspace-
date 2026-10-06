@@ -22,6 +22,15 @@ export const organizations = pgTable(
     // Phase 28: two people for money. When off (the default), nobody approves a project they are
     // paid on, or records a payment or adjustment on their own payout. Small teams may allow it.
     allowSelfApproval: boolean("allow_self_approval").notNull().default(false),
+    // Phase 29: the client money flow. The deposit suggested for new payment plans (basis points),
+    // whether a client project may start before its deposit is paid, how many working days a client
+    // has to review delivered work, and when the team's payouts can be paid.
+    defaultDepositBasisPoints: integer("default_deposit_basis_points").notNull().default(5000),
+    requireDeposit: boolean("require_deposit").notNull().default(false),
+    clientReviewDays: integer("client_review_days").notNull().default(10),
+    // ON_APPROVAL: in full once the project is approved. ON_CLIENT_PAYMENT: in step with what the
+    // client has paid for the project (internal projects: on approval).
+    payoutRelease: text("payout_release").notNull().default("ON_APPROVAL"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -33,6 +42,9 @@ export const organizations = pgTable(
     check("organizations_slug", sql`${t.slug} ~ '^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$'`),
     check("organizations_code_prefix", sql`${t.projectCodePrefix} ~ '^[A-Z][A-Z0-9]{1,7}$'`),
     check("organizations_team_type", sql`${t.teamType} IN ('SOFTWARE', 'FINTECH', 'OTHER')`),
+    check("organizations_deposit", sql`${t.defaultDepositBasisPoints} BETWEEN 0 AND 10000`),
+    check("organizations_review_days", sql`${t.clientReviewDays} BETWEEN 1 AND 60`),
+    check("organizations_payout_release", sql`${t.payoutRelease} IN ('ON_APPROVAL', 'ON_CLIENT_PAYMENT')`),
   ],
 );
 

@@ -110,6 +110,20 @@ check each service's permission (a role may have one and not the other).
 company allows it, nobody approves a project that pays them or that they asked to have approved, and
 nobody records a payment or adjustment on their own payout.
 
+### Client billing (Phase 29)
+
+| Action | Team Member | Project Manager | Admin |
+|---|:---:|:---:|:---:|
+| See a client project's Billing tab (plan, sign-off, change requests) | | ✓ | ✓ |
+| Change the payment plan, record client review and sign-off, change requests (`project.edit`) | | ✓ | ✓ |
+| Create a payment's invoice (`invoice.manage`) | | ✓ | ✓ |
+| Deposit rule, client review days, when the team is paid (`company.manage`) | | | ✓ |
+
+Row-level security: `billing_stages` and `change_requests` are for managers only. Database
+guards keep invoiced stages and decided change requests unchanged, and the trigger
+`payment_transactions_release` refuses payouts above what the client has paid for (when the
+company pays the team in step with the client).
+
 ### Community (Phase 25)
 
 Community roles are separate from company roles: everyone signed in is a Builder; Reviewer is a

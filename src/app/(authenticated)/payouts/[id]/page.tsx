@@ -134,6 +134,13 @@ export default async function PayoutPage({ params }: { params: Promise<{ id: str
                 ))}
               </ul>
             )}
+            {open && payout.releasableMinor < balance.effectiveOwedMinor && (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                The team is paid in step with the client. The client has paid for part of this project, so{" "}
+                <strong>{money(Math.max(payout.releasableMinor - balance.paidMinor, 0))}</strong> of this payout can be paid now; the rest follows the
+                client&apos;s next payments.
+              </p>
+            )}
             {can(actor, "payment.record") && open && balance.remainingMinor > 0 && (
               <div className="border-t border-line pt-4">
                 <PaymentForm action={recordPaymentAction.bind(null, entry.id)} today={todayInOperatingZone()} remainingLabel={money(balance.remainingMinor)} />

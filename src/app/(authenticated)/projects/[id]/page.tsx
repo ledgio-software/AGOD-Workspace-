@@ -28,6 +28,8 @@ import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { approvalBlockFor, getProjectPayouts } from "@/modules/approvals";
 import { activeJobTitleNames } from "@/modules/roles";
+import { canSeeBilling, getBilling } from "@/modules/billing";
+import { BillingTab } from "./billing-tab";
 import { type AttachmentView, attachmentsAvailable, listProjectAttachments } from "@/modules/attachments";
 import { listComments } from "@/modules/comments";
 import { getProjectFinance } from "@/modules/finance";
@@ -95,7 +97,7 @@ import {
   WaiveForm,
 } from "./workspace-forms";
 
-const TABS = ["overview", "tasks", "team", "discussion", "files", "activity"] as const;
+const TABS = ["overview", "tasks", "team", "billing", "discussion", "files", "activity"] as const;
 type Tab = (typeof TABS)[number];
 
 function Meta({ label, children }: { label: string; children: React.ReactNode }) {
@@ -160,6 +162,9 @@ export default async function ProjectWorkspacePage({
   // Phase 28: who may approve (a company role can switch it off), and two people for money.
   const canApprove = can(actor, "project.approve");
   const approvalBlock = canApprove && project.status === "PENDING_APPROVAL" ? await approvalBlockFor(actor, project.id) : null;
+  // Phase 29: client projects have a Billing tab (payment plan, sign-off, change requests).
+  const billing = project.clientType === "EXTERNAL" && canSeeBilling(actor) ? await getBilling(actor, project.id) : null;
+  const depositPending = !!billing?.settings.requireDeposit && billing.depositPaid !== true;
   const toLinks = (list: LinkView[]): LinkItem[] =>
     list.map((l) => ({
       id: l.id,
@@ -192,6 +197,7 @@ export default async function ProjectWorkspacePage({
     { key: "overview", label: "Overview" },
     { key: "tasks", label: "Tasks", count: ws.tasks.length },
     { key: "team", label: isManager ? "Team & money" : "Team" },
+    ...(billing ? [{ key: "billing" as const, label: "Billing", count: billing.stages.length }] : []),
     { key: "discussion", label: "Discussion", count: discussion.length },
     { key: "files", label: "Files", count: files.project.length + taskFileCount + links.project.length + taskLinkCount },
     { key: "activity", label: "Activity" },
@@ -523,7 +529,7 @@ export default async function ProjectWorkspacePage({
               {isManager && (
                 <Card title="Manage">
                   <div className="space-y-4">
-                    <StatusControls action={changeStatusAction.bind(null, project.id)} allowed={allowedManualTransitions(project.status)} />
+                    <StatusControls action={changeStatusAction.bind(null, project.id)} allowed={allowedManualTransitions(project.status)} depositPending={depositPending} />
                     {can(actor, "project.overrideHealth") && ws.calculatedHealth && (
                       <HealthOverrideForm action={healthOverrideAction.bind(null, project.id)} current={ws.healthOverride?.health ?? null} />
                     )}
@@ -948,6 +954,8 @@ export default async function ProjectWorkspacePage({
       )}
 
       {/* Discussion */}
+      {tab === "billing" && billing && <BillingTab actor={actor} billing={billing} milestones={ws.milestones.map((m) => ({ id: m.id, title: m.title }))} />}
+
       {tab === "discussion" && (
         <Card title="Discussion" aside={<MessagesSquare className="size-4 text-muted" aria-hidden />}>
           <div className="space-y-6">

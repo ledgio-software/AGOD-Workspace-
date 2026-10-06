@@ -52,7 +52,8 @@ calendar, partners page and metrics.
 ## Company workflow (Phase 28 onwards)
 
 From the workflow research (software and fintech teams, October 2026). Done: company-made roles,
-job titles, "what kind of team are you?" set-up, two people for money (Phase 28). Next: client
-money flow (deposit setting, milestone invoices, client sign-off, when the team is paid, change
-requests) (29); in-app messages with an unread icon (30); later fintech extras (security check,
-release approval, evidence export) and tax rates as settings.
+job titles, "what kind of team are you?" set-up, two people for money (Phase 28); client money
+flow: payment plans, deposit rule, client sign-off, change requests, paying the team in step with
+the client (Phase 29). Next: in-app messages with an unread icon (30); later fintech extras
+(security check, release approval, evidence export), tax rates as settings (withholding tax on
+client payments), and a client portal for online sign-off.

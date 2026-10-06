@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
@@ -65,6 +65,11 @@ function rethrowGuard(error: unknown): never {
   throw error;
 }
 
+/** Phase 29: how much of a payout may be paid so far (see app_payout_releasable). */
+async function releasableOf(tx: Tx, entryId: string): Promise<number> {
+  return Number((await tx.execute<{ r: string }>(sql`select app_payout_releasable(${entryId}) as r`)).rows[0].r);
+}
+
 /** Phase 28, two people for money (the database refuses it too). */
 async function assertNotOwnPayout(tx: Tx, actor: Actor, payeeId: string) {
   if (payeeId !== actor.id) return;
@@ -110,6 +115,14 @@ export async function recordPayment(
   return withActor(actor, async (tx) => {
     const { entry, projectCode, projectName } = await loadEntry(tx, entryId);
     await assertNotOwnPayout(tx, actor, entry.memberId);
+    // Phase 29: when the company pays the team in step with the client (the database refuses it too).
+    const before = await balanceOf(tx, entry);
+    const releasable = await releasableOf(tx, entryId);
+    if (releasable < before.effectiveOwedMinor && before.paidMinor + input.amount > releasable) {
+      throw new ServiceError(
+        `Only ${formatMoney(Math.max(releasable - before.paidMinor, 0), entry.currency)} of this payout can be paid now: the team is paid in step with what the client has paid for ${projectCode}.`,
+      );
+    }
     let payment;
     try {
       [payment] = await tx
@@ -262,6 +275,8 @@ export async function getPayout(actor: Actor, entryId: string) {
     return {
       ...row,
       balance,
+      /** Phase 29: what may be paid so far in total (less than owed while the client hasn't paid enough). */
+      releasableMinor: await releasableOf(tx, entryId),
       payments: payments.map((p) => ({ ...p.payment, recordedByName: p.recordedByName })),
       adjustments: adjustmentRows.map((a) => ({ ...a.adjustment, createdByName: a.createdByName })),
     };

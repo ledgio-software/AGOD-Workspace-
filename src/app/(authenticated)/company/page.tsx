@@ -4,8 +4,8 @@ import { Card, PageHeader } from "@/components/ui";
 import { can } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { getOrganization } from "@/modules/orgs";
-import { selfApprovalAction, updateCompanyAction } from "./actions";
-import { CompanyForm, SelfApprovalForm } from "./company-form";
+import { moneyFlowAction, selfApprovalAction, updateCompanyAction } from "./actions";
+import { CompanyForm, MoneyFlowForm, SelfApprovalForm } from "./company-form";
 
 export default async function CompanyPage() {
   const actor = await requireUser();
@@ -21,6 +21,17 @@ export default async function CompanyPage() {
       />
       <Card>
         <CompanyForm action={updateCompanyAction} defaults={{ name: org.name, projectCodePrefix: org.projectCodePrefix }} />
+      </Card>
+      <Card title="Client payments" description="Deposits, how long clients have to review work, and when the team can be paid.">
+        <MoneyFlowForm
+          action={moneyFlowAction}
+          defaults={{
+            defaultDeposit: String(org.defaultDepositBasisPoints / 100),
+            requireDeposit: org.requireDeposit,
+            clientReviewDays: org.clientReviewDays,
+            payoutRelease: org.payoutRelease as "ON_APPROVAL" | "ON_CLIENT_PAYMENT",
+          }}
+        />
       </Card>
       <Card
         title="Two people for money"

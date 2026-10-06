@@ -309,6 +309,20 @@
       "when": 1791315169684,
       "tag": "20261006193249_roles_and_titles_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791318964056,
+      "tag": "20261006203604_client_money_flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1791318965401,
+      "tag": "20261006203605_client_money_flow_rules",
+      "breakpoints": true
     }
   ]
 }

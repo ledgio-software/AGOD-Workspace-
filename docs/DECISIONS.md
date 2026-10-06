@@ -335,3 +335,16 @@ Phase 9 (file attachments in Vercel Blob).
 | Two people for money | On for new companies: nobody approves a project that pays them or that they asked to have approved, and nobody records a payment or adjustment on their own payout (the database refuses the payout and payment rows too). A one-manager company may switch it off on the Company page, with a reason (audited). Companies that existed before Phase 28 start with it off, so nothing breaks; Admins should switch it on. |
 | Password reset | Completing a reset link also confirms the email (and finishes sign-up), since it proves the person owns the address. |
 | Wording | "AGOD share" is now "company share" in the app, since every company uses it. |
+
+## Phase 29 decisions (2026-10-06): client money flow
+
+| Decision | Choice |
+|---|---|
+| Payment plan | Per client (external) project: stages of kind Deposit, Milestone, Final or Change, in amounts (pesewas) that never add up to more than the project's value. Presets 50/50 (the company's usual deposit), 40/30/30, 100% upfront, 100% on completion; the last stage takes the rounding remainder. Presets replace only stages not yet invoiced; change payments stay. |
+| Invoicing | One draft invoice per stage, for the project's customer, from the Billing tab (`invoice.manage`). The stage's status follows its invoice: not invoiced, draft, invoiced, part paid, paid. A voided invoice frees the stage. An invoiced stage keeps its amount and is never deleted (database guard). |
+| Deposit rule | Company setting "No deposit, no work" (off by default): a client project can't move from Planning to In progress until its deposit stage is paid. A manager may start anyway with a written reason, recorded in the audit log. |
+| Client sign-off | Recorded by a manager on each stage: when the work went for review, and when and how the client accepted (e.g. "Email from Ama"). The answer deadline is the company's review days in working days (default 10, Mon–Fri, holidays not counted). Silence is not turned into acceptance automatically; the page says when the time is up. No client portal yet. |
+| Change requests | Draft → sent → approved or rejected (with date and how the client decided). Approval needs the project to be editable; it adds the price to the project's value (so percentage splits grow with it), adds a Change payment to the plan, and moves the target date by the extra days. Decided requests never change (database guard). |
+| Paying the team | Company setting: on approval (default, as before) or in step with the client. In step: for a client project, a payout can be paid up to owed × (client paid ÷ project value), whole pesewas rounded down; internal projects are paid on approval. Client paid = each issued invoice's payments shared across its lines in proportion. Enforced in the app and by a database trigger (`app_payout_releasable`). |
+| Who | Plans, sign-off and change requests: "Create and edit projects". Invoices: "Invoices". Settings: "Company settings". Team members never see a project's billing. |
+| Not included | Withholding tax and VAT on client payments (tax rates as settings come later, after advice), online client sign-off links, automatic reminders to clients. |
