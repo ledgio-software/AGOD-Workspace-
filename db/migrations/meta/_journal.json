@@ -204,6 +204,27 @@
       "when": 1791253603500,
       "tag": "20261006022643_google_drive_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791255989557,
+      "tag": "20261006030629_organizations",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791255994504,
+      "tag": "20261006030634_invoice_settings_per_org",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791256129694,
+      "tag": "20261006030849_organizations_rules",
+      "breakpoints": true
     }
   ]
 }

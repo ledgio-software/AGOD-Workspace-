@@ -1,10 +1,10 @@
-# Creates the FIRST Admin in an environment that has none (normally once, at go-live).
-# The script refuses if an active Admin already exists. Runs only when started by hand;
+# Creates a company and its first Admin (e.g. AGOD at go-live, or a company you set up by hand).
+# The script refuses if a company with that name exists. Runs only when started by hand;
 # the `production` environment additionally requires a reviewer's approval.
 #
 # The temporary password is printed in this run's log, which repo collaborators can read:
 # the new Admin must change it on the Account page right after signing in.
-name: Create first Admin
+name: Create a company and its first Admin
 
 on:
   workflow_dispatch:
@@ -13,6 +13,12 @@ on:
         description: "Environment"
         type: choice
         options: [staging, production]
+      company:
+        description: "Company name"
+        required: true
+      prefix:
+        description: "Project code prefix (optional, e.g. AGOD)"
+        required: false
       name:
         description: "Admin's full name"
         required: true
@@ -37,6 +43,8 @@ jobs:
       - name: Create Admin
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+          COMPANY_NAME: ${{ inputs.company }}
+          PROJECT_CODE_PREFIX: ${{ inputs.prefix }}
           ADMIN_NAME: ${{ inputs.name }}
           ADMIN_EMAIL: ${{ inputs.email }}
         run: npm run admin:create

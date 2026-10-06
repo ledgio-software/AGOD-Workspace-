@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { projectCosts, projects, tasks, users } from "@/lib/db/schema";
+import { projectCosts, projects, tasks, orgMembers, users } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { parseMoney } from "@/lib/money";
 import { type Actor, assertCan } from "@/lib/permissions";
@@ -280,10 +280,10 @@ export async function getUtilisation(actor: Actor, rawMonth?: string) {
   const weeks = (end.getTime() - start.getTime()) / (7 * 86_400_000);
   return withActor(actor, async (tx) => {
     const people = await tx
-      .select({ id: users.id, name: users.name, weeklyCapacityHours: users.weeklyCapacityHours })
-      .from(users)
-      .where(eq(users.active, true))
-      .orderBy(asc(users.name));
+      .select({ id: orgMembers.id, name: orgMembers.name, weeklyCapacityHours: orgMembers.weeklyCapacityHours })
+      .from(orgMembers)
+      .where(eq(orgMembers.active, true))
+      .orderBy(asc(orgMembers.name));
     const done = await tx
       .select({ assignedTo: tasks.assignedTo, estimateHours: tasks.estimateHours })
       .from(tasks)

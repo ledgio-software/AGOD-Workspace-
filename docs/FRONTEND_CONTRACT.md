@@ -38,6 +38,8 @@ rules, audit) lives behind these functions, not in the pages.
 | `/subscriptions/[id]` | `subscription.view` | `getSubscription`, `renewalSuggestion` | `subscriptions/actions`: `changeStatusAction`, `updateDraftAction`, `amendAction`, `renewAction`, `updateDetailsAction` |
 | `/services` | `subscription.view` | `listServices` | `createServiceAction`, `updateServiceAction`, `setServiceActiveAction` |
 | `/account` | everyone | `getDailyEmail` | `account/actions`: `setDailyEmailAction` |
+| `/company` | `company.manage` | `getOrganization` | `company/actions`: `updateCompanyAction`; `switchCompanyAction` (the sidebar company menu, any member of several companies) |
+| `/no-company` | signed in, no active company | `getSignedIn` | |
 | `/integrations` (`?google=<result>`) | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig`, `googleStatus` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction`, `syncDriveAction`, `disconnectGoogleAction` (`google.manage`); `/api/google/connect` → Google → `/api/google/callback` |
 | `/invoices` | `invoice.view` | `listInvoices({ q, state, customerId })`, `invoiceTotals` | `invoices/actions`: `prepareAction` |
 | `/invoices/new` (`?customer=<id>`) | `invoice.manage` | `listCustomerOptions` | `createDraftAction` |

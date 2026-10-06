@@ -46,6 +46,7 @@ export function navGroups(actor: Actor): NavGroup[] {
         { href: "/team", label: "Team", icon: "team", show: can(actor, "team.view") },
         { href: "/audit", label: "Audit log", icon: "audit", show: can(actor, "audit.viewProject") },
         { href: "/integrations", label: "Integrations", icon: "integrations", show: can(actor, "audit.viewAll") },
+        { href: "/company", label: "Company", icon: "company", show: can(actor, "company.manage") },
       ],
     },
   ];

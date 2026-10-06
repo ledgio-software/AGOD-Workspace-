@@ -10,7 +10,7 @@ import { todayInOperatingZone } from "@/lib/dates";
 import { authorizationUrl, newAuthRequest } from "@/lib/google/client";
 import { COMPANY_SCOPES, googleConfig } from "@/lib/google/config";
 import { openAttempt, sealAttempt } from "@/lib/google/oauth-cookie";
-import { PermissionError } from "@/lib/permissions";
+import { type Actor, PermissionError } from "@/lib/permissions";
 import { approveProject, requestApproval } from "@/modules/approvals";
 import { attachmentsAvailable, openAttachment, uploadAttachment } from "@/modules/attachments";
 import { createCustomer } from "@/modules/customers";
@@ -33,7 +33,7 @@ import { changeProjectStatus, createProject } from "@/modules/projects";
 import { addAssignment } from "@/modules/projects/team";
 import { createTask, updateTaskProgress } from "@/modules/tasks";
 import { type FakeGoogle, childrenOf, fakeGoogleEnv, sharedWith, startFakeGoogle } from "../support/fake-google";
-import { createUser, db, expectDbError } from "./fixtures";
+import { TEST_ORG_ID, createUser, db, expectDbError } from "./fixtures";
 
 vi.mock("server-only", () => ({}));
 
@@ -61,7 +61,7 @@ beforeEach(async () => {
 });
 
 /** Goes through the fake consent screen and finishes the connection, like /api/google/callback. */
-async function connect(admin: { id: string; role: "ADMIN" }) {
+async function connect(admin: Actor) {
   const config = googleConfig()!;
   const attempt = newAuthRequest();
   const response = await fetch(authorizationUrl(config, { redirectUri: googleRedirectUri(), scopes: COMPANY_SCOPES, state: attempt.state, challenge: attempt.challenge }), {
@@ -75,7 +75,7 @@ async function connect(admin: { id: string; role: "ADMIN" }) {
 
 /** The current account's folder for a purpose, as the app recorded it. */
 async function folder(purpose: string, entityId: string | null = null) {
-  const connection = (await companyConnection())!;
+  const connection = (await companyConnection(TEST_ORG_ID))!;
   const rows = await db.select().from(driveFolders).where(and(eq(driveFolders.connectionId, connection.id), eq(driveFolders.purpose, purpose)));
   const row = rows.find((r) => r.entityId === entityId)!;
   return google.files.get(row.folderId)!;
@@ -92,25 +92,26 @@ async function team() {
   await changeProjectStatus(pm, project.id, { to: "PLANNING" });
   await changeProjectStatus(pm, project.id, { to: "IN_PROGRESS" });
   const task = await createTask(pm, project.id, { title: "Build", assignedTo: member.id });
-  return { admin: admin as { id: string; role: "ADMIN" }, pm, member, other, project, task };
+  return { admin, pm, member, other, project, task };
 }
 
 const email = (u: { id: string }) => `${u.id}@agod.test`;
 
 describe("connecting the company Google account", () => {
-  it("is Admin-only, stores the sign-in encrypted, and creates and shares the AGOD folder", async () => {
+  it("is Admin-only, stores the sign-in encrypted, and creates and shares the company folder", async () => {
     const { admin, pm, member } = await team();
     await expect(completeCompanyConnect(pm, { code: "x", verifier: "y" })).rejects.toThrow(PermissionError);
 
     const connected = await connect(admin);
     expect(connected).toBe(google.account.email);
-    const connection = (await companyConnection())!;
+    const connection = (await companyConnection(TEST_ORG_ID))!;
     expect(connection.googleEmail).toBe(google.account.email);
     expect(connection.refreshTokenEnc).toMatch(/^v1\./);
     expect(connection.refreshTokenEnc).not.toContain("rt-");
 
     // AGOD is shared with every active manager, not with members.
     const root = await rootFolder();
+    expect(root.name).toBe("Test company");
     const shared = sharedWith(google, root.id);
     expect(shared).toEqual(expect.arrayContaining([email(admin), email(pm)]));
     expect(shared).not.toContain(email(member));
@@ -128,15 +129,15 @@ describe("connecting the company Google account", () => {
     const { admin } = await team();
     google.account.grantDrive = false;
     await expect(connect(admin)).rejects.toThrow(/Drive access/);
-    expect(await companyConnection()).toBeNull();
+    expect(await companyConnection(TEST_ORG_ID)).toBeNull();
 
-    const cookie = sealAttempt({ state: "s1", verifier: "v1", userId: admin.id });
-    expect(openAttempt(cookie, { state: "s1", userId: admin.id })?.verifier).toBe("v1");
-    expect(openAttempt(cookie, { state: "s2", userId: admin.id })).toBeNull();
-    expect(openAttempt(cookie, { state: "s1", userId: randomUUID() })).toBeNull();
-    expect(openAttempt(cookie, { state: "s1", userId: admin.id }, Date.now() + 11 * 60_000)).toBeNull();
+    const cookie = sealAttempt({ state: "s1", verifier: "v1", userId: admin.id, orgId: TEST_ORG_ID });
+    expect(openAttempt(cookie, { state: "s1", userId: admin.id, orgId: TEST_ORG_ID })?.verifier).toBe("v1");
+    expect(openAttempt(cookie, { state: "s2", userId: admin.id, orgId: TEST_ORG_ID })).toBeNull();
+    expect(openAttempt(cookie, { state: "s1", userId: randomUUID(), orgId: TEST_ORG_ID })).toBeNull();
+    expect(openAttempt(cookie, { state: "s1", userId: admin.id, orgId: TEST_ORG_ID }, Date.now() + 11 * 60_000)).toBeNull();
     const tampered = cookie.slice(0, 20) + (cookie[20] === "A" ? "B" : "A") + cookie.slice(21);
-    expect(openAttempt(tampered, { state: "s1", userId: admin.id })).toBeNull();
+    expect(openAttempt(tampered, { state: "s1", userId: admin.id, orgId: TEST_ORG_ID })).toBeNull();
   });
 });
 
@@ -144,7 +145,7 @@ describe("files in Drive", () => {
   it("stores uploads in the project folder, shares it with the team, and serves them back", async () => {
     const { admin, pm, member, other, project, task } = await team();
     await connect(admin);
-    expect(await attachmentsAvailable()).toBe(true);
+    expect(await attachmentsAvailable(TEST_ORG_ID)).toBe(true);
 
     const doc = await uploadAttachment(pm, { kind: "PROJECT", projectId: project.id }, { name: "brief.txt", bytes: new TextEncoder().encode("Scope v1") });
     await uploadAttachment(member, { kind: "TASK", taskId: task.id }, { name: "design.pdf", bytes: new TextEncoder().encode("%PDF-1.7 design") });
@@ -154,20 +155,20 @@ describe("files in Drive", () => {
     expect(projectFolder.name).toBe(`${project.code} ${project.name}`);
     expect(projectFolder.parents).toEqual([(await folder("INTERNAL")).id]);
     expect(childrenOf(google, projectFolder.id).map((f) => f.name).sort()).toEqual(["brief.txt", "design.pdf"]);
-    expect(await driveFolderLink("PROJECT", project.id)).toContain(projectFolder.id);
+    expect(await driveFolderLink(TEST_ORG_ID, "PROJECT", project.id)).toContain(projectFolder.id);
 
     const opened = await openAttachment(member, doc.id);
     expect(opened && new TextDecoder().decode(opened.body as Uint8Array)).toBe("Scope v1");
     expect(await openAttachment(other, doc.id)).toBeNull();
 
     // Sharing: the member gets the project folder; when they leave the project, the access the app gave goes.
-    await syncDrive({ projectIds: [project.id] });
+    await syncDrive(TEST_ORG_ID, { projectIds: [project.id] });
     expect(sharedWith(google, projectFolder.id)).toEqual([email(member)]);
     await db.update(projectAssignments).set({ active: false }).where(eq(projectAssignments.memberId, member.id));
     await db.execute(`UPDATE tasks SET assigned_to = NULL WHERE id = '${task.id}'`);
     // Someone shared it by hand in Drive: the app leaves that alone.
     google.permissions.get(projectFolder.id)!.push({ id: "manual", type: "user", role: "reader", emailAddress: "client@example.com" });
-    const summary = await syncDrive({ projectIds: [project.id] });
+    const summary = await syncDrive(TEST_ORG_ID, { projectIds: [project.id] });
     expect(summary?.unshared).toBe(1);
     expect(sharedWith(google, projectFolder.id)).toEqual(["client@example.com"]);
   });
@@ -183,10 +184,10 @@ describe("files in Drive", () => {
     expect(row.folderId).not.toBe(folderId);
     expect(google.files.get(file.storageKey.split(":")[2])?.parents).toEqual([row.folderId]);
 
-    // The whole AGOD folder deleted in Drive: the next sync builds it again.
+    // The whole company folder deleted in Drive: the next sync builds it again.
     const oldRoot = (await rootFolder()).id;
     for (const f of [...google.files.values()]) google.files.delete(f.id);
-    await syncDrive();
+    await syncDrive(TEST_ORG_ID);
     const newRoot = await rootFolder();
     expect(newRoot.id).not.toBe(oldRoot);
     expect(sharedWith(google, newRoot.id)).toContain(email(admin));
@@ -194,7 +195,7 @@ describe("files in Drive", () => {
     const outsider = await createUser("TEAM_MEMBER");
     await db.execute(`UPDATE users SET email = 'x-${outsider.id.slice(0, 8)}@nogoogle.test' WHERE id = '${outsider.id}'`);
     await addAssignment(pm, project.id, { memberId: outsider.id, roleOnProject: "QA", split: "0" });
-    const summary = await syncDrive({ projectIds: [project.id] });
+    const summary = await syncDrive(TEST_ORG_ID, { projectIds: [project.id] });
     expect(summary?.failures.join()).toMatch(/nogoogle\.test.*no Google account/);
   });
 
@@ -221,17 +222,17 @@ describe("files in Drive", () => {
 
     const local = await uploadAttachment(pm, { kind: "PROJECT", projectId: project.id }, { name: "b.txt", bytes: new TextEncoder().encode("local") });
     expect(local.storageKey).toMatch(/^projects\//);
-    expect((await companyConnection())?.lastError).toMatch(/Connect the account again/);
+    expect((await companyConnection(TEST_ORG_ID))?.lastError).toMatch(/Connect the account again/);
     expect(await openAttachment(pm, inDrive.id)).toBeNull();
 
     // Reconnecting the same account brings the Drive files back.
     await connect(admin);
     const opened = await openAttachment(pm, inDrive.id);
     expect(opened && new TextDecoder().decode(opened.body as Uint8Array)).toBe("drive");
-    expect((await companyConnection())?.lastError).toBeNull();
+    expect((await companyConnection(TEST_ORG_ID))?.lastError).toBeNull();
 
     await disconnectCompany(admin);
-    expect(await companyConnection()).toBeNull();
+    expect(await companyConnection(TEST_ORG_ID)).toBeNull();
     expect([...google.refreshTokens.values()].every((t) => t.revoked)).toBe(true);
     expect(await openAttachment(pm, inDrive.id)).toBeNull();
   });
@@ -258,7 +259,7 @@ describe("invoices in Drive", () => {
     const invoicesFolder = google.files.get(pdf.parents[0])!;
     expect(invoicesFolder.name).toBe("Invoices");
     expect(google.files.get(invoicesFolder.parents[0])?.name).toBe(customer.name);
-    expect(await driveFolderLink("CUSTOMER", customer.id)).toContain(invoicesFolder.parents[0]);
+    expect(await driveFolderLink(TEST_ORG_ID, "CUSTOMER", customer.id)).toContain(invoicesFolder.parents[0]);
   });
 });
 

@@ -17,12 +17,12 @@ export default async function InvoiceSettingsPage() {
       <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
         <ArrowLeft className="size-4" aria-hidden /> Invoices
       </Link>
-      <PageHeader title="Invoice settings" description="Who AGOD is on its invoices and how customers pay. These details appear on every invoice PDF, including ones already issued." />
+      <PageHeader title="Invoice settings" description="Who your company is on its invoices and how customers pay. These details appear on every invoice PDF, including ones already issued." />
       <Card>
         <SettingsForm
           action={settingsAction}
           defaults={{
-            businessName: s?.businessName ?? "AGOD",
+            businessName: s?.businessName ?? actor.orgName,
             address: s?.address ?? null,
             email: s?.email ?? null,
             phone: s?.phone ?? null,

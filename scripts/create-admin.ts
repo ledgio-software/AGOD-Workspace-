@@ -1,68 +1,56 @@
-// Creates the FIRST Admin in an environment that has none (e.g. production at go-live).
-// Refuses to run if an active Admin already exists: after that, Admins are managed on the Team page.
+// Creates a company and its first Admin (e.g. production at go-live, or a company you set up by
+// hand before self sign-up exists). After that, Admins manage their people on the Team page.
 //
-//   ADMIN_NAME="Ama Mensah" ADMIN_EMAIL=ama@example.com npm run admin:create
+//   COMPANY_NAME="AGOD" ADMIN_NAME="Ama Mensah" ADMIN_EMAIL=ama@example.com npm run admin:create
+//   (optional: PROJECT_CODE_PREFIX=AGOD — defaults to the first word of the company name)
 //
-// Prints a temporary password once. The Admin must change it on the Account page after signing in.
+// If the email already has a login (e.g. in another company), that person becomes the new
+// company's Admin with their existing password. Otherwise a temporary password is printed once.
 import { randomBytes } from "node:crypto";
 import { config } from "dotenv";
-import { hashPassword } from "better-auth/crypto";
-import { and, eq, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import { normalizeDatabaseUrl } from "../src/lib/db/url";
-import { accounts, auditEvents, users } from "../src/lib/db/schema";
 
 config({ path: [".env.local", ".env"], quiet: true });
 
 async function main() {
-  const url = process.env.DATABASE_URL;
+  const { hashPassword } = await import("better-auth/crypto");
+  const { eq, sql } = await import("drizzle-orm");
+  const { db } = await import("../src/lib/db");
+  const { accounts, auditEvents, organizations, users } = await import("../src/lib/db/schema");
+  const { createOrganization } = await import("../src/modules/orgs");
+
+  const company = process.env.COMPANY_NAME?.trim();
   const name = process.env.ADMIN_NAME?.trim();
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (!url) throw new Error("DATABASE_URL is not set");
-  if (!name || !email || !email.includes("@")) {
-    throw new Error("Set ADMIN_NAME and ADMIN_EMAIL.");
-  }
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
+  if (!company || !name || !email || !email.includes("@")) throw new Error("Set COMPANY_NAME, ADMIN_NAME and ADMIN_EMAIL.");
 
-  const pool = new Pool({ connectionString: normalizeDatabaseUrl(url) });
-  const db = drizzle(pool);
-  try {
-    const [existingAdmin] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.role, "ADMIN"), eq(users.active, true)));
-    if (existingAdmin) {
-      throw new Error("An active Admin already exists. Use the Team page to add more Admins.");
-    }
-    const [existingEmail] = await db.select({ id: users.id }).from(users).where(eq(sql`lower(${users.email})`, email));
-    if (existingEmail) throw new Error("A user with this email already exists.");
+  const [sameName] = await db.select({ id: organizations.id }).from(organizations).where(eq(sql`lower(${organizations.name})`, company.toLowerCase()));
+  if (sameName) throw new Error(`A company called "${company}" already exists. Its Admins add people on the Team page.`);
 
-    const temporaryPassword = `Agod-${randomBytes(12).toString("base64url")}`;
+  let temporaryPassword: string | null = null;
+  let [user] = await db.select({ id: users.id }).from(users).where(eq(sql`lower(${users.email})`, email));
+  if (!user) {
+    temporaryPassword = `Agod-${randomBytes(12).toString("base64url")}`;
     const passwordHash = await hashPassword(temporaryPassword);
-    await db.transaction(async (tx) => {
-      const [admin] = await tx
-        .insert(users)
-        .values({ name, email, role: "ADMIN", emailVerified: true })
-        .returning({ id: users.id });
-      await tx.insert(accounts).values({
-        userId: admin.id,
-        accountId: admin.id,
-        providerId: "credential",
-        password: passwordHash,
-      });
-      await tx.insert(auditEvents).values({
-        actorId: null,
-        entityType: "user",
-        entityId: admin.id,
-        action: "user.bootstrap_admin",
-        afterJson: { name, email, role: "ADMIN" },
-      });
+    user = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(users).values({ name, email, emailVerified: true }).returning({ id: users.id });
+      await tx.insert(accounts).values({ userId: created.id, accountId: created.id, providerId: "credential", password: passwordHash });
+      return created;
     });
-    console.log(`Created Admin ${email}`);
-    console.log(`Temporary password (shown once, change it after signing in): ${temporaryPassword}`);
-  } finally {
-    await pool.end();
   }
+  const org = await createOrganization({ name: company, ownerId: user.id, projectCodePrefix: process.env.PROJECT_CODE_PREFIX?.trim() || undefined });
+  await db.insert(auditEvents).values({
+    organizationId: org.id,
+    actorId: null,
+    entityType: "organization",
+    entityId: org.id,
+    action: "company.created",
+    afterJson: { name: org.name, admin: email },
+  });
+  console.log(`Created company "${org.name}" (projects ${org.projectCodePrefix}-…) with Admin ${email}`);
+  if (temporaryPassword) console.log(`Temporary password (shown once, change it after signing in): ${temporaryPassword}`);
+  else console.log("That email already had a login: sign in with its existing password and pick the company.");
+  process.exit(0);
 }
 
 main().catch((error) => {

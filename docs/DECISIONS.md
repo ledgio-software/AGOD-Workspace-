@@ -26,8 +26,8 @@ Changing any of these later needs a PR that updates this file.
 
 ## Consequences for the design document
 
-- Row Level Security: the design doc relies on Supabase's `auth.uid()`. With Neon, domain queries run as a restricted `agod_app` role with the acting user's id in a per-transaction setting (`app.user_id`); policies look up that user's role and active flag in `users`. See `docs/PERMISSIONS.md`.
-- Roles are stored on `users.role` (`TEAM_MEMBER`, `PROJECT_MANAGER`, `ADMIN`); clients can never set them through the auth API.
+- Row Level Security: the design doc relies on Supabase's `auth.uid()`. With Neon, domain queries run as a restricted `agod_app` role with the acting user's id in a per-transaction setting (`app.user_id`); policies look up that user's role and active flag (since Phase 22: in their membership of the current company, `app.org_id`). See `docs/PERMISSIONS.md`.
+- Roles (`TEAM_MEMBER`, `PROJECT_MANAGER`, `ADMIN`) were stored on `users.role`; since Phase 22 they are per company on `memberships.role`. Clients can never set them through the auth API.
 
 ## Initial team and roles
 
@@ -228,3 +228,19 @@ Phase 9 (file attachments in Vercel Blob).
 | Links | Links (https only) to Google Docs/Sheets/Slides/Drive or other pages on a project (managers) or a task (managers and the assignee); removed softly by whoever added them or a manager; visible with the project. |
 | Security | The refresh token is encrypted (AES-256-GCM, key derived from `BETTER_AUTH_SECRET`). Tokens and folder ids live in tables the app role cannot read at all; the server reads them through the owner connection after its own permission checks. The OAuth attempt (state, PKCE verifier, who started it) is kept in an encrypted, httpOnly, 10-minute cookie. |
 | Not included | Shared drives (Google Workspace), browsing Drive from the app, two-way sync of files added in Drive, per-person Drive accounts (Phase 22 adds personal Google connections for calendars). |
+
+## Phase 22 decisions (2026-10-06): companies (multi-tenant)
+
+| Decision | Choice |
+|---|---|
+| Why now | The product will be offered to other companies and developers. Done before go-live, while there is no real data, with AGOD as the first company (all existing data moved into it). |
+| Model | One shared database. Every company-owned table has `organization_id`, defaulted from the current company. A person has one login and a **membership** per company with its own role, active flag and capacity. |
+| Separation | Enforced by PostgreSQL for the app role: a restrictive policy per table (`organization_id = app_org_id()`), roles read from the membership in the current company, a trigger refusing cross-company references, and company checks inside functions that bypass row-level security. An integration test checks every company-owned table. |
+| Membership | People can belong to several companies, with a company switcher (choice remembered per browser; default is the company joined first). Deactivating someone ends access to that company only. |
+| Accounts | Admins add people by email; an existing login is added without a new password. Admins reset passwords only for people in no other company. Every company keeps at least one active Admin. |
+| Numbering | Project codes use a per-company prefix (default from the company name, editable by Admins; existing codes unchanged), sequential per company and year. Invoice numbers are sequential per company. |
+| System work | The daily job runs per company (one run record and one email per person per company). GitHub webhook rows go to each affected project's company. Google Drive is connected per company. GitHub deliveries are platform-wide; each company sees only its own repositories'. |
+| Creating companies | `npm run admin:create` or the GitHub workflow (company + first Admin) until self sign-up (Phase 23). New companies get the starter templates and invoice settings. |
+| Product name | Will become **Ghana Vibe Coders & Developers** (Phase 23 sign-up pages); inside the app the sidebar shows the company's name. |
+| Not included | Self sign-up, invitations by email and password reset by email (Phase 23); billing; a platform admin view; per-company time zone and currency (still Africa/Accra and GHS by default). |
+

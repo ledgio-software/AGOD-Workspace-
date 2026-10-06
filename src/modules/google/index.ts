@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { customers, driveFolders, googleConnections, projectAssignments, projects, tasks, users } from "@/lib/db/schema";
+import { customers, driveFolders, googleConnections, memberships, organizations, projectAssignments, projects, tasks, users } from "@/lib/db/schema";
 import { resolveBaseUrl } from "@/lib/env";
 import {
   GoogleError,
@@ -25,7 +25,7 @@ import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { ServiceError } from "@/modules/errors";
 
 // Phase 21: the company Google account (Drive). An Admin connects one Google account (e.g. the
-// team's Gmail); the app keeps its files in an "AGOD" folder there:
+// team's Gmail); the app keeps its files in a folder named after the company (here AGOD):
 //
 //   AGOD/                         shared (writer) with every active PM and Admin
 //     <Customer>/                 per customer
@@ -37,6 +37,7 @@ import { ServiceError } from "@/modules/errors";
 //
 // With the drive.file scope the app only sees what it created there. Tokens and folder ids are
 // only read here, through the owner connection; callers check permissions first.
+// Phase 22: each company connects its own Google account; everything here is per company.
 
 export type Connection = typeof googleConnections.$inferSelect;
 export type CompanyDrive = { config: GoogleConfig; connection: Connection; token: string };
@@ -48,11 +49,11 @@ export const googleRedirectUri = () => `${resolveBaseUrl(process.env) ?? ""}/api
 
 // --- Connection and tokens --------------------------------------------------------------------
 
-export async function companyConnection(): Promise<Connection | null> {
+export async function companyConnection(orgId: string): Promise<Connection | null> {
   const [row] = await db
     .select()
     .from(googleConnections)
-    .where(and(eq(googleConnections.kind, "COMPANY"), isNull(googleConnections.disconnectedAt)));
+    .where(and(eq(googleConnections.organizationId, orgId), eq(googleConnections.kind, "COMPANY"), isNull(googleConnections.disconnectedAt)));
   return row ?? null;
 }
 
@@ -108,10 +109,10 @@ async function call<T>(drive: CompanyDrive, request: (token: string) => Promise<
 const isSignInError = (error: unknown) => error instanceof GoogleError && (error.reason === "invalid_grant" || error.status === 401);
 
 /** The company Drive, ready to call; null when Google isn't set up here or no account is connected. */
-export async function companyDrive(): Promise<CompanyDrive | null> {
+export async function companyDrive(orgId: string): Promise<CompanyDrive | null> {
   const config = googleConfig();
   if (!config) return null;
-  const connection = await companyConnection();
+  const connection = await companyConnection(orgId);
   if (!connection) return null;
   return { config, connection, token: await accessTokenFor(config, connection) };
 }
@@ -135,7 +136,7 @@ export async function completeCompanyConnect(actor: Actor, input: { code: string
     const [active] = await tx
       .select()
       .from(googleConnections)
-      .where(and(eq(googleConnections.kind, "COMPANY"), isNull(googleConnections.disconnectedAt)))
+      .where(and(eq(googleConnections.organizationId, actor.orgId), eq(googleConnections.kind, "COMPANY"), isNull(googleConnections.disconnectedAt)))
       .for("update");
     const fresh = { refreshTokenEnc: sealed, scopes: tokens.scope, userId: actor.id, connectedAt: new Date(), disconnectedAt: null, lastError: null, lastErrorAt: null };
     let row: Connection;
@@ -151,12 +152,12 @@ export async function completeCompanyConnect(actor: Actor, input: { code: string
       const [previous] = await tx
         .select()
         .from(googleConnections)
-        .where(and(eq(googleConnections.kind, "COMPANY"), eq(googleConnections.googleEmail, email)))
+        .where(and(eq(googleConnections.organizationId, actor.orgId), eq(googleConnections.kind, "COMPANY"), eq(googleConnections.googleEmail, email)))
         .orderBy(desc(googleConnections.connectedAt))
         .limit(1);
       [row] = previous
         ? await tx.update(googleConnections).set(fresh).where(eq(googleConnections.id, previous.id)).returning()
-        : await tx.insert(googleConnections).values({ kind: "COMPANY", googleEmail: email, ...fresh }).returning();
+        : await tx.insert(googleConnections).values({ organizationId: actor.orgId, kind: "COMPANY", googleEmail: email, ...fresh }).returning();
     }
     await recordAudit(tx, {
       actorId: actor.id,
@@ -165,6 +166,7 @@ export async function completeCompanyConnect(actor: Actor, input: { code: string
       action: "google.connected",
       after: { googleEmail: email, scopes: tokens.scope },
       request,
+      organizationId: actor.orgId,
     });
     return { connection: row, replaced };
   });
@@ -174,14 +176,14 @@ export async function completeCompanyConnect(actor: Actor, input: { code: string
     await revokeToken(config, openSecret(replaced.refreshTokenEnc));
   }
   // Create the folders and share them now (best effort: the daily job retries).
-  await syncDrive().catch((error) => console.error("Drive sync after connecting failed", describeError(error)));
+  await syncDrive(actor.orgId).catch((error) => console.error("Drive sync after connecting failed", describeError(error)));
   return email;
 }
 
 /** Admin: stops using the company Google account. Its files stay in that Drive. */
 export async function disconnectCompany(actor: Actor, request?: RequestMeta) {
   assertCan(actor, "google.manage");
-  const connection = await companyConnection();
+  const connection = await companyConnection(actor.orgId);
   if (!connection) throw new ServiceError("No Google account is connected.");
   await db.transaction(async (tx) => {
     await tx.update(googleConnections).set({ disconnectedAt: new Date() }).where(eq(googleConnections.id, connection.id));
@@ -192,6 +194,7 @@ export async function disconnectCompany(actor: Actor, request?: RequestMeta) {
       action: "google.disconnected",
       before: { googleEmail: connection.googleEmail },
       request,
+      organizationId: actor.orgId,
     });
   });
   tokenCache.delete(connection.id);
@@ -202,7 +205,7 @@ export async function disconnectCompany(actor: Actor, request?: RequestMeta) {
 /** Admin: the Integrations page card. */
 export async function googleStatus(actor: Actor) {
   assertCan(actor, "audit.viewAll");
-  const connection = await companyConnection();
+  const connection = await companyConnection(actor.orgId);
   if (!connection) return { configured: isGoogleConfigured(), redirectUri: googleRedirectUri(), connection: null };
   const [by] = await db.select({ name: users.name }).from(users).where(eq(users.id, connection.userId));
   const [root] = await db
@@ -230,29 +233,33 @@ export async function googleStatus(actor: Actor) {
 type Purpose = "ROOT" | "CUSTOMER" | "CUSTOMER_INVOICES" | "PROJECT" | "INTERNAL" | "RECEIPTS";
 type FolderSpec = { purpose: Purpose; entityId: string | null; name: string; parent: FolderSpec | null };
 
-const ROOT: FolderSpec = { purpose: "ROOT", entityId: null, name: "AGOD", parent: null };
+// Named after the company when created (ensureFolder).
+const ROOT: FolderSpec = { purpose: "ROOT", entityId: null, name: "Company", parent: null };
 const INTERNAL: FolderSpec = { purpose: "INTERNAL", entityId: null, name: "Internal projects", parent: ROOT };
 const RECEIPTS: FolderSpec = { purpose: "RECEIPTS", entityId: null, name: "Payment receipts", parent: ROOT };
 
 const folderName = (name: string) => name.replace(/[\r\n\t]+/g, " ").trim().slice(0, 200) || "Untitled";
 
-async function customerSpec(customerId: string): Promise<FolderSpec> {
-  const [customer] = await db.select({ name: customers.name }).from(customers).where(eq(customers.id, customerId));
+async function customerSpec(orgId: string, customerId: string): Promise<FolderSpec> {
+  const [customer] = await db
+    .select({ name: customers.name })
+    .from(customers)
+    .where(and(eq(customers.id, customerId), eq(customers.organizationId, orgId)));
   if (!customer) throw new ServiceError("Customer not found.");
   return { purpose: "CUSTOMER", entityId: customerId, name: folderName(customer.name), parent: ROOT };
 }
 
-async function invoicesSpec(customerId: string): Promise<FolderSpec> {
-  return { purpose: "CUSTOMER_INVOICES", entityId: customerId, name: "Invoices", parent: await customerSpec(customerId) };
+async function invoicesSpec(orgId: string, customerId: string): Promise<FolderSpec> {
+  return { purpose: "CUSTOMER_INVOICES", entityId: customerId, name: "Invoices", parent: await customerSpec(orgId, customerId) };
 }
 
-async function projectSpec(projectId: string): Promise<FolderSpec> {
+async function projectSpec(orgId: string, projectId: string): Promise<FolderSpec> {
   const [project] = await db
     .select({ code: projects.code, name: projects.name, customerId: projects.customerId })
     .from(projects)
-    .where(eq(projects.id, projectId));
+    .where(and(eq(projects.id, projectId), eq(projects.organizationId, orgId)));
   if (!project) throw new ServiceError("Project not found.");
-  const parent = project.customerId ? await customerSpec(project.customerId) : INTERNAL;
+  const parent = project.customerId ? await customerSpec(orgId, project.customerId) : INTERNAL;
   return { purpose: "PROJECT", entityId: projectId, name: folderName(`${project.code} ${project.name}`), parent };
 }
 
@@ -280,19 +287,24 @@ async function ensureFolder(drive: CompanyDrive, spec: FolderSpec): Promise<type
   const existing = await findFolder(drive.connection.id, spec);
   if (existing) return existing;
   let parentId = spec.parent ? (await ensureFolder(drive, spec.parent)).folderId : null;
+  // The top folder is named after the company (Phase 22).
+  const name =
+    spec.purpose === "ROOT"
+      ? folderName((await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, drive.connection.organizationId)))[0]?.name ?? spec.name)
+      : spec.name;
   let created;
   try {
-    created = await call(drive, (t) => createFolder(drive.config, t, spec.name, parentId));
+    created = await call(drive, (t) => createFolder(drive.config, t, name, parentId));
   } catch (error) {
     if (!isGone(error) || !spec.parent) throw error;
     // The parent was deleted in Drive: make it again, once.
     await forgetFolder(drive.connection.id, spec.parent);
     parentId = (await ensureFolder(drive, spec.parent)).folderId;
-    created = await call(drive, (t) => createFolder(drive.config, t, spec.name, parentId));
+    created = await call(drive, (t) => createFolder(drive.config, t, name, parentId));
   }
   const [row] = await db
     .insert(driveFolders)
-    .values({ connectionId: drive.connection.id, purpose: spec.purpose, entityId: spec.entityId, folderId: created.id, webViewLink: created.webViewLink ?? null })
+    .values({ organizationId: drive.connection.organizationId, connectionId: drive.connection.id, purpose: spec.purpose, entityId: spec.entityId, folderId: created.id, webViewLink: created.webViewLink ?? null })
     .onConflictDoNothing()
     .returning();
   if (row) return row;
@@ -316,8 +328,8 @@ async function inFolder<T>(drive: CompanyDrive, spec: FolderSpec, write: (folder
 const folderLink = (row: { folderId: string; webViewLink: string | null }) => row.webViewLink ?? driveFolderUrl(row.folderId);
 
 /** Link to an existing folder (no Google calls). Callers have already checked the person may see the entity. */
-export async function driveFolderLink(purpose: "PROJECT" | "CUSTOMER", entityId: string): Promise<string | null> {
-  const connection = await companyConnection();
+export async function driveFolderLink(orgId: string, purpose: "PROJECT" | "CUSTOMER", entityId: string): Promise<string | null> {
+  const connection = await companyConnection(orgId);
   if (!connection || !isGoogleConfigured()) return null;
   const row = await findFolder(connection.id, { purpose, entityId });
   return row ? folderLink(row) : null;
@@ -326,10 +338,10 @@ export async function driveFolderLink(purpose: "PROJECT" | "CUSTOMER", entityId:
 /** Managers: create (or find) a project's Drive folder now and share it with the team. */
 export async function createProjectFolder(actor: Actor, projectId: string): Promise<string> {
   assertCan(actor, "project.edit");
-  const drive = await companyDrive();
+  const drive = await companyDrive(actor.orgId);
   if (!drive) throw new ServiceError("Google Drive is not connected. An Admin connects it on the Integrations page.");
-  const folder = await ensureFolder(drive, await projectSpec(projectId));
-  await syncDrive({ projectIds: [projectId], drive });
+  const folder = await ensureFolder(drive, await projectSpec(actor.orgId, projectId));
+  await syncDrive(actor.orgId, { projectIds: [projectId], drive });
   return folderLink(folder);
 }
 
@@ -348,10 +360,14 @@ export type DriveTarget = { kind: "PROJECT" | "TASK"; projectId: string } | { ki
  * Stores an attachment in the company Drive (project folder, or Payment receipts). Returns its
  * storage key, or null when Drive isn't connected (the caller then uses the usual storage).
  */
-export async function putInDrive(target: DriveTarget, file: { name: string; bytes: Uint8Array; contentType: string; description: string }): Promise<string | null> {
-  const drive = await companyDrive();
+export async function putInDrive(
+  orgId: string,
+  target: DriveTarget,
+  file: { name: string; bytes: Uint8Array; contentType: string; description: string },
+): Promise<string | null> {
+  const drive = await companyDrive(orgId);
   if (!drive) return null;
-  const spec = target.kind === "PAYMENT" ? RECEIPTS : await projectSpec(target.projectId);
+  const spec = target.kind === "PAYMENT" ? RECEIPTS : await projectSpec(orgId, target.projectId);
   const uploaded = await inFolder(drive, spec, (parentId) =>
     call(drive, (t) => uploadFile(drive.config, t, { name: file.name, parentId, bytes: file.bytes, contentType: file.contentType, description: file.description })),
   );
@@ -384,10 +400,10 @@ export async function removeFromDrive(key: string): Promise<void> {
 }
 
 /** Saves an issued invoice's PDF in the customer's Invoices folder. Returns the Drive file id, or null when Drive isn't connected. */
-export async function saveInvoicePdf(customerId: string, file: { name: string; bytes: Uint8Array; description: string }): Promise<string | null> {
-  const drive = await companyDrive();
+export async function saveInvoicePdf(orgId: string, customerId: string, file: { name: string; bytes: Uint8Array; description: string }): Promise<string | null> {
+  const drive = await companyDrive(orgId);
   if (!drive) return null;
-  const uploaded = await inFolder(drive, await invoicesSpec(customerId), (parentId) =>
+  const uploaded = await inFolder(drive, await invoicesSpec(orgId, customerId), (parentId) =>
     call(drive, (t) => uploadFile(drive.config, t, { name: file.name, parentId, bytes: file.bytes, contentType: "application/pdf", description: file.description })),
   );
   return uploaded.id;
@@ -401,25 +417,31 @@ export type DriveSyncSummary = { folders: number; shared: number; unshared: numb
 const LIVE_STATUSES = ["DRAFT", "PLANNING", "IN_PROGRESS", "PENDING_APPROVAL", "CHANGES_REQUESTED"] as const;
 
 /**
- * Makes sure the folders exist and are shared as they should be: AGOD with every active PM and
+ * Makes sure the folders exist and are shared as they should be: the company folder with every active PM and
  * Admin; each live project's folder with its team members (owner, assigned people, task
  * assignees). Access the app granted is removed when it is no longer needed; sharing someone
  * added by hand in Drive is left alone.
  */
-export async function syncDrive(options: { projectIds?: string[]; drive?: CompanyDrive } = {}): Promise<DriveSyncSummary | null> {
-  const drive = options.drive ?? (await companyDrive());
+export async function syncDrive(orgId: string, options: { projectIds?: string[]; drive?: CompanyDrive } = {}): Promise<DriveSyncSummary | null> {
+  const drive = options.drive ?? (await companyDrive(orgId));
   if (!drive) return null;
   const summary: DriveSyncSummary = { folders: 0, shared: 0, unshared: 0, failures: [] };
   const own = drive.connection.googleEmail.toLowerCase();
 
   const people = await db
-    .select({ id: users.id, role: users.role, email: users.email, personal: googleConnections.googleEmail })
-    .from(users)
+    .select({ id: users.id, role: memberships.role, email: users.email, personal: googleConnections.googleEmail })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
     .leftJoin(
       googleConnections,
-      and(eq(googleConnections.userId, users.id), eq(googleConnections.kind, "PERSONAL"), isNull(googleConnections.disconnectedAt)),
+      and(
+        eq(googleConnections.organizationId, orgId),
+        eq(googleConnections.userId, users.id),
+        eq(googleConnections.kind, "PERSONAL"),
+        isNull(googleConnections.disconnectedAt),
+      ),
     )
-    .where(eq(users.active, true));
+    .where(and(eq(memberships.organizationId, orgId), eq(memberships.active, true), eq(users.active, true)));
   // Their Google account: the one they connected (Phase 22), else the email they sign in with.
   const emailOf = new Map(people.map((p) => [p.id, (p.personal ?? p.email).toLowerCase()]));
   const managers = people.filter((p) => p.role !== "TEAM_MEMBER").map((p) => emailOf.get(p.id)!);
@@ -470,7 +492,7 @@ export async function syncDrive(options: { projectIds?: string[]; drive?: Compan
   };
 
   if (!options.projectIds) {
-    // Everything lives inside AGOD: if it was deleted (or trashed) in Drive, start again.
+    // Everything lives inside the company folder: if it was deleted (or trashed) in Drive, start again.
     const root = await findFolder(drive.connection.id, ROOT);
     if (root) {
       const found = await call(drive, (t) => getFile(drive.config, t, root.folderId));
@@ -483,7 +505,12 @@ export async function syncDrive(options: { projectIds?: string[]; drive?: Compan
   const list = await db
     .select({ id: projects.id, ownerId: projects.projectOwnerId })
     .from(projects)
-    .where(options.projectIds ? inArray(projects.id, options.projectIds) : inArray(projects.status, [...LIVE_STATUSES]))
+    .where(
+      and(
+        eq(projects.organizationId, orgId),
+        options.projectIds ? inArray(projects.id, options.projectIds) : inArray(projects.status, [...LIVE_STATUSES]),
+      ),
+    )
     .orderBy(asc(projects.createdAt));
   if (list.length > 0) {
     const ids = list.map((p) => p.id);
@@ -498,8 +525,8 @@ export async function syncDrive(options: { projectIds?: string[]; drive?: Compan
     const memberIds = new Set(people.filter((p) => p.role === "TEAM_MEMBER").map((p) => p.id));
     for (const project of list) {
       const team = [project.ownerId, ...assigned.filter((a) => a.projectId === project.id).map((a) => a.userId), ...taskPeople.filter((t) => t.projectId === project.id).map((t) => t.userId!)];
-      // Managers already reach every folder through AGOD.
-      await sync(await projectSpec(project.id), team.filter((id) => memberIds.has(id)).map((id) => emailOf.get(id)!));
+      // Managers already reach every folder through the company folder.
+      await sync(await projectSpec(orgId, project.id), team.filter((id) => memberIds.has(id)).map((id) => emailOf.get(id)!));
     }
   }
 
@@ -515,12 +542,12 @@ export async function syncDrive(options: { projectIds?: string[]; drive?: Compan
 /** Admin: "Sync now" on the Integrations page. */
 export async function syncDriveNow(actor: Actor): Promise<DriveSyncSummary> {
   assertCan(actor, "google.manage");
-  const drive = await companyDrive().catch((error) => {
+  const drive = await companyDrive(actor.orgId).catch((error) => {
     throw new ServiceError(describeError(error));
   });
   if (!drive) throw new ServiceError("No Google account is connected.");
   try {
-    return (await syncDrive({ drive }))!;
+    return (await syncDrive(actor.orgId, { drive }))!;
   } catch (error) {
     throw new ServiceError(describeError(error));
   }

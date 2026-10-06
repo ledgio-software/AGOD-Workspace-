@@ -203,6 +203,14 @@ export async function getProjectGithub(actor: Actor, projectId: string) {
 /** Admin integration page: recent webhook deliveries. */
 export async function recentDeliveries(actor: Actor) {
   assertCan(actor, "audit.viewAll");
-  return withActor(actor, (tx) => tx.select().from(githubDeliveries).orderBy(desc(githubDeliveries.receivedAt)).limit(30));
+  // Deliveries are shared by every company; each sees only its own projects' repositories.
+  return withActor(actor, (tx) =>
+    tx
+      .select()
+      .from(githubDeliveries)
+      .where(inArray(githubDeliveries.repo, tx.select({ repo: projects.githubRepo }).from(projects)))
+      .orderBy(desc(githubDeliveries.receivedAt))
+      .limit(30),
+  );
 }
 

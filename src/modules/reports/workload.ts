@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { withActor } from "@/lib/db/actor";
-import { projectAssignments, projects, tasks, users } from "@/lib/db/schema";
+import { projectAssignments, projects, tasks, orgMembers } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { addDays } from "@/modules/notifications/deadlines";
@@ -62,9 +62,9 @@ export async function getWorkload(actor: Actor) {
   const today = todayInOperatingZone();
   return withActor(actor, async (tx) => {
     const people = await tx
-      .select({ id: users.id, name: users.name, role: users.role, weeklyCapacityHours: users.weeklyCapacityHours })
-      .from(users)
-      .where(eq(users.active, true));
+      .select({ id: orgMembers.id, name: orgMembers.name, role: orgMembers.role, weeklyCapacityHours: orgMembers.weeklyCapacityHours })
+      .from(orgMembers)
+      .where(eq(orgMembers.active, true));
     const openTasks = await tx
       .select({ assignedTo: tasks.assignedTo, projectId: tasks.projectId, status: tasks.status, dueDate: tasks.dueDate, estimateHours: tasks.estimateHours })
       .from(tasks)

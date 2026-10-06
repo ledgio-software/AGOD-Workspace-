@@ -6,7 +6,8 @@ import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
 import { changeRole, createMember, resetPassword, setActive, setCapacity } from "@/modules/team";
 
-type Credentials = { email: string; temporaryPassword: string };
+/** temporaryPassword is null when the person already had a login (e.g. in another company). */
+type Credentials = { email: string; temporaryPassword: string | null };
 
 export async function createMemberAction(
   _prev: ActionResult<Credentials> | null,

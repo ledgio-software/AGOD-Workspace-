@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const attempt = newAuthRequest();
   const url = authorizationUrl(config, { redirectUri: googleRedirectUri(), scopes: COMPANY_SCOPES, state: attempt.state, challenge: attempt.challenge });
   const response = NextResponse.redirect(url);
-  response.cookies.set(OAUTH_COOKIE, sealAttempt({ state: attempt.state, verifier: attempt.verifier, userId: actor.id }), {
+  response.cookies.set(OAUTH_COOKIE, sealAttempt({ state: attempt.state, verifier: attempt.verifier, userId: actor.id, orgId: actor.orgId }), {
     httpOnly: true,
     secure: new URL(request.url).protocol === "https:",
     sameSite: "lax",

@@ -16,23 +16,37 @@ async function main() {
   }
   // Imported after the guard so nothing connects before it passes.
   const { db } = await import("../src/lib/db");
-  const { payoutLedgerEntries, projects, tasks, users } = await import("../src/lib/db/schema");
+  const { memberships, payoutLedgerEntries, projects, tasks, users } = await import("../src/lib/db/schema");
   const { approveProject, rejectProject, requestApproval } = await import("../src/modules/approvals");
   const { createAdjustment, recordPayment } = await import("../src/modules/payments");
   const { changeProjectStatus, createProject } = await import("../src/modules/projects");
   const { addAssignment, createMilestone } = await import("../src/modules/projects/team");
   const { createTask, updateTaskProgress, waiveTask } = await import("../src/modules/tasks");
-  type Actor = { id: string; role: "ADMIN" | "PROJECT_MANAGER" | "TEAM_MEMBER" };
+  type Actor = { id: string; role: "ADMIN" | "PROJECT_MANAGER" | "TEAM_MEMBER"; orgId: string };
 
+  // Phase 22: the pilot goes into the first company with an active Admin (or PILOT_COMPANY_ID).
   const [adminRow] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(and(eq(users.role, "ADMIN"), eq(users.active, true)))
+    .select({ id: users.id, orgId: memberships.organizationId })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(
+      and(
+        eq(memberships.role, "ADMIN"),
+        eq(memberships.active, true),
+        eq(users.active, true),
+        process.env.PILOT_COMPANY_ID ? eq(memberships.organizationId, process.env.PILOT_COMPANY_ID) : undefined,
+      ),
+    )
+    .orderBy(memberships.createdAt)
     .limit(1);
-  if (!adminRow) throw new Error("No active Admin found. Create one first.");
-  const admin: Actor = { id: adminRow.id, role: "ADMIN" };
+  if (!adminRow) throw new Error("No active Admin found. Create a company first (npm run admin:create).");
+  const admin: Actor = { id: adminRow.id, role: "ADMIN", orgId: adminRow.orgId };
 
-  const [existing] = await db.select({ id: projects.id }).from(projects).where(like(projects.name, "[Pilot]%")).limit(1);
+  const [existing] = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(and(eq(projects.organizationId, admin.orgId), like(projects.name, "[Pilot]%")))
+    .limit(1);
   if (existing) {
     console.log("Pilot projects already exist; nothing to do.");
     return;
@@ -40,9 +54,9 @@ async function main() {
 
   async function member(name: string, email: string): Promise<Actor> {
     const [found] = await db.select({ id: users.id }).from(users).where(eq(sql`lower(${users.email})`, email));
-    if (found) return { id: found.id, role: "TEAM_MEMBER" };
-    const [created] = await db.insert(users).values({ name, email, role: "TEAM_MEMBER", emailVerified: true }).returning({ id: users.id });
-    return { id: created.id, role: "TEAM_MEMBER" };
+    const id = found?.id ?? (await db.insert(users).values({ name, email, emailVerified: true }).returning({ id: users.id }))[0].id;
+    await db.insert(memberships).values({ organizationId: admin.orgId, userId: id, role: "TEAM_MEMBER" }).onConflictDoNothing();
+    return { id, role: "TEAM_MEMBER", orgId: admin.orgId };
   }
   const ama = await member("Pilot – Ama Mensah", "pilot.ama@agod.test");
   const kofi = await member("Pilot – Kofi Boateng", "pilot.kofi@agod.test");
