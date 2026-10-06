@@ -42,7 +42,7 @@ export function verifyEmailMessage(o: { name: string; url: string }) {
   return message({
     subject: `Confirm your email for ${PRODUCT_NAME}`,
     name: o.name,
-    lines: ["Thanks for signing up. Confirm your email address to finish creating your account and company."],
+    lines: ["Thanks for signing up. Confirm your email address to finish joining the community."],
     button: { label: "Confirm my email", url: o.url },
     footer: "The link works for 24 hours. If you didn't sign up, ignore this email.",
   });

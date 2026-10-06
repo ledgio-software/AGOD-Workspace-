@@ -6,7 +6,7 @@ import { signupOpen } from "@/modules/accounts";
 import { SignUpForm } from "./sign-up-form";
 
 export default async function SignUpPage() {
-  if (await getSignedIn()) redirect("/dashboard");
+  if (await getSignedIn()) redirect("/community");
   const signIn = (
     <p>
       Already have an account?{" "}
@@ -17,13 +17,13 @@ export default async function SignUpPage() {
   );
   if (!signupOpen()) {
     return (
-      <AuthShell title="Sign-up is closed" description="New companies can't sign up here right now. If your company already uses the app, ask one of its Admins to invite you." footer={signIn}>
+      <AuthShell title="Sign-up is closed" description="New members can't join here right now. If your company already uses the app, ask one of its Admins to invite you." footer={signIn}>
         {null}
       </AuthShell>
     );
   }
   return (
-    <AuthShell title="Create your company's account" description="Start free. You'll be the Admin and can invite your team afterwards." footer={signIn}>
+    <AuthShell title="Join the community" description="Free for everyone who builds software in Ghana, whether you code by hand or with AI tools." footer={signIn}>
       <SignUpForm />
     </AuthShell>
   );

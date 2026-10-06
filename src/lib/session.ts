@@ -61,10 +61,20 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return { ...user, role: current.role, orgId: current.id, orgName: current.name, companies };
 });
 
-/** Use in server components/actions that require a signed-in person working in a company. */
+/**
+ * Use in server components/actions that require a signed-in person working in a company. People
+ * without a company (Phase 25: community members) go to the community instead.
+ */
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (user) return user;
-  if (await getSignedIn()) redirect("/no-company");
+  if (await getSignedIn()) redirect("/community");
   redirect("/sign-in");
+}
+
+/** Phase 25: the community pages: any signed-in person, with their company if they have one. */
+export async function requireMember(): Promise<{ member: SignedIn; current: CurrentUser | null }> {
+  const member = await getSignedIn();
+  if (!member) redirect("/sign-in");
+  return { member, current: await getCurrentUser() };
 }

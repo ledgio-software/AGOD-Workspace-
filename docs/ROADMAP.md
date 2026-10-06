@@ -38,3 +38,11 @@ Still to do before Stage 1 is "in production": the pilot sign-off (`docs/PILOT.m
 | 5. Automated payments | MoMo/bank APIs, batches, multi-level authorisation, reconciliation | Separate project with its own security and reconciliation design. |
 | 6. Portals | Client and contractor access | Only after the internal workflow is stable. |
 | 7. Business operating system | CRM to profitability | Long term. |
+
+## Community (Phase 25 onwards)
+
+The product is also a community for people in Ghana who build software (`docs/COMMUNITY.md`).
+Done: member sign-up without a company, profiles and member list, roles, code of conduct, reports
+(Phase 25). Next: showcase and review requests (26), teaching sessions (27), mentorship matching,
+tools and prompts library, project of the month (28); later jobs board, team finder, badges, events
+calendar, partners page and metrics.

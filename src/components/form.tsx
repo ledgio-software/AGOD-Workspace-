@@ -80,7 +80,9 @@ export function ActionForm<S extends State>({
         onSubmit={(event) => {
           event.preventDefault();
           if (confirmMessage && !confirm(confirmMessage)) return;
-          const data = new FormData(event.currentTarget);
+          // The clicked button's name and value are included (forms with several submit buttons).
+          const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+          const data = new FormData(event.currentTarget, submitter?.name ? submitter : null);
           startTransition(() => dispatch(data));
         }}
       >

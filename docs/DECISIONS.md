@@ -266,3 +266,17 @@ Phase 9 (file attachments in Vercel Blob).
 | Project meetings | Scheduled by managers on a project; a Google Calendar event in the company calendar with a Meet link, invitations sent by Google to the project owner, assigned team and task assignees. Recorded in `project_meetings` (visible to whoever can see the project). Cancel only, no editing; no deletion. |
 | Sync | Daily job, *Sync now* buttons and on connecting. The app keeps a mapping of the events it made and only rewrites changed ones; it never touches events it didn't create. Times use the operating time zone (Africa/Accra). |
 | Not included | Reading people's free/busy times, editing meetings, recurring meetings, two-way sync (changes made in Google aren't read back), meetings outside projects. |
+
+## Phase 25 decisions (2026-10-06): community foundation
+
+| Decision | Choice |
+|---|---|
+| Where | In the same app, not a separate site: one login, one brand, and reuse of sign-up, email, Google Meet and files. The public pages (home, members, profiles, code of conduct) are the front door; company workspaces stay private behind them. |
+| Joining | Sign-up makes a community member; a company workspace is optional (at sign-up or later from the community home). Agreeing to the code of conduct is part of sign-up. |
+| Profiles | One per person, platform-wide. Self-joined members start public; people added to a company start visible to signed-in members only. Email never shown. Links must be https and open with `nofollow ugc`. |
+| Roles | Builder (everyone), Reviewer (self-selected), Organizer (first ones from `COMMUNITY_ORGANIZER_EMAILS`, then appointed by organizers). Separate from company roles. |
+| Moderation | Reports with a reason; organizers hide (with a note) or dismiss; hidden profiles remain visible to their owner and organizers. |
+| Data | `member_profiles`, `community_reports`: no company, server-only (no app-role access). |
+| Chat | Stays on Discord and WhatsApp (links configurable); not built into the app. |
+| Marketing | The community is free; the company workspace is offered where it helps (community home, sign-up option, home page), free while testing. |
+| Not included | Showcase posts, review requests, teaching sessions, mentorship matching, library (next phases); profile photos; blocking members. |

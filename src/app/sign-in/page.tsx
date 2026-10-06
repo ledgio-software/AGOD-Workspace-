@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth-shell";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { SignInForm } from "./sign-in-form";
 
 export default async function SignInPage() {
   if (await getCurrentUser()) redirect("/dashboard");
+  if (await getSignedIn()) redirect("/community");
   const canSignUp = signupOpen();
 
   return (
     <AuthShell
       title="Sign in"
-      description="Welcome back. Sign in to your company's workspace."
+      description="Welcome back to the community and your workspace."
       footer={
         <>
           <p>
@@ -25,7 +26,7 @@ export default async function SignInPage() {
               <>
                 New here?{" "}
                 <Link href="/sign-up" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-                  Create an account for your company
+                  Join the community
                 </Link>
               </>
             ) : (

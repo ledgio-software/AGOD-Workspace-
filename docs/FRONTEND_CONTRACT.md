@@ -39,7 +39,11 @@ rules, audit) lives behind these functions, not in the pages.
 | `/services` | `subscription.view` | `listServices` | `createServiceAction`, `updateServiceAction`, `setServiceActiveAction` |
 | `/account` (`?google=<result>`) | everyone | `getDailyEmail`, `personalCalendarStatus` | `account/actions`: `setDailyEmailAction`, `syncMyCalendarAction`, `disconnectMyCalendarAction`; `/api/google/connect?kind=personal` → Google → `/api/google/callback` |
 | `/company` | `company.manage` | `getOrganization` | `company/actions`: `updateCompanyAction`; `switchCompanyAction` (the sidebar company menu, any member of several companies) |
-| `/no-company` | signed in, no active company | `getSignedIn`, `signupOpen` | `no-company/actions`: `createOwnCompanyAction` (while sign-up is open) |
+| `/no-company` | | | Redirects to `/community` (Phase 25) |
+| `/` , `/members`, `/members/[handle]`, `/code-of-conduct` | public | `communityStats`, `listMembers`, `memberCities`, `getProfile` | `reportProfileAction` (signed in); organizers: `unhideProfileAction`, `setOrganizerAction` |
+| `/community` | signed in (company optional) | `ensureProfile`, `onboarding`, `companiesOf`, `listMembers`, `chatLinks` | `community/actions`: `acceptConductAction`, `createCompanyAction`; `switchCompanyAction` |
+| `/community/profile` | signed in | `ensureProfile` | `updateProfileAction`; change password (Better Auth) |
+| `/community/reports` | organizers | `listReports` | `resolveReportAction` |
 | `/sign-up`, `/forgot-password`, `/reset-password` | public | `signupOpen`, `emailConfig` | Better Auth client: `signUp.email` (with `pendingCompany`), `requestPasswordReset`, `resetPassword` |
 | `/integrations` (`?google=<result>`) | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig`, `googleStatus`, `companyCalendarStatus` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction`, `syncDriveAction` (Drive and calendars), `disconnectGoogleAction` (`google.manage`); `/api/google/connect` → Google → `/api/google/callback` |
 | `/invoices` | `invoice.view` | `listInvoices({ q, state, customerId })`, `invoiceTotals` | `invoices/actions`: `prepareAction` |
