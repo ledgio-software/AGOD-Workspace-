@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { Building } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getCurrentUser, getSignedIn } from "@/lib/session";
+import { signupOpen } from "@/modules/accounts";
+import { CreateCompanyForm } from "./create-company-form";
 
 // Phase 22: signed in, but not an active member of any company (removed from their only one, or
 // not added yet).
@@ -20,6 +22,12 @@ export default async function NoCompanyPage() {
             removed. Ask an Admin of your company to add you on their Team page, then sign in again.
           </p>
         </div>
+        {signupOpen() && (
+          <div className="space-y-3 border-t border-line pt-5">
+            <p className="text-sm font-medium">Or start your own company</p>
+            <CreateCompanyForm />
+          </div>
+        )}
         <div className="flex items-center justify-center gap-1 text-sm text-muted">
           Sign out <SignOutButton />
         </div>

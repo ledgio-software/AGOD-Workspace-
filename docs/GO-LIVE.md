@@ -26,7 +26,10 @@ GitHub, Vercel or Neon; nothing here can be done from the repository alone.
    prefix `AGOD`. Sign in at
    https://agod-workspace.vercel.app with the printed temporary password and change it on **Account**
    immediately.
-9. As that Admin, add the team on **Team** and hand each person their temporary password privately.
+9. As that Admin, add the team on **Team**. With email set up they get an invitation email to choose their
+   password; otherwise hand each person their temporary password privately.
+   To let other companies sign up themselves, add `ALLOW_SIGNUP=true` to Production in Vercel and redeploy
+   (needs the SMTP settings; `docs/COMPANIES.md`). Leave it out to keep sign-up closed.
 
 ## After
 

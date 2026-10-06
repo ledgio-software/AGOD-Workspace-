@@ -25,7 +25,9 @@ export function SignInForm() {
       setError(
         error.status === 429
           ? "Too many attempts. Wait a minute and try again."
-          : "Email or password is incorrect, or the account is inactive.",
+          : error.status === 403
+            ? "Confirm your email first. We've just sent you a new link: open it, then you're signed in."
+            : "Email or password is incorrect, or the account is inactive.",
       );
       return;
     }

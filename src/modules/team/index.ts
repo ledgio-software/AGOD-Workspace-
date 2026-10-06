@@ -4,9 +4,12 @@ import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { accounts, memberships, orgMembers, sessions, users } from "@/lib/db/schema";
+import { accounts, memberships, orgMembers, organizations, sessions, users } from "@/lib/db/schema";
+import { emailConfig } from "@/lib/email";
 import { type Actor, type Role, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
+import { appUrl, createPasswordLink, sendAccountEmail } from "@/modules/accounts";
+import { addedToCompanyMessage, inviteMessage, resetPasswordMessage } from "@/modules/email/account";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
 
 export const ROLES = ["TEAM_MEMBER", "PROJECT_MANAGER", "ADMIN"] as const satisfies readonly Role[];
@@ -66,9 +69,12 @@ export async function createMember(
   actor: Actor,
   rawInput: z.input<typeof createMemberInput>,
   request?: RequestMeta,
-): Promise<{ member: TeamMember; temporaryPassword: string | null }> {
+): Promise<{ member: TeamMember; temporaryPassword: string | null; emailed: boolean; existing: boolean }> {
   assertCan(actor, "team.manage");
   const input = createMemberInput.parse(rawInput);
+  // Phase 23: with email set up, people get an email (an invitation with a link to choose their
+  // password, or a note that they were added); otherwise the Admin passes on a temporary password.
+  const viaEmail = emailConfig() !== null;
 
   // Someone with a login already (e.g. in another company) is added with their own password.
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(sql`lower(${users.email})`, input.email));
@@ -87,22 +93,26 @@ export async function createMember(
       });
       return loadMember(tx, existing.id);
     });
-    return { member, temporaryPassword: null };
+    const emailed = viaEmail && (await notify(actor, member, (who) => addedToCompanyMessage({ name: member.name, ...who, url: appUrl("/sign-in") })));
+    return { member, temporaryPassword: null, emailed, existing: true };
   }
 
-  const temporaryPassword = generateTemporaryPassword();
-  const passwordHash = await hashPassword(temporaryPassword);
+  const temporaryPassword = viaEmail ? null : generateTemporaryPassword();
+  const passwordHash = temporaryPassword ? await hashPassword(temporaryPassword) : null;
   const member = await withActor(actor, async (tx) => {
     // No RETURNING: the new person is only visible to this company once their membership exists.
     const created = { id: randomUUID(), name: input.name, email: input.email };
     await tx.insert(users).values({ ...created, emailVerified: true });
     await tx.insert(memberships).values({ organizationId: actor.orgId, userId: created.id, role: input.role });
-    await tx.insert(accounts).values({
-      userId: created.id,
-      accountId: created.id,
-      providerId: "credential",
-      password: passwordHash,
-    });
+    // Invited by email: no password yet; they choose one with the link.
+    if (passwordHash) {
+      await tx.insert(accounts).values({
+        userId: created.id,
+        accountId: created.id,
+        providerId: "credential",
+        password: passwordHash,
+      });
+    }
     await recordAudit(tx, {
       actorId: actor.id,
       entityType: "user",
@@ -113,8 +123,27 @@ export async function createMember(
     });
     return loadMember(tx, created.id);
   });
+  if (!viaEmail) return { member, temporaryPassword, emailed: false, existing: false };
+  const url = await createPasswordLink(member.id);
+  await notify(actor, member, (who) => inviteMessage({ name: member.name, ...who, url }));
+  return { member, temporaryPassword: null, emailed: true, existing: false };
+}
 
-  return { member, temporaryPassword };
+/** Emails a person about this company; a failure is reported, with how to send it again. */
+async function notify(
+  actor: Actor,
+  member: { name: string; email: string },
+  build: (who: { company: string; invitedBy: string }) => { subject: string; text: string; html: string },
+): Promise<boolean> {
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, actor.orgId));
+  const [me] = await db.select({ name: users.name }).from(users).where(eq(users.id, actor.id));
+  try {
+    return await sendAccountEmail(member.email, build({ company: org.name, invitedBy: me.name }));
+  } catch (error) {
+    throw new ServiceError(
+      `${member.name} was added, but the email could not be sent (${error instanceof Error ? error.message : "unknown error"}). Use “Send a password link” on the Team page to try again.`,
+    );
+  }
 }
 
 async function loadMember(tx: Parameters<Parameters<typeof withActor>[1]>[0], userId: string) {
@@ -184,9 +213,26 @@ export async function resetPassword(
   actor: Actor,
   rawInput: z.input<typeof resetPasswordInput>,
   request?: RequestMeta,
-): Promise<{ temporaryPassword: string }> {
+): Promise<{ temporaryPassword: string | null; emailed: boolean }> {
   assertCan(actor, "team.manage");
   const input = resetPasswordInput.parse(rawInput);
+  // Phase 23: with email set up, the person gets a link at their own address (safe for anyone,
+  // even people in several companies, since only they can open it).
+  if (emailConfig()) {
+    const member = await withActor(actor, (tx) => loadMember(tx, input.userId));
+    const [credential] = await db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.userId, input.userId), eq(accounts.providerId, "credential")));
+    const url = await createPasswordLink(input.userId, credential ? 1 : 7);
+    await notify(actor, member, (who) =>
+      credential ? resetPasswordMessage({ name: member.name, url }) : inviteMessage({ name: member.name, ...who, url }),
+    );
+    await withActor(actor, (tx) =>
+      recordAudit(tx, { actorId: actor.id, entityType: "user", entityId: input.userId, action: "user.password_link_sent", request }),
+    );
+    return { temporaryPassword: null, emailed: true };
+  }
   // A login shared with another company is that person's own: no company may take it over.
   const [elsewhere] = await db
     .select({ id: memberships.id })
@@ -221,7 +267,7 @@ export async function resetPassword(
     });
   });
 
-  return { temporaryPassword };
+  return { temporaryPassword, emailed: false };
 }
 
 /** Roadmap 2.6: hours a week a person has for project work (0 for someone on leave). */

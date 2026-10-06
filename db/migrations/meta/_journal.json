@@ -225,6 +225,13 @@
       "when": 1791256129694,
       "tag": "20261006030849_organizations_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791278263326,
+      "tag": "20261006091743_signup_pending_company",
+      "breakpoints": true
     }
   ]
 }

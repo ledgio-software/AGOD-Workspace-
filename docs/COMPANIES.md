@@ -25,9 +25,34 @@ its own data. AGOD is the first company; everything that existed before Phase 22
   Otherwise one company could take over an account that another company relies on.
 - Every company keeps at least one active Admin (the database refuses to demote or deactivate the last one).
 
-## Creating a company
+## Signing up (Phase 23)
 
-Until self sign-up arrives (Phase 23), companies are created by the platform owner:
+With `ALLOW_SIGNUP=true` (and email set up), anyone can create a company at **/sign-up**:
+
+1. They enter their name, the company name, their email and a password.
+2. The app emails a confirmation link. Until it is opened they can't sign in; trying sends a new
+   link.
+3. Opening the link confirms the email, **creates the company** with them as its Admin (starter
+   templates, invoice settings, a project code prefix from the company name), and signs them in.
+
+Signing up with an email that already has an account looks the same on screen (so nobody can find out
+which emails are registered); the account owner gets an email saying someone tried. Signed-in people
+with no company can create one on the "not in a company" page while sign-up is open. Turn sign-up off by
+removing `ALLOW_SIGNUP` (and redeploying): the page then says sign-up is closed, and the sign-up endpoint
+refuses requests.
+
+**Invitations.** With email set up, adding a new person on the Team page emails them an invitation
+with a link to choose their password (valid 7 days, once). No temporary password is shown. People who
+already have a login get an email saying they were added. "Send a password link" on the Team page
+emails a new link (to anyone, since only the owner of the address can use it). Without email, Team
+falls back to temporary passwords as before.
+
+**Forgot password** (sign-in page): emails a link valid for 1 hour, once. Choosing a new password
+signs the person out everywhere else.
+
+## Creating a company by hand
+
+Companies can also be created by the platform owner (e.g. AGOD at go-live, or with sign-up off):
 
 - GitHub: **Actions → Create a company and its first Admin → Run workflow**. Choose the environment,
   then enter the company name, an optional project code prefix, and the Admin's name and email.
@@ -80,6 +105,4 @@ another company for isolation tests.
 
 ## Next
 
-- Phase 23: public sign-up (create your company), email verification, invitations by email and
-  "forgot password", and the new product name.
-- Later: billing per company, and a platform admin view.
+- Later: billing per company, a platform admin view, and creating more companies from the company menu.

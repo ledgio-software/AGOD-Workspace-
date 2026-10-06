@@ -36,6 +36,8 @@ export const users = pgTable("users", {
   phone: text("phone"),
   // A disabled login can't sign in to any company. Roles live on memberships (Phase 22).
   active: boolean("active").notNull().default(true),
+  // Phase 23: the company named at sign-up, created once the email is verified.
+  pendingCompany: text("pending_company"),
   ...timestamps,
 });
 

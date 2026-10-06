@@ -244,3 +244,15 @@ Phase 9 (file attachments in Vercel Blob).
 | Product name | Will become **Ghana Vibe Coders & Developers** (Phase 23 sign-up pages); inside the app the sidebar shows the company's name. |
 | Not included | Self sign-up, invitations by email and password reset by email (Phase 23); billing; a platform admin view; per-company time zone and currency (still Africa/Accra and GHS by default). |
 
+## Phase 23 decisions (2026-10-06): sign-up, invitations, password reset
+
+| Decision | Choice |
+|---|---|
+| Product name | **Ghana Vibe Coders & Developers** on public pages, the browser title and account emails (`src/lib/brand.ts`). Inside the app the sidebar shows the company's name. |
+| Sign-up | Open when `ALLOW_SIGNUP=true` and email works. Name, company, email, password (10+ characters). The company is created only when the email is confirmed (Better Auth email verification, link valid 24 hours), so unconfirmed or borrowed addresses never get a company. Unconfirmed accounts can't sign in; trying sends a new link. |
+| Existing emails | Sign-up with an address that already has an account shows the same message and changes nothing; the owner is emailed. |
+| Invitations | With email set up, new people get an invitation link to choose their password (7 days, single use, Better Auth's password-reset tokens) instead of an Admin-relayed temporary password; existing logins get an "added to company" email; "Send a password link" replaces "Reset password". Without email, temporary passwords as before. |
+| Forgot password | Self-service by email (link 1 hour, single use); resetting signs out other sessions. |
+| Abuse limits | Per-IP limits: 5 sign-ups and 5 reset/verification emails an hour, 5 sign-in and reset attempts a minute. |
+| Not included | Social sign-in (Google), CAPTCHA, deleting unconfirmed accounts automatically, billing. |
+
