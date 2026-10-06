@@ -4,7 +4,6 @@ import { communityGroup, navGroups } from "@/components/nav";
 import { AppShell } from "@/components/shell";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Avatar } from "@/components/ui";
-import { roleLabel } from "@/lib/labels";
 import { requireUser } from "@/lib/session";
 import { canModerate } from "@/modules/community";
 import { switchCompanyAction } from "./company/actions";
@@ -23,7 +22,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
           <Avatar name={user.name} />
           <Link href="/account" className="min-w-0 flex-1 leading-tight hover:opacity-80" title="Account settings">
             <span className="block truncate text-sm font-medium text-fg">{user.name}</span>
-            <span className="block truncate text-xs text-muted">{roleLabel[user.role]}</span>
+            <span className="block truncate text-xs text-muted">{user.roleName}</span>
           </Link>
           <SignOutButton />
         </div>

@@ -64,6 +64,7 @@ rules, audit) lives behind these functions, not in the pages.
 | `/reconcile` | `payout.viewAll` | | `reconcile/actions`: `reconcileAction` |
 | `/profitability` (+ `/profitability/export`) | `finance.view` | `getProfitability({ scope, category })`, `getRecurringRevenue` (`?view=recurring`), `getPayoutForecast`, `getPayoutAging`, `getUtilisation(month)` | |
 | `/team`, `/team/[id]` | `team.view` | `listTeam`, `getContributionHistory` | `team/actions` (`team.manage`) |
+| `/team/roles` | `team.view` | `listRoles`, `listJobTitles`, `needsTeamSetup` | `team/roles/actions` (`team.manage`; team type also `company.manage`) |
 | `/workload` | `workload.view` | `getWorkload` | |
 | `/summary` | `report.weekly` | `getWeeklySummary`, `summaryText` | |
 | `/templates`, `/templates/[id]` | `template.manage` | `listTemplates`, `getTemplate` | `templates/actions` |

@@ -78,6 +78,38 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Schedule or cancel a project meeting (`project.edit`) | | ✓ | ✓ |
 | Company name and project code prefix (`company.manage`) | | | ✓ |
 
+### Company-made roles (Phase 28)
+
+The table above is the built-in roles. A company can make its own roles on **Team › Roles & job
+titles** by copying a role and switching permission groups off. The groups (`PERMISSION_GROUPS` in
+`src/lib/permissions`) are:
+
+| Group | Actions | Lowest built-in role with it |
+|---|---|---|
+| Create and edit projects | `project.create`, `project.edit`, `project.configureCompensation`, `project.overrideHealth`, `template.manage`, `task.update` (any task) | Project Manager |
+| Approve finished projects | `project.approve`, `project.reject` | Project Manager |
+| Reopen approved projects | `project.reopen` | Admin |
+| See everyone's payouts | `payout.viewAll`, `ledger.export`, `period.view`, `payoutQuestion.review` | Project Manager |
+| Pay the team | `payment.record`, `adjustment.create`, `payoutQuestion.resolve`, `period.close` | Admin |
+| See the team | `team.view`, `workload.view`, `report.weekly` | Project Manager |
+| Manage people and roles | `team.manage` | Admin |
+| Profitability and costs | `finance.view`, `finance.manage` | Project Manager |
+| Customers and subscriptions | `customer.*`, `subscription.*` | Project Manager |
+| Invoices | `invoice.view`, `invoice.manage` | Project Manager |
+| Customer payments | `invoice.recordPayment`, `invoice.settings` | Admin |
+| Company settings | `company.manage`, `google.manage`, `audit.viewAll` | Admin |
+
+`can()` first applies the built-in rule for the starting role, then the role's list of groups;
+with a group off, people keep only their own work (their own tasks). The actor's `permissions` are
+loaded from `company_roles` on every request (`src/lib/session.ts`), so changes apply on the next
+page. Row-level security still enforces the starting role. Pages that call several services must
+check each service's permission (a role may have one and not the other).
+
+**Two people for money** (database triggers `payout_ledger_entries_not_self`,
+`payment_transactions_not_self`, `adjustments_not_self`, plus the approval service): unless the
+company allows it, nobody approves a project that pays them or that they asked to have approved, and
+nobody records a payment or adjustment on their own payout.
+
 ### Community (Phase 25)
 
 Community roles are separate from company roles: everyone signed in is a Builder; Reviewer is a

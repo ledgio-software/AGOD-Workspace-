@@ -10,7 +10,8 @@ import { NewDraftForm } from "../invoice-forms";
 
 export default async function NewInvoicePage({ searchParams }: { searchParams: Promise<{ customer?: string }> }) {
   const actor = await requireUser();
-  if (!can(actor, "invoice.manage")) return <AccessDenied what="creating invoices" />;
+  // Phase 28: an invoice is for a customer, so this also needs the customer list.
+  if (!can(actor, "invoice.manage") || !can(actor, "customer.view")) return <AccessDenied what="creating invoices" />;
   const { customer } = await searchParams;
   const customers = await listCustomerOptions(actor);
   return (

@@ -4,13 +4,14 @@ import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { accounts, memberships, orgMembers, organizations, sessions, users } from "@/lib/db/schema";
+import { accounts, companyRoles, memberships, orgMembers, organizations, sessions, users } from "@/lib/db/schema";
 import { emailConfig } from "@/lib/email";
-import { type Actor, type Role, assertCan } from "@/lib/permissions";
+import { type Actor, type PermissionKey, type Role, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { appUrl, createPasswordLink, sendAccountEmail } from "@/modules/accounts";
 import { addedToCompanyMessage, inviteMessage, resetPasswordMessage } from "@/modules/email/account";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
+import { assertCanGrant, resolveRole } from "@/modules/roles";
 
 export const ROLES = ["TEAM_MEMBER", "PROJECT_MANAGER", "ADMIN"] as const satisfies readonly Role[];
 
@@ -20,20 +21,26 @@ export type TeamMember = {
   email: string;
   phone: string | null;
   role: Role;
+  /** Phase 28: the company-made role, when the person has one (else the built-in `role`). */
+  companyRoleId: string | null;
+  jobTitleId: string | null;
   active: boolean;
   weeklyCapacityHours: number;
   createdAt: Date;
 };
+
+/** Phase 28: a role picked in a form: a built-in role ("ADMIN") or a company role's id. */
+const roleRef = z.string().trim().min(1, "Choose a role");
 
 const reason = z.string().trim().min(3, "Give a reason (at least 3 characters)").max(500);
 
 export const createMemberInput = z.object({
   name: z.string().trim().min(2, "Name is required").max(120),
   email: z.email("Enter a valid email").trim().toLowerCase(),
-  role: z.enum(ROLES),
+  role: roleRef,
 });
 
-export const changeRoleInput = z.object({ userId: z.uuid(), role: z.enum(ROLES), reason });
+export const changeRoleInput = z.object({ userId: z.uuid(), role: roleRef, reason });
 export const setActiveInput = z.object({ userId: z.uuid(), active: z.boolean(), reason });
 export const resetPasswordInput = z.object({ userId: z.uuid() });
 export const capacityInput = z.object({
@@ -53,6 +60,8 @@ const memberColumns = {
   email: orgMembers.email,
   phone: orgMembers.phone,
   role: orgMembers.role,
+  companyRoleId: orgMembers.companyRoleId,
+  jobTitleId: orgMembers.jobTitleId,
   active: orgMembers.active,
   weeklyCapacityHours: orgMembers.weeklyCapacityHours,
   createdAt: orgMembers.createdAt,
@@ -82,13 +91,18 @@ export async function createMember(
     const member = await withActor(actor, async (tx) => {
       const [already] = await tx.select({ id: memberships.id }).from(memberships).where(thisMembership(actor, existing.id));
       if (already) throw new ServiceError("This person is already in the team. Reactivate them instead.");
-      await tx.insert(memberships).values({ organizationId: actor.orgId, userId: existing.id, role: input.role }).catch(rethrowDbGuard);
+      const role = await resolveRole(tx, input.role);
+      assertCanGrant(actor, role);
+      await tx
+        .insert(memberships)
+        .values({ organizationId: actor.orgId, userId: existing.id, role: role.baseRole, companyRoleId: role.companyRoleId })
+        .catch(rethrowDbGuard);
       await recordAudit(tx, {
         actorId: actor.id,
         entityType: "user",
         entityId: existing.id,
         action: "user.added",
-        after: { email: input.email, role: input.role },
+        after: { email: input.email, role: role.name },
         request,
       });
       return loadMember(tx, existing.id);
@@ -102,8 +116,10 @@ export async function createMember(
   const member = await withActor(actor, async (tx) => {
     // No RETURNING: the new person is only visible to this company once their membership exists.
     const created = { id: randomUUID(), name: input.name, email: input.email };
+    const role = await resolveRole(tx, input.role);
+    assertCanGrant(actor, role);
     await tx.insert(users).values({ ...created, emailVerified: true });
-    await tx.insert(memberships).values({ organizationId: actor.orgId, userId: created.id, role: input.role });
+    await tx.insert(memberships).values({ organizationId: actor.orgId, userId: created.id, role: role.baseRole, companyRoleId: role.companyRoleId });
     // Invited by email: no password yet; they choose one with the link.
     if (passwordHash) {
       await tx.insert(accounts).values({
@@ -118,7 +134,7 @@ export async function createMember(
       entityType: "user",
       entityId: created.id,
       action: "user.created",
-      after: { name: created.name, email: created.email, role: input.role },
+      after: { name: created.name, email: created.email, role: role.name },
       request,
     });
     return loadMember(tx, created.id);
@@ -167,6 +183,13 @@ async function notify(
   }
 }
 
+/** The person's current role, including archived company roles (which they may still hold). */
+async function resolveCurrentRole(tx: Parameters<Parameters<typeof withActor>[1]>[0], member: TeamMember) {
+  if (!member.companyRoleId) return resolveRole(tx, member.role);
+  const [row] = await tx.select().from(companyRoles).where(eq(companyRoles.id, member.companyRoleId));
+  return { ref: row.id, name: row.name, baseRole: row.baseRole, permissions: row.permissions as PermissionKey[] };
+}
+
 async function loadMember(tx: Parameters<Parameters<typeof withActor>[1]>[0], userId: string) {
   const [member] = await tx.select(memberColumns).from(orgMembers).where(eq(orgMembers.id, userId));
   if (!member) throw new ServiceError("Member not found.");
@@ -186,15 +209,24 @@ export async function changeRole(
 
   await withActor(actor, async (tx) => {
     const member = await loadMember(tx, input.userId);
-    if (member.role === input.role) return;
-    await tx.update(memberships).set({ role: input.role }).where(thisMembership(actor, input.userId)).catch(rethrowDbGuard);
+    const current = await resolveCurrentRole(tx, member);
+    const next = await resolveRole(tx, input.role);
+    if (current.ref === next.ref) return;
+    // Phase 28: nobody changes the role of someone with more access than they have, or hands out more.
+    assertCanGrant(actor, current);
+    assertCanGrant(actor, next);
+    await tx
+      .update(memberships)
+      .set({ role: next.baseRole, companyRoleId: next.companyRoleId })
+      .where(thisMembership(actor, input.userId))
+      .catch(rethrowDbGuard);
     await recordAudit(tx, {
       actorId: actor.id,
       entityType: "user",
       entityId: input.userId,
       action: "user.role_changed",
-      before: { role: member.role },
-      after: { role: input.role },
+      before: { role: current.baseRole, ...(current.ref === current.baseRole ? {} : { companyRole: current.name }) },
+      after: { role: next.baseRole, ...(next.companyRoleId ? { companyRole: next.name } : {}) },
       reason: input.reason,
       request,
     });
@@ -215,6 +247,7 @@ export async function setActive(
   await withActor(actor, async (tx) => {
     const member = await loadMember(tx, input.userId);
     if (member.active === input.active) return;
+    assertCanGrant(actor, await resolveCurrentRole(tx, member));
     // Only this company: access ends on their next page load; other companies are unaffected.
     await tx.update(memberships).set({ active: input.active }).where(thisMembership(actor, input.userId)).catch(rethrowDbGuard);
     await recordAudit(tx, {
@@ -274,7 +307,8 @@ export async function resetPassword(
   const passwordHash = await hashPassword(temporaryPassword);
 
   await withActor(actor, async (tx) => {
-    await loadMember(tx, input.userId);
+    // Phase 28: a temporary password means taking over the login; only for people with no more access than you.
+    assertCanGrant(actor, await resolveCurrentRole(tx, await loadMember(tx, input.userId)));
     const updated = await tx
       .update(accounts)
       .set({ password: passwordHash })

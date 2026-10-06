@@ -11,6 +11,7 @@ import {
   users,
   orgMembers,
   organizations,
+  jobTitles,
 } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { DEFAULT_CURRENCY, parseMoney, parsePercent } from "@/lib/money";
@@ -72,7 +73,7 @@ export const projectInput = z
         if (!v || v.trim() === "") return 0;
         const bps = parsePercent(v);
         if (bps === null) {
-          ctx.addIssue({ code: "custom", message: "Enter the AGOD share as a percentage from 0 to 100, e.g. 30" });
+          ctx.addIssue({ code: "custom", message: "Enter the company share as a percentage from 0 to 100, e.g. 30" });
           return z.NEVER;
         }
         return bps;
@@ -549,8 +550,10 @@ export async function previewCompensationTx(tx: Tx, project: ProjectRow): Promis
 export async function listActiveMembers(actor: Actor) {
   return withActor(actor, (tx) =>
     tx
-      .select({ id: orgMembers.id, name: orgMembers.name, role: orgMembers.role })
+      // Phase 28: with their job title, the usual role on a project.
+      .select({ id: orgMembers.id, name: orgMembers.name, role: orgMembers.role, jobTitle: jobTitles.name })
       .from(orgMembers)
+      .leftJoin(jobTitles, eq(jobTitles.id, orgMembers.jobTitleId))
       .where(eq(orgMembers.active, true))
       .orderBy(asc(orgMembers.name)),
   );

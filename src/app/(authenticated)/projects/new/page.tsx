@@ -13,7 +13,8 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
   const actor = await requireUser();
   if (!can(actor, "project.create")) return <AccessDenied what="creating projects" />;
   const members = await listActiveMembers(actor);
-  const customers = await listCustomerOptions(actor);
+  // Phase 28: a company role may run projects without seeing the customer list.
+  const customers = can(actor, "customer.view") ? await listCustomerOptions(actor) : [];
   // Coming from a customer's page: start as an external project for that customer.
   const { customer } = await searchParams;
   const preset = customers.find((c) => c.id === customer);

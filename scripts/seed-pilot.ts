@@ -119,7 +119,7 @@ async function main() {
   const blog = await createTask(admin, site.id, { title: "Blog migration", assignedTo: ama.id });
   await updateTaskProgress(kofi, pages.id, { status: "DONE", completionNote: "Deployed", completedOn: today });
   await waiveTask(admin, blog.id, "Blog moved to Medium instead");
-  await requestApproval(admin, site.id);
+  await requestApproval(kofi, site.id, "Pages are live");
   await approveProject(admin, site.id, { expectedVersion: await version(site.id) });
   const amaSite = await entryFor(site.id, ama.id);
   await createAdjustment(admin, amaSite.id, { type: "DECREASE", amount: "300.00", reason: "Blog migration dropped from scope" });

@@ -22,7 +22,7 @@ export default async function ServicesPage() {
       <PageHeader
         eyebrow="Customers"
         title="Services"
-        description="The catalogue of what AGOD sells. Subscriptions copy a service's defaults and then keep their own agreed terms."
+        description="The catalogue of what the company sells. Subscriptions copy a service's defaults and then keep their own agreed terms."
       />
 
       {canManage && (
@@ -34,7 +34,7 @@ export default async function ServicesPage() {
       <Card bodyClassName={services.length ? "p-0" : undefined}>
         {services.length === 0 ? (
           <EmptyState icon={Package} title="No services yet">
-            Add what AGOD sells, e.g. website hosting, maintenance or a support plan.
+            Add what you sell, e.g. website hosting, maintenance or a support plan.
           </EmptyState>
         ) : (
           <div className="overflow-x-auto">

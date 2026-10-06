@@ -322,3 +322,16 @@ Phase 9 (file attachments in Vercel Blob).
 | Emails | Confirmation on joining, a reminder from the daily job for sessions in the next 24 hours, and emails on time/link changes and cancellations. |
 | Archive | The host adds a recording link and notes after the session; past sessions are listed with them. |
 | Not included | Waitlists, recurring sessions, in-app video, attendance tracking. |
+
+## Phase 28 decisions (2026-10-06): roles, job titles, two people for money
+
+| Decision | Choice |
+|---|---|
+| Roles | Built-in Team Member, Project Manager and Admin stay (unchangeable). A company makes its own roles by copying one and switching **permission groups** off (12 groups, e.g. "Pay the team", "Approve finished projects"). A company role can only narrow its starting role, never widen it. |
+| Enforcement | The application checks the role's groups. Row-level security keeps enforcing the starting role, which the database copies onto the membership (a trigger), so a bug can never give more than the starting role. What data someone sees (all projects or only their own) follows the starting role. |
+| Safety | Always one active Admin with the full built-in role (database guard). Nobody changes their own role, hands out access they don't have, or changes/deactivates/sets a temporary password for someone with more access. Role, job title and setting changes are audited. |
+| Job titles | Each company's own list; they grant nothing. "Role on project" is picked from the list (pre-filled from the person's title); free text remains when a company has no titles. |
+| Team type | "What kind of team are you?" (Software, Fintech, Other) on the Roles page (and when creating a company from the community): adds suggested titles and roles (Team Lead, Finance, and Compliance for fintech), only what's missing. The dashboard asks until the company has job titles. |
+| Two people for money | On for new companies: nobody approves a project that pays them or that they asked to have approved, and nobody records a payment or adjustment on their own payout (the database refuses the payout and payment rows too). A one-manager company may switch it off on the Company page, with a reason (audited). Companies that existed before Phase 28 start with it off, so nothing breaks; Admins should switch it on. |
+| Password reset | Completing a reset link also confirms the email (and finishes sign-up), since it proves the person owns the address. |
+| Wording | "AGOD share" is now "company share" in the app, since every company uses it. |

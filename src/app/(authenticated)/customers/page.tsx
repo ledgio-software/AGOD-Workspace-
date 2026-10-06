@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Building2, Plus, Search } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { CustomerStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, ButtonLink, Card, EmptyState, PageHeader, buttonClass, table } from "@/components/ui";
 import { customerStatusLabel, customerTypeLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
@@ -22,7 +22,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <PageHeader
         eyebrow="Work"
         title="Customers"
-        description="Who AGOD works for, their contacts and their projects."
+        description="Who the company works for, their contacts and their projects."
         actions={
           can(actor, "customer.manage") && (
             <ButtonLink href="/customers/new" variant="primary">

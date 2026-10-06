@@ -62,9 +62,9 @@ export function calculateCompensation(plan: PlanInput): PlanResult {
   if (plan.lines.length === 0) errors.push("Add at least one team member to the compensation plan.");
   const share = plan.agodShareBasisPoints ?? 0;
   if (!Number.isInteger(share) || share < 0 || share > FULL_BASIS_POINTS) {
-    errors.push("The AGOD share must be between 0% and 100%.");
+    errors.push("The company share must be between 0% and 100%.");
   } else if (share > 0 && plan.splitMode !== "PERCENTAGE") {
-    errors.push("An AGOD share percentage only applies to percentage splits.");
+    errors.push("A company share percentage only applies to percentage splits.");
   }
 
   const seen = new Set<string>();
@@ -103,7 +103,7 @@ function calculatePercentage(plan: PlanInput): PlanResult {
       ? []
       : share > 0
         ? [
-            `Team percentages must total exactly ${(teamBasisPoints / 100).toFixed(2)}% (100% minus the ${(share / 100).toFixed(2)}% AGOD share; currently ${(totalBasisPoints / 100).toFixed(2)}%).`,
+            `Team percentages must total exactly ${(teamBasisPoints / 100).toFixed(2)}% (100% minus the ${(share / 100).toFixed(2)}% company share; currently ${(totalBasisPoints / 100).toFixed(2)}%).`,
           ]
         : [`Percentages must total exactly 100% (currently ${(totalBasisPoints / 100).toFixed(2)}%).`];
 
@@ -126,7 +126,7 @@ function calculatePercentage(plan: PlanInput): PlanResult {
       const exact = Number((total * BigInt(share)) / BigInt(FULL_BASIS_POINTS));
       const remainder = agodShareMinor - exact;
       if (remainder > 0) {
-        roundingNote = `${remainder} pesewa${remainder === 1 ? "" : "s"} left over from rounding kept in the AGOD share.`;
+        roundingNote = `${remainder} pesewa${remainder === 1 ? "" : "s"} left over from rounding kept in the company share.`;
       }
     } else {
       const remainder = plan.totalValueMinor - floored;

@@ -4,8 +4,12 @@
 
 export type Role = "TEAM_MEMBER" | "PROJECT_MANAGER" | "ADMIN";
 
-/** Who is acting, in which company (Phase 22), with their role in that company. */
-export type Actor = { id: string; role: Role; orgId: string };
+/**
+ * Who is acting, in which company (Phase 22), with their role in that company. Phase 28: a
+ * company-made role keeps its base `role` (what the database allows) and lists the permission
+ * groups it keeps in `permissions`; null or absent means the full base role.
+ */
+export type Actor = { id: string; role: Role; orgId: string; permissions?: readonly PermissionKey[] | null };
 
 export type Action =
   | "project.view"
@@ -117,8 +121,93 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   "company.manage": isAdmin,
 };
 
+// Phase 28: companies make their own roles by starting from Team Member, Project Manager or Admin
+// and switching permission groups off. A role can only narrow its base role (row-level security
+// still enforces the base role), never widen it.
+
+export type PermissionKey =
+  | "projects.manage"
+  | "projects.approve"
+  | "projects.reopen"
+  | "payouts.view"
+  | "payouts.pay"
+  | "team.view"
+  | "team.manage"
+  | "finance"
+  | "clients"
+  | "invoices"
+  | "invoices.payments"
+  | "company";
+
+export type PermissionGroup = { key: PermissionKey; label: string; description: string; base: Role; actions: readonly Action[]; money?: boolean };
+
+/** Every manager- or Admin-level action belongs to exactly one group (checked by the unit tests). */
+export const PERMISSION_GROUPS: readonly PermissionGroup[] = [
+  {
+    key: "projects.manage",
+    label: "Create and edit projects",
+    description: "New projects, details, team and splits, milestones, any task, health and templates.",
+    base: "PROJECT_MANAGER",
+    actions: ["project.create", "project.edit", "project.configureCompensation", "project.overrideHealth", "template.manage", "task.update"],
+  },
+  { key: "projects.approve", label: "Approve finished projects", description: "Approve (which creates the payouts) or send back for changes.", base: "PROJECT_MANAGER", actions: ["project.approve", "project.reject"], money: true },
+  { key: "projects.reopen", label: "Reopen approved projects", description: "Undo an approval before anyone is paid.", base: "ADMIN", actions: ["project.reopen"], money: true },
+  {
+    key: "payouts.view",
+    label: "See everyone's payouts",
+    description: "The ledger and its export, month close checklist, and payout questions.",
+    base: "PROJECT_MANAGER",
+    actions: ["payout.viewAll", "ledger.export", "period.view", "payoutQuestion.review"],
+    money: true,
+  },
+  {
+    key: "payouts.pay",
+    label: "Pay the team",
+    description: "Record payments and adjustments, settle payout questions, close the month.",
+    base: "ADMIN",
+    actions: ["payment.record", "adjustment.create", "payoutQuestion.resolve", "period.close"],
+    money: true,
+  },
+  { key: "team.view", label: "See the team", description: "The team list, workload and weekly summary.", base: "PROJECT_MANAGER", actions: ["team.view", "workload.view", "report.weekly"] },
+  { key: "team.manage", label: "Manage people and roles", description: "Add people, change roles and job titles, deactivate, reset passwords.", base: "ADMIN", actions: ["team.manage"] },
+  { key: "finance", label: "Profitability and costs", description: "Profit reports, forecasts, cost budgets and project costs.", base: "PROJECT_MANAGER", actions: ["finance.view", "finance.manage"], money: true },
+  {
+    key: "clients",
+    label: "Customers and subscriptions",
+    description: "Customers, contacts, services and subscriptions.",
+    base: "PROJECT_MANAGER",
+    actions: ["customer.view", "customer.manage", "subscription.view", "subscription.manage"],
+  },
+  { key: "invoices", label: "Invoices", description: "Create, send and void invoices.", base: "PROJECT_MANAGER", actions: ["invoice.view", "invoice.manage"], money: true },
+  { key: "invoices.payments", label: "Customer payments", description: "Record money received from customers; invoice settings.", base: "ADMIN", actions: ["invoice.recordPayment", "invoice.settings"], money: true },
+  { key: "company", label: "Company settings", description: "Company details, Google and GitHub connections, the full audit log.", base: "ADMIN", actions: ["company.manage", "google.manage", "audit.viewAll"] },
+];
+
+const rank: Record<Role, number> = { TEAM_MEMBER: 0, PROJECT_MANAGER: 1, ADMIN: 2 };
+
+/** The groups a base role has in full. */
+export function groupsOf(role: Role): PermissionKey[] {
+  return PERMISSION_GROUPS.filter((g) => rank[g.base] <= rank[role]).map((g) => g.key);
+}
+
+/** The groups an actor actually has: their role's list, limited to what the base role allows. */
+export function effectiveGroups(actor: Actor): PermissionKey[] {
+  const full = groupsOf(actor.role);
+  return actor.permissions ? full.filter((k) => actor.permissions!.includes(k)) : full;
+}
+
+const groupOfAction = new Map<Action, PermissionGroup>(PERMISSION_GROUPS.flatMap((g) => g.actions.map((a) => [a, g] as const)));
+
+// What someone may still do when the group is switched off: their own tasks.
+const ownWork: Partial<Record<Action, (resource: ResourceContext) => boolean>> = {
+  "task.update": (r) => r.isTaskAssignee === true,
+};
+
 export function can(actor: Actor, action: Action, resource: ResourceContext = {}): boolean {
-  return rules[action](actor, resource);
+  if (!rules[action](actor, resource)) return false;
+  const group = groupOfAction.get(action);
+  if (!group || !actor.permissions || actor.permissions.includes(group.key)) return true;
+  return ownWork[action]?.(resource) ?? false;
 }
 
 export class PermissionError extends Error {

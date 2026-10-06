@@ -3,7 +3,7 @@ import { Banknote, Clock, Download, Gauge, Hourglass, Percent, Receipt, Repeat, 
 import { AccessDenied } from "@/components/access-denied";
 import { Badge } from "@/components/badges";
 import { BarList, StackedColumns, compactMoney } from "@/components/charts";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, Card, EmptyState, PageHeader, StatCard, TabNav, buttonClass, compactTable as ct, cx, table } from "@/components/ui";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
 import { projectCategoryLabel, projectStatusLabel } from "@/lib/labels";

@@ -676,7 +676,8 @@ export const settingsInput = z.object({
 });
 
 export async function getInvoiceSettings(actor: Actor) {
-  assertCan(actor, "invoice.view");
+  // Phase 28: whoever may change the settings may also read them.
+  if (!can(actor, "invoice.settings")) assertCan(actor, "invoice.view");
   return withActor(actor, async (tx) => (await tx.select().from(invoiceSettings))[0] ?? null);
 }
 

@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { invoiceSettings, memberships, organizations, projectTemplates } from "@/lib/db/schema";
+import { companyRoles, invoiceSettings, jobTitles, memberships, organizations, projectTemplates } from "@/lib/db/schema";
 import { type Actor, assertCan } from "@/lib/permissions";
 import { type RequestMeta, recordAudit } from "@/modules/audit";
 import { isUniqueViolation } from "@/modules/db-errors";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
+import { JOB_TITLE_PRESETS, ROLE_PRESETS, type TeamType } from "@/modules/roles/presets";
 import { STARTER_TEMPLATES } from "./starter-templates";
 
 // Phase 22: companies (workspaces). Creating one is a system action (the sign-up flow, scripts
@@ -45,9 +46,10 @@ export function suggestPrefix(text: string): string {
 
 /**
  * Creates a company with `ownerId` as its first Admin, the starter project templates and default
- * invoice settings. Returns the new company.
+ * invoice settings. With a team type (Phase 28) it also gets that kind of team's suggested job
+ * titles and roles. Returns the new company.
  */
-export async function createOrganization(input: { name: string; ownerId: string; projectCodePrefix?: string; slug?: string }) {
+export async function createOrganization(input: { name: string; ownerId: string; projectCodePrefix?: string; slug?: string; teamType?: TeamType }) {
   const companyName = name.parse(input.name);
   const codePrefix = prefix.parse(input.projectCodePrefix ?? suggestPrefix(companyName));
   const base = input.slug ?? slugify(companyName);
@@ -55,8 +57,17 @@ export async function createOrganization(input: { name: string; ownerId: string;
     const slug = attempt === 0 ? base : `${base.slice(0, 35)}-${attempt + 1}`;
     try {
       return await db.transaction(async (tx) => {
-        const [org] = await tx.insert(organizations).values({ name: companyName, slug, projectCodePrefix: codePrefix, createdBy: input.ownerId }).returning();
+        const [org] = await tx
+          .insert(organizations)
+          .values({ name: companyName, slug, projectCodePrefix: codePrefix, createdBy: input.ownerId, teamType: input.teamType ?? "OTHER" })
+          .returning();
         await tx.insert(memberships).values({ organizationId: org.id, userId: input.ownerId, role: "ADMIN" });
+        if (input.teamType) {
+          await tx.insert(jobTitles).values(JOB_TITLE_PRESETS[input.teamType].map((name) => ({ organizationId: org.id, name })));
+          await tx
+            .insert(companyRoles)
+            .values(ROLE_PRESETS[input.teamType].map((r) => ({ organizationId: org.id, name: r.name, description: r.description, baseRole: r.baseRole, permissions: r.permissions, createdBy: input.ownerId })));
+        }
         await tx.insert(projectTemplates).values(STARTER_TEMPLATES.map((t) => ({ ...t, organizationId: org.id })));
         await tx.insert(invoiceSettings).values({ organizationId: org.id, businessName: companyName });
         return org;
@@ -90,6 +101,34 @@ export async function updateOrganization(actor: Actor, raw: z.input<typeof organ
       action: "company.updated",
       before: { name: before.name, projectCodePrefix: before.projectCodePrefix },
       after: input,
+      request,
+    });
+  });
+}
+
+export const selfApprovalInput = z.object({ allow: z.boolean(), reason: z.string().trim().min(3, "Give a reason (at least 3 characters)").max(500) });
+
+/**
+ * Phase 28, two people for money. Off: nobody approves a project they are paid on or asked to have
+ * approved, or records a payment or adjustment on their own payout. On: allowed (for a team with one
+ * manager), and every change of this setting is in the audit log with its reason.
+ */
+export async function setSelfApproval(actor: Actor, raw: z.input<typeof selfApprovalInput>, request?: RequestMeta) {
+  assertCan(actor, "company.manage");
+  const input = selfApprovalInput.parse(raw);
+  await withActor(actor, async (tx) => {
+    const [before] = await tx.select({ allow: organizations.allowSelfApproval }).from(organizations).where(eq(organizations.id, actor.orgId));
+    if (!before) throw new ServiceError("Company not found.");
+    if (before.allow === input.allow) return;
+    await tx.update(organizations).set({ allowSelfApproval: input.allow }).where(eq(organizations.id, actor.orgId)).catch(rethrowDbGuard);
+    await recordAudit(tx, {
+      actorId: actor.id,
+      entityType: "organization",
+      entityId: actor.orgId,
+      action: "company.self_approval_changed",
+      before: { allowSelfApproval: before.allow },
+      after: { allowSelfApproval: input.allow },
+      reason: input.reason,
       request,
     });
   });

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { buttonClass, cx } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
