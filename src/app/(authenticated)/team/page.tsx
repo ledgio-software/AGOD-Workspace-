@@ -6,6 +6,7 @@ import { Avatar, ButtonLink, Card, Disclosure, PageHeader, StatCard, cx, table }
 import { formatDate } from "@/lib/dates";
 import { roleLabel } from "@/lib/labels";
 import { can } from "@/lib/permissions";
+import { emailConfig } from "@/lib/email";
 import { requireUser } from "@/lib/session";
 import { listTeam } from "@/modules/team";
 import { CreateMemberForm, MemberActions } from "./team-forms";
@@ -14,6 +15,7 @@ const roleTone = { ADMIN: "violet", PROJECT_MANAGER: "blue", TEAM_MEMBER: "gray"
 
 export default async function TeamPage() {
   const actor = await requireUser();
+  const viaEmail = emailConfig() !== null;
   if (!can(actor, "team.view")) return <AccessDenied what="the team list" />;
 
   const members = await listTeam(actor);
@@ -94,7 +96,7 @@ export default async function TeamPage() {
                   <td className={`${table.td} whitespace-nowrap text-muted`}>{formatDate(member.createdAt)}</td>
                   {canManage && (
                     <td className={`${table.td} text-right`}>
-                      {member.id === actor.id ? <span className="text-xs text-muted">You</span> : <MemberActions member={member} />}
+                      {member.id === actor.id ? <span className="text-xs text-muted">You</span> : <MemberActions member={member} viaEmail={viaEmail} />}
                     </td>
                   )}
                 </tr>

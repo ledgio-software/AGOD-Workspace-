@@ -77,6 +77,7 @@ Settings that must stay as they are:
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | optional, the production GitHub App (`docs/GITHUB_APP.md`) | optional, the staging GitHub App | key and secret: yes |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | optional, turns on email reminders (`docs/EMAIL.md`) | optional (same mailbox is fine while testing) | `SMTP_PASS`: yes |
 | `CRON_SECRET` | needed for the daily reminders job | needed to run it on demand | yes |
+| `ALLOW_SIGNUP` | `true` to let new companies sign up (needs SMTP) | `true` to test sign-up | no |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional, turns on Google Drive (`docs/GOOGLE.md`) | optional (same OAuth client, its own redirect URI) | secret: yes |
 
 Generate a secret in PowerShell:

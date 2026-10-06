@@ -75,8 +75,9 @@ The UI hides what a role can't use, but that is convenience only; the server and
 | Company name and project code prefix (`company.manage`) | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
-another, and no role ever reaches another company's data. An Admin resets passwords only for people who
-belong to no other company.
+another, and no role ever reaches another company's data. An Admin sets a temporary password only for
+people who belong to no other company; with email set up (Phase 23) they instead email a password link
+to the person's own address, which is safe for anyone.
 
 The GitHub webhook (`/api/github/webhook`) is the one place that writes domain data without a signed-in
 person: it verifies GitHub's signature, then acts as the system through the owner connection, only on projects

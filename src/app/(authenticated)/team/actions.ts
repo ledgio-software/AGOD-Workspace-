@@ -6,8 +6,11 @@ import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
 import { changeRole, createMember, resetPassword, setActive, setCapacity } from "@/modules/team";
 
-/** temporaryPassword is null when the person already had a login (e.g. in another company). */
-type Credentials = { email: string; temporaryPassword: string | null };
+/**
+ * temporaryPassword is null when the person already had a login (e.g. in another company) or was
+ * emailed a link to choose their password (Phase 23).
+ */
+type Credentials = { email: string; temporaryPassword: string | null; emailed: boolean; existing: boolean };
 
 export async function createMemberAction(
   _prev: ActionResult<Credentials> | null,
@@ -15,12 +18,12 @@ export async function createMemberAction(
 ): Promise<ActionResult<Credentials>> {
   const actor = await requireUser();
   const result = await runAction(async () => {
-    const { member, temporaryPassword } = await createMember(
+    const { member, temporaryPassword, emailed, existing } = await createMember(
       actor,
       { name: String(form.get("name") ?? ""), email: String(form.get("email") ?? ""), role: form.get("role") as never },
       await getRequestMeta(),
     );
-    return { email: member.email, temporaryPassword };
+    return { email: member.email, temporaryPassword, emailed, existing };
   });
   if (result.ok) revalidatePath("/team");
   return result;
@@ -71,12 +74,12 @@ export async function resetPasswordAction(
 ): Promise<ActionResult<Credentials>> {
   const actor = await requireUser();
   return runAction(async () => {
-    const { temporaryPassword } = await resetPassword(
+    const { temporaryPassword, emailed } = await resetPassword(
       actor,
       { userId: String(form.get("userId")) },
       await getRequestMeta(),
     );
-    return { email: String(form.get("email") ?? ""), temporaryPassword };
+    return { email: String(form.get("email") ?? ""), temporaryPassword, emailed, existing: true };
   });
 }
 

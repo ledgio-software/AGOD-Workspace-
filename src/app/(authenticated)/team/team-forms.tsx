@@ -31,10 +31,15 @@ export function CreateMemberForm() {
             <div className="sm:col-span-4">
               {state.data.temporaryPassword ? (
                 <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+              ) : state.data.existing ? (
+                <p className="rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
+                  {state.data.email} already has an account, so they were added to this company
+                  {state.data.emailed && " and told by email"}. They sign in with their own password and choose this company from the
+                  company menu.
+                </p>
               ) : (
                 <p className="rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
-                  {state.data.email} already has an account, so they were added to this company. They sign in with their own password and
-                  choose this company from the company menu.
+                  Invitation sent to {state.data.email}. They choose their password with the link in the email (it works for 7 days).
                 </p>
               )}
             </div>
@@ -61,7 +66,7 @@ export function CreateMemberForm() {
 
 type Member = { id: string; email: string; role: Role; active: boolean; weeklyCapacityHours: number };
 
-export function MemberActions({ member }: { member: Member }) {
+export function MemberActions({ member, viaEmail }: { member: Member; viaEmail: boolean }) {
   return (
     <details className="text-sm">
       <summary className="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">Manage</summary>
@@ -96,15 +101,26 @@ export function MemberActions({ member }: { member: Member }) {
 
         <ActionForm
           action={resetPasswordAction}
-          confirmMessage={`Reset the password for ${member.email}? They will be signed out.`}
+          confirmMessage={
+            viaEmail
+              ? `Email ${member.email} a link to choose a new password?`
+              : `Reset the password for ${member.email}? They will be signed out.`
+          }
           className="space-y-2"
           renderResult={(state) =>
-            state.ok && state.data.temporaryPassword && <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+            state.ok &&
+            (state.data.temporaryPassword ? (
+              <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+            ) : (
+              <p className="text-xs text-muted">Password link sent to {state.data.email}.</p>
+            ))
           }
         >
           <input type="hidden" name="userId" value={member.id} />
           <input type="hidden" name="email" value={member.email} />
-          <SubmitButton size="sm" variant="secondary" pendingText="Resetting…">Reset password</SubmitButton>
+          <SubmitButton size="sm" variant="secondary" pendingText={viaEmail ? "Sending…" : "Resetting…"}>
+            {viaEmail ? "Send a password link" : "Reset password"}
+          </SubmitButton>
         </ActionForm>
       </div>
     </details>

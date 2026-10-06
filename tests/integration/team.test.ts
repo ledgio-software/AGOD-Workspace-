@@ -129,7 +129,7 @@ describe("team management by an Admin", () => {
 
     const { temporaryPassword } = await resetPassword(admin, { userId: member.id });
     const [account] = await db.select().from(accounts).where(eq(accounts.userId, member.id));
-    expect(await verifyPassword({ hash: account.password!, password: temporaryPassword })).toBe(true);
+    expect(await verifyPassword({ hash: account.password!, password: temporaryPassword! })).toBe(true);
     expect(await db.select().from(sessions).where(eq(sessions.userId, member.id))).toHaveLength(0);
   });
 });
