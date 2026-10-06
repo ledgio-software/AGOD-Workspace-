@@ -44,6 +44,9 @@ rules, audit) lives behind these functions, not in the pages.
 | `/community` | signed in (company optional) | `ensureProfile`, `onboarding`, `companiesOf`, `listMembers`, `chatLinks` | `community/actions`: `acceptConductAction`, `createCompanyAction`; `switchCompanyAction` |
 | `/community/profile` | signed in | `ensureProfile` | `updateProfileAction`; change password (Better Auth) |
 | `/community/reports` | organizers | `listReports` | `resolveReportAction` |
+| `/showcase` | public | `listPosts({ status, q, page, order })` | |
+| `/showcase/[id]` (+ `/showcase/[id]/images/[imageId]`) | public (members-only posts: signed in) | `getPost`, `openScreenshot` | `addReviewAction`, `replyToReviewAction`, `reportPostAction`, `reportReviewAction`; author: `setPostStatusAction`, `addScreenshotAction`, `removeScreenshotAction`, `removePostAction`; organizers: `unhideShowcaseAction` |
+| `/community/showcase/new`, `/community/showcase/[id]/edit` | signed in (author) | `giveBack`, `screenshotsAvailable`, `getPost` | `createPostAction` (with an optional screenshot), `updatePostAction` |
 | `/sign-up`, `/forgot-password`, `/reset-password` | public | `signupOpen`, `emailConfig` | Better Auth client: `signUp.email` (with `pendingCompany`), `requestPasswordReset`, `resetPassword` |
 | `/integrations` (`?google=<result>`) | `audit.viewAll` | `recentJobRuns`, `recentDeliveries`, `emailConfig`, `googleStatus`, `companyCalendarStatus` | `integrations/actions`: `sendTestEmailAction`, `runDailyNowAction`, `syncDriveAction` (Drive and calendars), `disconnectGoogleAction` (`google.manage`); `/api/google/connect` → Google → `/api/google/callback` |
 | `/invoices` | `invoice.view` | `listInvoices({ q, state, customerId })`, `invoiceTotals` | `invoices/actions`: `prepareAction` |

@@ -5,7 +5,9 @@ import { PRODUCT_NAME } from "@/lib/brand";
 import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { communityStats, listMembers } from "@/modules/community";
+import { listPosts } from "@/modules/community/showcase";
 import { MemberGrid } from "./members/member-grid";
+import { PostGrid } from "./showcase/post-grid";
 
 // Phase 25: the front door. The community first; the company workspace (projects and payouts)
 // is offered to members who build with a team or for clients.
@@ -20,7 +22,7 @@ const pillars = [
 const audience = ["Beginners and non-coders who build with AI tools", "Working developers who want a local peer group", "Students who want real projects and feedback", "Founders who need a prototype reviewed"];
 
 export default async function HomePage() {
-  const [signedIn, stats, recent] = await Promise.all([getSignedIn(), communityStats(), listMembers(null)]);
+  const [signedIn, stats, recent, projects] = await Promise.all([getSignedIn(), communityStats(), listMembers(null), listPosts(null)]);
   const open = signupOpen();
 
   return (
@@ -68,6 +70,18 @@ export default async function HomePage() {
           </div>
         ))}
       </section>
+
+      {projects.posts.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl font-semibold tracking-tight">Latest projects</h2>
+            <Link href="/showcase" className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
+              The showcase <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          </div>
+          <PostGrid posts={projects.posts.slice(0, 3)} />
+        </section>
+      )}
 
       <section className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-3">

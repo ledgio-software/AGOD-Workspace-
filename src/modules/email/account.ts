@@ -89,3 +89,14 @@ export function existingSignUpMessage(o: { name: string; signInUrl: string; rese
     footer: "If it wasn't you, you don't need to do anything: no account was changed.",
   });
 }
+
+/** Phase 26: someone reviewed a member's showcase project. */
+export function newReviewMessage(o: { name: string; reviewer: string; title: string; url: string }) {
+  return message({
+    subject: `New feedback on ${o.title}`,
+    name: o.name,
+    lines: [`${o.reviewer} reviewed ${o.title} in the showcase.`, "Read it, thank them, and reply if you have a question."],
+    button: { label: "Read the feedback", url: o.url },
+    footer: "You get this email when someone reviews one of your projects.",
+  });
+}

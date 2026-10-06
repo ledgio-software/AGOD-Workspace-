@@ -5,8 +5,10 @@ import { Callout, Card, PageHeader, buttonClass } from "@/components/ui";
 import { companiesOf, requireMember } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { canModerate, chatLinks, ensureProfile, listMembers, listReports, onboarding } from "@/modules/community";
+import { giveBack, reviewRequests } from "@/modules/community/showcase";
 import { switchCompanyAction } from "../../(authenticated)/company/actions";
 import { MemberGrid } from "../../(public)/members/member-grid";
+import { PostGrid } from "../../(public)/showcase/post-grid";
 import { AcceptConductForm, CreateCompanyForm } from "./forms";
 
 function Step({ done, title, children, soon }: { done: boolean; title: string; children?: React.ReactNode; soon?: boolean }) {
@@ -26,7 +28,14 @@ function Step({ done, title, children, soon }: { done: boolean; title: string; c
 export default async function CommunityHomePage() {
   const { member } = await requireMember();
   const profile = await ensureProfile(member);
-  const [steps, companies, organizer, recent] = await Promise.all([onboarding(profile), companiesOf(member.id), canModerate(member), listMembers(member)]);
+  const [steps, companies, organizer, recent, counts, waiting] = await Promise.all([
+    onboarding(profile),
+    companiesOf(member.id),
+    canModerate(member),
+    listMembers(member),
+    giveBack(member.id),
+    reviewRequests(member),
+  ]);
   const openReports = organizer ? (await listReports(member)).filter((r) => r.status === "OPEN").length : 0;
   const chat = chatLinks();
   const firstName = member.name.split(/\s+/)[0];
@@ -91,10 +100,32 @@ export default async function CommunityHomePage() {
                   <p className="text-muted">The organizers will share the chat links here soon.</p>
                 )}
               </Step>
-              <Step done={false} soon title="Share your first project" />
-              <Step done={false} soon title="Review someone else's project" />
+              <Step done={counts.posts > 0} title="Share your first project">
+                <p className="text-muted">Finished or in progress: add a link, a screenshot or a short video demo, and say what you want feedback on.</p>
+                <Link href="/community/showcase/new" className={buttonClass("primary", "sm")}>
+                  Share a project
+                </Link>
+              </Step>
+              <Step done={counts.reviews > 0} title="Review someone else's project">
+                <p className="text-muted">Give back: one review for every project you post.</p>
+                <Link href="/showcase?status=NEEDS_REVIEW" className={buttonClass("secondary", "sm")}>
+                  See who is waiting
+                </Link>
+              </Step>
               <Step done={false} soon title="Join a teaching session" />
             </ol>
+          </Card>
+
+          <Card
+            title="Waiting for feedback"
+            description={`You have shared ${counts.posts} and reviewed ${counts.reviews}.`}
+            aside={
+              <Link href="/showcase?status=NEEDS_REVIEW" className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
+                All requests <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            }
+          >
+            <PostGrid posts={waiting} empty="Nobody is waiting for feedback right now." />
           </Card>
 
           <Card
@@ -142,8 +173,6 @@ export default async function CommunityHomePage() {
 
           <Card title="What's coming" aside={<Sparkles className="size-4 text-muted" aria-hidden />}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-              <li>Showcase: post your projects with screenshots and video demos</li>
-              <li>Review requests with honest, kind feedback</li>
               <li>Teaching sessions with Google Meet links</li>
               <li>Mentorship matching and a tools &amp; prompts library</li>
             </ul>

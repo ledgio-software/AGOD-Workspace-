@@ -187,7 +187,7 @@ describe("reports and organizers", () => {
     await expect(listReports(builder)).rejects.toThrow(/organizers/);
     await expect(resolveReport(builder, report.id, { action: "HIDE", note: "No" })).rejects.toThrow(/organizers/);
 
-    const open = (await listReports(org)).filter((r) => r.target_handle === handle);
+    const open = (await listReports(org)).filter((r) => r.target_link === `/members/${handle}`);
     expect(open.map((r) => r.reporter).sort()).toEqual(["Careful Reader", "Second Reader"]);
     await resolveReport(org, report.id, { action: "HIDE", note: "Scam links" });
     const after = await db.select().from(communityReports).where(eq(communityReports.targetId, target.id));

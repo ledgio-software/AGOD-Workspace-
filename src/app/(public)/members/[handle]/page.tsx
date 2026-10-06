@@ -6,6 +6,8 @@ import { Badge } from "@/components/badges";
 import { Avatar, Callout, Card, Disclosure, buttonClass } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { getProfile } from "@/modules/community";
+import { giveBack, listPosts } from "@/modules/community/showcase";
+import { PostGrid } from "../../showcase/post-grid";
 import { reportProfileAction } from "../../../(community)/community/actions";
 import { OrganizerForm, ReportForm, UnhideForm } from "../../../(community)/community/forms";
 
@@ -28,6 +30,7 @@ export default async function MemberPage({ params }: Params) {
   const found = await getProfile((await params).handle, viewer);
   if (!found) notFound();
   const { profile: p, name, self, organizer } = found;
+  const [counts, projects] = await Promise.all([giveBack(p.userId), listPosts(viewer, { authorId: p.userId })]);
   const links = LINKS.filter(([key]) => p[key]).map(([key, label]) => ({ url: p[key]!, label }));
 
   return (
@@ -54,6 +57,9 @@ export default async function MemberPage({ params }: Params) {
               {p.communityRole === "ORGANIZER" && <Badge tone="violet">Organizer</Badge>}
               {p.reviewer && <Badge tone="green">Reviewer</Badge>}
               {p.wantsMentor && <Badge tone="amber">Looking for a mentor</Badge>}
+              <span>
+                {counts.posts} {counts.posts === 1 ? "project" : "projects"} · {counts.reviews} {counts.reviews === 1 ? "review" : "reviews"} given
+              </span>
               <span>Member since {new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "Africa/Accra" }).format(p.createdAt)}</span>
             </div>
           </div>
@@ -96,6 +102,12 @@ export default async function MemberPage({ params }: Params) {
               </li>
             ))}
           </ul>
+        </Card>
+      )}
+
+      {projects.posts.length > 0 && (
+        <Card title="Projects">
+          <PostGrid posts={projects.posts} />
         </Card>
       )}
 

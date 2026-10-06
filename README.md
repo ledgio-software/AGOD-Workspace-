@@ -231,6 +231,9 @@ src/
 ### Phase 25 — Community foundation ✓
 - Public home page, member list and profiles, code of conduct; join without a company (workspace optional); Builder, Reviewer and Organizer roles; reports and moderation (`docs/COMMUNITY.md`)
 
+### Phase 26 — Showcase and reviews ✓
+- Share projects with a live preview, screenshots and a video demo link; review requests with structured feedback (what works, to improve, next step), author replies, shipped status, give-back counts (`docs/COMMUNITY.md`)
+
 ## Getting Started
 
 Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).

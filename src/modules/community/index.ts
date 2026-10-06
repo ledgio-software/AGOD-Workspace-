@@ -1,7 +1,7 @@
 import { and, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { communityReports, memberProfiles, users } from "@/lib/db/schema";
+import { communityReports, memberProfiles, showcasePosts, showcaseReviews, users } from "@/lib/db/schema";
 import { ServiceError } from "@/modules/errors";
 
 // Phase 25: the community. Everyone who signs up is a member with a profile, whether or not they
@@ -235,19 +235,26 @@ export const reportInput = z.object({
   reason: z.string().trim().min(10, "Say what is wrong (at least 10 characters)").max(1000),
 });
 
+export type ReportTarget = "PROFILE" | "POST" | "REVIEW";
+
+/** Files a report (once per person and thing while it is open). */
+export async function fileReport(member: Member, targetType: ReportTarget, targetId: string, raw: z.input<typeof reportInput>) {
+  const input = reportInput.parse(raw);
+  const [created] = await db
+    .insert(communityReports)
+    .values({ reporterId: member.id, targetType, targetId, reason: input.reason })
+    .onConflictDoNothing()
+    .returning();
+  if (!created) throw new ServiceError("You already reported this. The organizers will look at it.");
+  return created;
+}
+
 /** Any member: reports a profile to the organizers. */
 export async function reportProfile(member: Member, handle: string, raw: z.input<typeof reportInput>) {
-  const input = reportInput.parse(raw);
   const target = await getProfile(handle, member);
   if (!target) throw new ServiceError("Profile not found.");
   if (target.self) throw new ServiceError("You can't report your own profile.");
-  const [created] = await db
-    .insert(communityReports)
-    .values({ reporterId: member.id, targetType: "PROFILE", targetId: target.profile.userId, reason: input.reason })
-    .onConflictDoNothing()
-    .returning();
-  if (!created) throw new ServiceError("You already reported this profile. The organizers will look at it.");
-  return created;
+  return fileReport(member, "PROFILE", target.profile.userId, raw);
 }
 
 async function requireOrganizer(member: Member) {
@@ -271,18 +278,35 @@ export async function listReports(member: Member) {
     created_at: Date;
     resolved_at: Date | null;
     reporter: string;
+    target_type: ReportTarget;
     target_name: string | null;
-    target_handle: string | null;
+    target_link: string | null;
     target_hidden: boolean | null;
     resolver: string | null;
   }>(sql`
-    SELECT r.id, r.reason, r.status, r.resolution, r.created_at, r.resolved_at,
-           ru.name AS reporter, tu.name AS target_name, p.handle AS target_handle, (p.hidden_at IS NOT NULL) AS target_hidden,
+    SELECT r.id, r.reason, r.status, r.resolution, r.created_at, r.resolved_at, r.target_type,
+           ru.name AS reporter,
+           CASE r.target_type
+             WHEN 'PROFILE' THEN tu.name
+             WHEN 'POST' THEN sp.title
+             ELSE 'Feedback by ' || rvu.name || ' on ' || rvp.title END AS target_name,
+           CASE r.target_type
+             WHEN 'PROFILE' THEN '/members/' || p.handle
+             WHEN 'POST' THEN '/showcase/' || sp.id
+             ELSE '/showcase/' || rv.post_id || '#reviews' END AS target_link,
+           CASE r.target_type
+             WHEN 'PROFILE' THEN p.hidden_at IS NOT NULL
+             WHEN 'POST' THEN sp.hidden_at IS NOT NULL
+             ELSE rv.hidden_at IS NOT NULL END AS target_hidden,
            su.name AS resolver
     FROM community_reports r
     JOIN users ru ON ru.id = r.reporter_id
     LEFT JOIN member_profiles p ON r.target_type = 'PROFILE' AND p.user_id = r.target_id
     LEFT JOIN users tu ON tu.id = p.user_id
+    LEFT JOIN showcase_posts sp ON r.target_type = 'POST' AND sp.id = r.target_id AND sp.removed_at IS NULL
+    LEFT JOIN showcase_reviews rv ON r.target_type = 'REVIEW' AND rv.id = r.target_id
+    LEFT JOIN users rvu ON rvu.id = rv.reviewer_id
+    LEFT JOIN showcase_posts rvp ON rvp.id = rv.post_id AND rvp.removed_at IS NULL
     LEFT JOIN users su ON su.id = r.resolved_by
     ORDER BY (r.status = 'OPEN') DESC, r.created_at DESC
     LIMIT 100
@@ -295,7 +319,7 @@ export const resolveInput = z.object({
   note: z.string().trim().min(3, "Add a short note (what you did and why)").max(500),
 });
 
-/** Organizers: closes a report, hiding the profile ("HIDE") or not ("DISMISS"). */
+/** Organizers: closes a report, hiding the profile, post or review ("HIDE") or not ("DISMISS"). */
 export async function resolveReport(member: Member, reportId: string, raw: z.input<typeof resolveInput>) {
   await requireOrganizer(member);
   const input = resolveInput.parse(raw);
@@ -303,11 +327,19 @@ export async function resolveReport(member: Member, reportId: string, raw: z.inp
     const [report] = await tx.select().from(communityReports).where(eq(communityReports.id, reportId)).for("update");
     if (!report || report.status !== "OPEN") throw new ServiceError("This report was already handled.");
     if (input.action === "HIDE") {
-      if (report.targetId === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
-      await tx
-        .update(memberProfiles)
-        .set({ hiddenAt: new Date(), hiddenBy: member.id, hiddenReason: input.note })
-        .where(and(eq(memberProfiles.userId, report.targetId), isNull(memberProfiles.hiddenAt)));
+      const hide = { hiddenAt: new Date(), hiddenBy: member.id, hiddenReason: input.note };
+      if (report.targetType === "PROFILE") {
+        if (report.targetId === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(memberProfiles).set(hide).where(and(eq(memberProfiles.userId, report.targetId), isNull(memberProfiles.hiddenAt)));
+      } else if (report.targetType === "POST") {
+        const [post] = await tx.select({ owner: showcasePosts.authorId }).from(showcasePosts).where(eq(showcasePosts.id, report.targetId));
+        if (post?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(showcasePosts).set(hide).where(and(eq(showcasePosts.id, report.targetId), isNull(showcasePosts.hiddenAt)));
+      } else {
+        const [review] = await tx.select({ owner: showcaseReviews.reviewerId }).from(showcaseReviews).where(eq(showcaseReviews.id, report.targetId));
+        if (review?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(showcaseReviews).set(hide).where(and(eq(showcaseReviews.id, report.targetId), isNull(showcaseReviews.hiddenAt)));
+      }
     }
     // Every open report about the same profile is settled together.
     await tx

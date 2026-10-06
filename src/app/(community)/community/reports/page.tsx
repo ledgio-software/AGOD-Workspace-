@@ -8,6 +8,8 @@ import { requireMember } from "@/lib/session";
 import { canModerate, listReports } from "@/modules/community";
 import { ResolveReportForm } from "../forms";
 
+const TARGET = { PROFILE: "Profile", POST: "Project", REVIEW: "Feedback" } as const;
+
 export default async function ReportsPage() {
   const { member } = await requireMember();
   if (!(await canModerate(member))) return <AccessDenied what="community reports" />;
@@ -17,7 +19,7 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Community" title="Reports" description="Profiles members reported. Hide a profile when it breaks the code of conduct; dismiss the report otherwise." />
+      <PageHeader eyebrow="Community" title="Reports" description="Profiles, projects and feedback members reported. Hide it when it breaks the code of conduct; dismiss the report otherwise." />
       <Card title={`Open (${open.length})`} bodyClassName={open.length ? "p-0" : undefined}>
         {open.length === 0 ? (
           <EmptyState icon={Flag} title="Nothing to review" />
@@ -26,12 +28,13 @@ export default async function ReportsPage() {
             {open.map((r) => (
               <li key={r.id} className="space-y-3 px-5 py-4 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  {r.target_handle ? (
-                    <Link href={`/members/${r.target_handle}`} className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  <Badge>{TARGET[r.target_type]}</Badge>
+                  {r.target_link && r.target_name ? (
+                    <Link href={r.target_link} className="font-medium text-brand-600 hover:underline dark:text-brand-400">
                       {r.target_name}
                     </Link>
                   ) : (
-                    <span className="font-medium">A removed profile</span>
+                    <span className="font-medium">Something since removed</span>
                   )}
                   {r.target_hidden && <Badge tone="red">Hidden</Badge>}
                   <span className="text-xs text-muted">
@@ -51,7 +54,8 @@ export default async function ReportsPage() {
             {closed.map((r) => (
               <li key={r.id} className="space-y-1 px-5 py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{r.target_name ?? "A removed profile"}</span>
+                  <Badge>{TARGET[r.target_type]}</Badge>
+                  <span className="font-medium">{r.target_name ?? "Something since removed"}</span>
                   <Badge tone={r.status === "RESOLVED" ? "red" : "gray"}>{r.status === "RESOLVED" ? "Hidden" : "Dismissed"}</Badge>
                   <span className="text-xs text-muted">
                     by {r.resolver} · {r.resolved_at && formatDateTime(r.resolved_at)}

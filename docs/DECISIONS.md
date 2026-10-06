@@ -280,3 +280,16 @@ Phase 9 (file attachments in Vercel Blob).
 | Chat | Stays on Discord and WhatsApp (links configurable); not built into the app. |
 | Marketing | The community is free; the company workspace is offered where it helps (community home, sign-up option, home page), free while testing. |
 | Not included | Showcase posts, review requests, teaching sessions, mentorship matching, library (next phases); profile photos; blocking members. |
+
+## Phase 26 decisions (2026-10-06): showcase and reviews
+
+| Decision | Choice |
+|---|---|
+| Posts | The handbook's template (name, one-line pitch, audience, built with, AI-built, links, video demo, feedback areas and questions, what they need). A live preview card on the form. Five posts a day per member. |
+| Media | Up to four screenshots (images only, 4 MB, signature-checked) in the existing file storage, served through the app with a locked-down policy. Video demos are links (Loom, YouTube, Drive), not embeds or uploads: cheaper on data and storage. |
+| Safety | The handbook's code safety checklist is required on every post and edit. |
+| Review status | Needs review → Reviewed (automatically on first feedback) → Shipped (author). |
+| Feedback | Structured as the handbook says (what works, to improve, next step); one per person and project; author can reply once; author emailed on new feedback. |
+| Give back | Counts shown, not enforced (posting isn't blocked when you haven't reviewed). |
+| Moderation | Reports extended to projects and feedback; organizers hide or dismiss; authors take their own projects down. |
+| Not included | Comments threads, likes or votes (project of the month comes in Phase 28), embedded video, editing feedback. |
