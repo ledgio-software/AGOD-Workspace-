@@ -19,6 +19,17 @@ function RoleSelect({ defaultValue }: { defaultValue: Role }) {
   );
 }
 
+/** The email didn't go out: why, and what the Admin does instead. */
+function EmailFailed({ error, fallback }: { error: string; fallback: boolean }) {
+  return (
+    <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      The email could not be sent: {error}
+      {fallback ? " Give them the temporary password below instead (they change it after signing in)." : ""} Fix email on the Integrations page, then use
+      “Send test email” to check it.
+    </p>
+  );
+}
+
 export function CreateMemberForm() {
   return (
     <section>
@@ -28,7 +39,8 @@ export function CreateMemberForm() {
         className="grid gap-3 sm:grid-cols-4 sm:items-end"
         renderResult={(state) =>
           state.ok && (
-            <div className="sm:col-span-4">
+            <div className="space-y-2 sm:col-span-4">
+              {state.data.emailError && <EmailFailed error={state.data.emailError} fallback={!!state.data.temporaryPassword} />}
               {state.data.temporaryPassword ? (
                 <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
               ) : state.data.existing ? (
@@ -110,7 +122,10 @@ export function MemberActions({ member, viaEmail }: { member: Member; viaEmail: 
           renderResult={(state) =>
             state.ok &&
             (state.data.temporaryPassword ? (
-              <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+              <div className="space-y-2">
+                {state.data.emailError && <EmailFailed error={state.data.emailError} fallback />}
+                <TemporaryPassword email={state.data.email} password={state.data.temporaryPassword} />
+              </div>
             ) : (
               <p className="text-xs text-muted">Password link sent to {state.data.email}.</p>
             ))

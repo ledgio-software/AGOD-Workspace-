@@ -70,7 +70,8 @@ const post = (extra: Record<string, unknown> = {}) => ({
   safety: true as const,
   ...extra,
 });
-const png = () => new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...Array.from({ length: 64 }, (_, i) => i)]);
+// A different picture each time (identical ones are stored once and refused twice on a project).
+const png = () => new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...Buffer.from(randomUUID())]);
 
 async function organizer() {
   const o = await member("Organizer");

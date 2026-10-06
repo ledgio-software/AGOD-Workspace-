@@ -58,8 +58,9 @@ Community roles are separate from company roles (Admin, Project Manager, Team Me
   what you need (testers, feedback, users, collaborators). The card preview updates as you type.
 - **Safety check**: before posting (and after every edit) the author confirms there are no secrets in the
   links, repository or screenshots, private pages need a login, and no real personal data is shown.
-- **Screenshots**: PNG, JPG, WebP or GIF up to 4 MB, at most four, stored in the app's file storage
-  (Vercel Blob) and served through the app (the first is the card image). Without file storage the
+- **Screenshots**: PNG, JPG, WebP or GIF, at most four, made smaller in the browser before upload (Phase
+  26.1, `docs/STORAGE.md`), fingerprinted so identical pictures are stored once, kept in the app's file
+  storage (Vercel Blob or Cloudflare R2) and served through the app (the first is the card image). Without file storage the
   screenshot fields are hidden.
 - **Visibility**: everyone, or signed-in members only (screenshots follow the project).
 - **Status**: *Needs review* (new), *Reviewed* (after the first feedback), *Shipped* (the author marks
