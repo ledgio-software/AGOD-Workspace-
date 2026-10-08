@@ -442,6 +442,20 @@
       "when": 1791474408683,
       "tag": "20261008154648_articles_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1791484711052,
+      "tag": "20261008183831_news",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1791484714057,
+      "tag": "20261008183834_news_rules",
+      "breakpoints": true
     }
   ]
 }

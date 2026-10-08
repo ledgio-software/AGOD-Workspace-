@@ -79,6 +79,8 @@ rules, audit) lives behind these functions, not in the pages.
 | `/articles/[id]` | public (drafts: author; hidden: author and organizers) | `getArticle` | `community/article-actions`: `usefulArticleAction`, `bookmarkAction`, `commentAction`, `deleteCommentAction`, `repostAction`, `reviewArticleAction`, `reportArticleAction`, `reportCommentAction`, `publishAction`, `removeArticleAction`, `unhideArticleAction` |
 | `/articles/[id]/cover` | public (published, visible) | `openCover` | (GET) |
 | `/community/articles`, `/community/articles/new`, `/community/articles/[id]/edit` | members | `myArticles`, `getArticle`, `coversAvailable` | `createArticleAction`, `updateArticleAction` (cover upload; `intent=publish` publishes) |
+| `/news` (`?topic=AI\|PROGRAMMING\|AFRICA\|RELEASES\|TECH&sort=top&q=`) | public | `newsFeed`, `newsUpdatedAt` (and `refreshNews` after the response when stale) | `community/news-actions`: `usefulNewsAction`, `hideNewsAction` (organizers) |
+| `/community/news` | organizers | `newsSourceStatus` | `community/news-actions`: `newsSourceAction`, `refreshNewsAction` |
 | `/api/community/chat` | community members | `?channel=&known=`, `?thread=&known=`, `?channels=1` (polled by the open chat; "unchanged" when nothing changed) | (GET) |
 | `/` and `/community` banner | everyone | `frontPage` (photos, welcome video) | |
 | `/community/front-page` | organizers | `frontPage`, `photosAvailable` | `community/front-page/actions`: `addPhotoAction`, `removePhotoAction`, `videoAction` |

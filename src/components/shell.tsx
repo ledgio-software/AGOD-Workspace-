@@ -28,6 +28,7 @@ import {
   ListChecks,
   Menu,
   Newspaper,
+  Radio,
   Package,
   Plug,
   Repeat,
@@ -74,6 +75,7 @@ const icons = {
   frontPage: ImagePlay,
   chat: MessagesSquare,
   articles: Newspaper,
+  news: Radio,
 } as const;
 
 export type IconName = keyof typeof icons;

@@ -421,6 +421,17 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 38 decisions (2026-10-08): tech news
+
+| Decision | Choice |
+|---|---|
+| What | A public `/news` page of headlines from free sources (African tech, AI, programming, tech, releases), so members keep up without leaving the community. Members mark headlines useful; "Top this week" ranks by those marks. |
+| Sources | RSS/Atom feeds, the Hacker News front page (Algolia API) and DEV's API: free, no keys, no contracts. Not NewsAPI (its free plan is for development only), Reddit (paid, restricted API) or Product Hunt (commercial use needs permission). The list lives in code; organizers switch sources off and on. |
+| What we keep | Title, https link, date, a plain-text summary (at most 300 characters) and the source; the article stays on the publisher's site, which owns it. No images or HTML from feeds, so nothing from a feed can run in a reader's browser and the page stays light on data. |
+| Freshness | Fetched when a visitor opens `/news` and a source is more than 3 hours old (after the response, with `after()`), plus the daily cron job; Vercel's free plan allows only a daily cron. Sources are claimed with one `UPDATE … RETURNING` so concurrent visitors never fetch the same source twice. Headlines are kept 45 days. |
+| Parsing | A small RSS/Atom reader in `src/lib/feeds.ts` instead of an XML library: it only needs titles, links, dates and summaries. Responses are read up to 2 MB (some feeds carry whole articles; the newest entries come first) with a 10 second timeout. |
+| Not included | Comments on headlines, sharing a headline to the article feed, a weekly news email, AI-written summaries, organizers adding sources from the page. |
+
 ## Phase 37 decisions (2026-10-08): articles
 
 | Decision | Choice |
