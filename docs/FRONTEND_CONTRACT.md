@@ -74,6 +74,9 @@ rules, audit) lives behind these functions, not in the pages.
 | `/api/messages/unread` | signed in to a company | `unreadMessageCount` | (GET, polled by the message icon) |
 | `/mentors`, `/library`, `/library/[id]` | everyone (public) | `listMentors`, `listItems`, `getItem` | `community/growth-actions` (signed-in members) |
 | `/community/mentoring`, `/community/library/new`, `/community/library/[id]/edit` | community members | `myMentorships`, `getItem` | `community/growth-actions` |
+| `/` and `/community` banner | everyone | `frontPage` (photos, welcome video) | |
+| `/community/front-page` | organizers | `frontPage`, `photosAvailable` | `community/front-page/actions`: `addPhotoAction`, `removePhotoAction`, `videoAction` |
+| `/front/photos/[id]` | everyone (public) | `openFrontPhoto` | (GET, image) |
 | `/jobs`, `/jobs/[id]`, `/teams`, `/teams/[id]` | everyone (public) | `listJobs`, `getJob`, `listTeamPosts`, `getTeamPost` | `community/work-actions` (signed-in members) |
 | `/community/jobs` (`/new`, `/[id]/edit`), `/community/teams` (`/new`, `/[id]/edit`) | community members | `myJobs`, `getJob`, `myTeams`, `getTeamPost` | `community/work-actions` |
 | `/team/roles` | `team.view` | `listRoles`, `listJobTitles`, `needsTeamSetup` | `team/roles/actions` (`team.manage`; team type also `company.manage`) |

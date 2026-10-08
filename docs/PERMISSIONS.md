@@ -178,6 +178,7 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | See open jobs and team finder posts | ✓ | ✓ | ✓ |
 | Post jobs and team finder posts (after the code of conduct); apply, ask to join or invite; manage own posts, applicants and requests; report | | ✓ | ✓ |
 | Feature library items; pick a finished month's project of the month | | | ✓ |
+| Change the front page photos and welcome video | | | ✓ |
 | See reports; hide or show profiles, projects, feedback, sessions, library items, jobs and team finder posts; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in

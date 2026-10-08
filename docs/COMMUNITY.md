@@ -161,6 +161,22 @@ Rules:
   to the same post.
 - Organizers hide reported jobs and posts from the Reports page, as for everything else.
 
+## Front page photos and video (Phase 35)
+
+| Page | Who | What |
+|---|---|---|
+| `/` and `/community` | everyone / members | The welcome banner: the organizers' photos fade one into the next behind the welcome text (a brand colour wash when there are none), with the welcome video beside it (below it on a phone). The video loads only when someone taps play, to save data. |
+| `/community/front-page` | organizers | Add up to 6 photos (made smaller in the browser before upload; each needs a short description for screen readers), remove them, and set or remove the welcome video (a YouTube, Vimeo, Loom or Google Drive link). Shows a live preview. |
+| `/front/photos/<id>` | everyone | The photos themselves (public, cached for a day). |
+
+Project videos: on a showcase project, a YouTube, Vimeo, Loom or Google Drive link now plays on the
+project page (other links still open in a new tab). The share form has a clear "Pictures and video"
+section, and says so plainly when picture uploads aren't switched on (no file storage connected)
+instead of hiding the field.
+
+Photos and pictures need file storage (Vercel Blob or S3/R2, `docs/STORAGE.md`); videos don't (they
+stay on YouTube, Vimeo, Loom or Google Drive, which keeps hosting free and adapts to slow internet).
+
 ## Next
 
 Badges, events calendar, partners page and community numbers.
