@@ -10,10 +10,20 @@ type Source = Record<string, string | undefined>;
 export const SITE_DESCRIPTION =
   "Ghana's community for people who build software, by hand or with AI: share projects and get feedback, read articles and tech news, join live sessions, find mentors, jobs and teammates.";
 
-/** The site's address (no trailing slash), or null when it isn't known. */
+/**
+ * The site's address (origin only, no trailing slash), or null when it isn't known or can't be
+ * read. A value without a scheme ("gvcd.example") is taken as https; an unreadable one gives null
+ * instead of an error, since this runs while pages are built and a bad setting must not break that.
+ */
 export function siteUrl(source: Source = process.env): string | null {
-  const base = resolveBaseUrl(source);
-  return base ? base.replace(/\/$/, "") : null;
+  const raw = resolveBaseUrl(source)?.trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.origin : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

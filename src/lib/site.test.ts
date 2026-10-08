@@ -22,6 +22,13 @@ describe("siteUrl", () => {
     expect(siteUrl({ BETTER_AUTH_URL: "https://gvcd.example/" })).toBe("https://gvcd.example");
     expect(siteUrl({})).toBeNull();
   });
+  it("reads an address without https, and never throws on a bad one", () => {
+    expect(siteUrl({ BETTER_AUTH_URL: "gvcd.example" })).toBe("https://gvcd.example");
+    expect(siteUrl({ BETTER_AUTH_URL: " https://gvcd.example/app " })).toBe("https://gvcd.example");
+    expect(siteUrl({ BETTER_AUTH_URL: "http://localhost:3000" })).toBe("http://localhost:3000");
+    expect(siteUrl({ BETTER_AUTH_URL: "https://" })).toBeNull();
+    expect(siteUrl({ BETTER_AUTH_URL: "ftp://gvcd.example" })).toBeNull();
+  });
 });
 
 describe("clip and pageMetadata", () => {
