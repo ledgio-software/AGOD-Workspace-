@@ -165,7 +165,7 @@ Rules:
 
 | Page | Who | What |
 |---|---|---|
-| `/` and `/community` | everyone / members | The welcome banner: the organizers' photos fade one into the next behind the welcome text (a brand colour wash when there are none), with the welcome video beside it (below it on a phone). The video loads only when someone taps play, to save data. |
+| `/` and `/community` | everyone / members | The welcome banner: a slideshow behind the welcome text: a built-in picture (`public/front/coding.webp`, served at `/front/coding.webp`) first, then the organizers' photos, fading one into the next, with the welcome video beside it (below it on a phone). The video loads only when someone taps play, to save data. |
 | `/community/front-page` | organizers | Add up to 6 photos (made smaller in the browser before upload; each needs a short description for screen readers), remove them, and set or remove the welcome video (a YouTube, Vimeo, Loom or Google Drive link). Shows a live preview. |
 | `/front/photos/<id>` | everyone | The photos themselves (public, cached for a day). |
 
