@@ -250,7 +250,7 @@ export const communitySessions = pgTable(
     check("community_sessions_topics", sql`cardinality(${t.topics}) <= 8`),
     check("community_sessions_times", sql`${t.endsAt} > ${t.startsAt} AND ${t.endsAt} <= ${t.startsAt} + interval '6 hours'`),
     check("community_sessions_capacity", sql`${t.capacity} IS NULL OR ${t.capacity} BETWEEN 2 AND 1000`),
-    check("community_sessions_urls", sql`(${t.callUrl} ~ '^https://[^\s]+$') AND (${httpsUrl(t.recordingUrl)})`),
+    check("community_sessions_urls", sql`(${t.callUrl} ~ '^https://[^\\s]+$') AND (${httpsUrl(t.recordingUrl)})`),
     check("community_sessions_notes", sql`${t.notes} IS NULL OR length(${t.notes}) <= 5000`),
     check("community_sessions_cancelled", sql`(${t.cancelledAt} IS NULL) = (${t.cancelReason} IS NULL)`),
     check("community_sessions_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
