@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { cx } from "@/components/ui";
 
 /** Phase 35: the front page photos, fading from one to the next every few seconds (still for people who prefer less motion). */
-export function PhotoSlideshow({ photos, seconds = 6 }: { photos: { id: string; alt: string }[]; seconds?: number }) {
+export function PhotoSlideshow({ photos, seconds = 6 }: { photos: { id: string; alt: string; src: string }[]; seconds?: number }) {
   const [index, setIndex] = useState(0);
   useEffect(() => {
     if (photos.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -17,7 +17,7 @@ export function PhotoSlideshow({ photos, seconds = 6 }: { photos: { id: string; 
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={p.id}
-          src={`/front/photos/${p.id}`}
+          src={p.src}
           alt={i === index ? p.alt : ""}
           aria-hidden={i !== index}
           loading={i === 0 ? "eager" : "lazy"}
