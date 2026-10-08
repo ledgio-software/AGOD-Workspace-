@@ -8,10 +8,12 @@ import { AwsClient } from "aws4fetch";
 // through the app. Where new files go:
 //  - S3-compatible storage (Phase 26.1: Cloudflare R2, Backblaze B2, ...) when S3_* is set: the
 //    cheapest at scale (R2 has a free allowance and no charge for downloads);
-//  - else a Vercel Blob store (BLOB_READ_WRITE_TOKEN, added when the store is connected);
+//  - else a Vercel Blob store, connected either the newer way (BLOB_STORE_ID: the app signs in
+//    with Vercel's short-lived OIDC token, nothing secret to keep) or the older way
+//    (BLOB_READ_WRITE_TOKEN);
 //  - else, off Vercel (local development and tests), a folder on disk.
 // Files are read from wherever they were saved: S3 keys carry an "s3:" prefix, so switching to R2
-// keeps older Blob files readable as long as BLOB_READ_WRITE_TOKEN stays set.
+// keeps older Blob files readable as long as the Blob store stays connected.
 
 export type StoredFile = { body: ReadableStream<Uint8Array> | Uint8Array };
 
@@ -25,7 +27,8 @@ export type Storage = {
 
 type Env = Record<string, string | undefined>;
 
-const blob = (token: string): Storage => ({
+/** Without a token the Blob library signs in with Vercel's OIDC token and BLOB_STORE_ID. */
+const blob = (token?: string): Storage => ({
   name: "vercel-blob",
   async put(key, bytes, contentType) {
     const result = await put(key, Buffer.from(bytes), { access: "private", contentType, addRandomSuffix: true, token });
@@ -116,6 +119,8 @@ function s3(config: S3Config): Storage {
 
 /** Where files saved without the "s3:" prefix live (Blob on Vercel, a folder elsewhere). */
 function legacy(source: Env): Storage | null {
+  // The newer connection wins, so revoking the old token later doesn't switch uploads off.
+  if (source.BLOB_STORE_ID) return blob();
   if (source.BLOB_READ_WRITE_TOKEN) return blob(source.BLOB_READ_WRITE_TOKEN);
   // Never fall back to the (ephemeral) local disk on Vercel.
   if (source.VERCEL) return null;

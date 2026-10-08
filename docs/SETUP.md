@@ -73,7 +73,7 @@ Settings that must stay as they are:
 | `APP_TIMEZONE` | `Africa/Accra` | `Africa/Accra` | no |
 | `BETTER_AUTH_URL` | optional (defaults to the production domain) | optional (defaults to the branch URL) | no |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | optional, enables error monitoring | optional | no |
-| `BLOB_READ_WRITE_TOKEN` | added by connecting a Blob store (below) | same store or a separate one | yes |
+| `BLOB_STORE_ID` (or the older `BLOB_READ_WRITE_TOKEN`) | added by connecting a Blob store (below) | same store or a separate one | yes |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | optional, the production GitHub App (`docs/GITHUB_APP.md`) | optional, the staging GitHub App | key and secret: yes |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | optional, turns on email reminders (`docs/EMAIL.md`) | optional (same mailbox is fine while testing) | `SMTP_PASS`: yes |
 | `CRON_SECRET` | needed for the daily reminders job | needed to run it on demand | yes |
@@ -102,7 +102,7 @@ buttons say uploads are not set up; everything else works.
 
 1. Vercel → project **agod-workspace** → **Storage** → **Create Database** → **Blob** → name it `agod-files`.
 2. Choose **Private** access if asked, and connect it to the project for the environments that should have
-   uploads (Preview and/or Production). Vercel adds `BLOB_READ_WRITE_TOKEN` automatically.
+   uploads (Preview and/or Production). Vercel adds `BLOB_STORE_ID` (older stores: `BLOB_READ_WRITE_TOKEN`) automatically; redeploy afterwards.
 3. Redeploy the branch (Deployments → ⋯ → Redeploy).
 
 Files can be at most 4 MB (Vercel's request limit is 4.5 MB). Allowed: PDF, PNG, JPEG, GIF, WebP, TXT, CSV,

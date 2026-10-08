@@ -22,11 +22,14 @@ The app picks, in this order:
 
 1. **S3-compatible storage** (Cloudflare R2 recommended, or Backblaze B2): used when all four `S3_*`
    settings are present.
-2. **Vercel Blob**: used when `BLOB_READ_WRITE_TOKEN` is set (what staging uses since Phase 9).
+2. **Vercel Blob**: used when the store is connected to the project. Vercel now connects stores
+   with `BLOB_STORE_ID` and signs the app in by itself (OIDC); older connections set
+   `BLOB_READ_WRITE_TOKEN`. Either works. Once every deployment has `BLOB_STORE_ID` (redeploy after
+   connecting), the read-write token can be revoked in the store's settings.
 3. A folder on disk: local development and tests only (never on Vercel).
 
 Switching is a setting, not a code change. Files saved before the switch stay readable from where they
-were saved (new keys are marked `s3:`), as long as the old settings (`BLOB_READ_WRITE_TOKEN`) stay set.
+were saved (new keys are marked `s3:`), as long as the Blob store stays connected.
 Nothing is copied automatically.
 
 ## Setting up Cloudflare R2 (recommended when you grow)
@@ -52,7 +55,7 @@ current numbers.
    | `S3_ACCESS_KEY_ID` | the access key id | yes |
    | `S3_SECRET_ACCESS_KEY` | the secret access key | yes |
 
-5. Redeploy. New uploads go to R2; keep `BLOB_READ_WRITE_TOKEN` so older files still open.
+5. Redeploy. New uploads go to R2; keep the Blob store connected so older files still open.
 
 Backblaze B2 works the same way (its S3 endpoint looks like `https://s3.<region>.backblazeb2.com`; set
 `S3_REGION` to the region).
