@@ -421,3 +421,16 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 36 decisions (2026-10-08): community chat and feedback conversations
+
+| Decision | Choice |
+|---|---|
+| What | Our own chat inside the community (channels, threads, reactions, @handle tags, solved questions), so questions and answers stay with members' profiles and projects. Discord and WhatsApp links remain for those who prefer them. |
+| Channels | Six to start (#general, #help as questions, #ai-tools, #show-and-tell, #jobs-and-gigs, #off-topic), added in the migration; more can be added the same way. |
+| Live updates | The open page asks every 4 seconds whether anything changed (a version made from the latest change time and message count) and downloads only when it did; nothing while the tab is hidden. No WebSockets or paid real-time service, matching Phase 30. |
+| Who | Everyone signed in reads; posting needs the code of conduct. 20 messages a minute at most. Organizers hide messages at once or from reports; authors delete their own. Deleted or hidden messages leave a placeholder so threads still read well. |
+| Tags | @handle (profile addresses are unique and stable). Tagged people see an @ count on the channel and the message highlighted; no email, to avoid noise. |
+| Feedback | Under each review, the project's author and the reviewer reply to each other as often as needed (up to 50 replies; then continue in the chat), and each reply emails the other one. Existing single replies were copied into the new conversations. |
+| Fix | The session call-link check refused any link containing an "s" after `https://` (`[^\s]` lost its backslash in a JS template); corrected by migration, with a regression test. |
+| Not included | Direct messages between community members (company messages stay inside companies), channel creation from the app, file uploads in chat, push notifications. |
+

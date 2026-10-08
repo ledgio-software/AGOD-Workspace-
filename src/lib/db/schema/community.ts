@@ -88,7 +88,7 @@ export const communityReports = pgTable(
     index("community_reports_status_idx").on(t.status, t.createdAt),
     // One open report per person and thing.
     uniqueIndex("community_reports_one_open").on(t.reporterId, t.targetType, t.targetId).where(sql`${t.status} = 'OPEN'`),
-    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION', 'LIBRARY', 'JOB', 'TEAM')`),
+    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION', 'LIBRARY', 'JOB', 'TEAM', 'CHAT')`),
     check("community_reports_reason", sql`length(btrim(${t.reason})) BETWEEN 10 AND 1000`),
     check("community_reports_status", sql`${t.status} IN ('OPEN', 'RESOLVED', 'DISMISSED')`),
     check("community_reports_resolved", sql`(${t.status} = 'OPEN') = (${t.resolvedAt} IS NULL) AND (${t.resolvedAt} IS NULL) = (${t.resolvedBy} IS NULL)`),
@@ -574,5 +574,106 @@ export const communitySettings = pgTable(
     check("community_settings_video", httpsUrl(t.welcomeVideoUrl)),
     check("community_settings_title", sql`${t.welcomeVideoTitle} IS NULL OR length(btrim(${t.welcomeVideoTitle})) BETWEEN 2 AND 120`),
   ],
+);
+
+// Phase 36: back-and-forth on showcase feedback: the project's author and the reviewer reply to
+// each other under a review (replaces the single author reply, which is copied in).
+export const showcaseReviewReplies = pgTable(
+  "showcase_review_replies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => showcaseReviews.id, { onDelete: "restrict" }),
+    authorId: userRef("author_id").notNull(),
+    body: text("body").notNull(),
+    createdAt,
+  },
+  (t) => [index("showcase_review_replies_review_idx").on(t.reviewId, t.createdAt), check("showcase_review_replies_body", sql`length(btrim(${t.body})) BETWEEN 2 AND 1000`)],
+);
+
+// Phase 36: community chat, like Discord channels: everyone signed in reads and talks in topic
+// channels; a message can start a thread of replies; questions in a questions channel can be
+// marked solved.
+export const chatChannels = pgTable(
+  "chat_channels",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    // CHAT (conversation) or QUESTIONS (each message is a question that can be marked solved)
+    kind: text("kind").notNull().default("CHAT"),
+    position: integer("position").notNull().default(0),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("chat_channels_slug").on(t.slug),
+    check("chat_channels_slug_format", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND length(${t.slug}) <= 30`),
+    check("chat_channels_kind", sql`${t.kind} IN ('CHAT', 'QUESTIONS')`),
+  ],
+);
+
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    channelId: uuid("channel_id")
+      .notNull()
+      .references(() => chatChannels.id, { onDelete: "restrict" }),
+    authorId: userRef("author_id").notNull(),
+    // Set for replies in a thread: the message that started it.
+    parentId: uuid("parent_id"),
+    body: text("body").notNull(),
+    mentionedIds: uuid("mentioned_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    replyCount: integer("reply_count").notNull().default(0),
+    lastReplyAt: timestamp("last_reply_at", { withTimezone: true }),
+    solvedAt: timestamp("solved_at", { withTimezone: true }),
+    solvedBy: userRef("solved_by"),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    hiddenReason: text("hidden_reason"),
+    createdAt,
+    // Bumped on any change (reply, reaction, solved, removed), so open pages fetch only when something changed.
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("chat_messages_channel_idx").on(t.channelId, t.createdAt),
+    index("chat_messages_parent_idx").on(t.parentId, t.createdAt),
+    index("chat_messages_author_idx").on(t.authorId, t.createdAt),
+    check("chat_messages_body", sql`length(btrim(${t.body})) BETWEEN 1 AND 2000`),
+    check("chat_messages_mentions", sql`cardinality(${t.mentionedIds}) <= 10`),
+    check("chat_messages_solved", sql`(${t.solvedAt} IS NULL) = (${t.solvedBy} IS NULL) AND (${t.solvedAt} IS NULL OR ${t.parentId} IS NULL)`),
+    check("chat_messages_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+export const chatReactions = pgTable(
+  "chat_reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => chatMessages.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    emoji: text("emoji").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("chat_reactions_unique").on(t.messageId, t.userId, t.emoji), check("chat_reactions_emoji", sql`length(${t.emoji}) BETWEEN 1 AND 16`)],
+);
+
+/** Where each person has read up to in each channel (for unread counts). */
+export const chatReads = pgTable(
+  "chat_reads",
+  {
+    userId: userRef("user_id").notNull(),
+    channelId: uuid("channel_id")
+      .notNull()
+      .references(() => chatChannels.id, { onDelete: "restrict" }),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("chat_reads_unique").on(t.userId, t.channelId)],
 );
 

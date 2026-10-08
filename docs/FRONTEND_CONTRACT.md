@@ -74,6 +74,8 @@ rules, audit) lives behind these functions, not in the pages.
 | `/api/messages/unread` | signed in to a company | `unreadMessageCount` | (GET, polled by the message icon) |
 | `/mentors`, `/library`, `/library/[id]` | everyone (public) | `listMentors`, `listItems`, `getItem` | `community/growth-actions` (signed-in members) |
 | `/community/mentoring`, `/community/library/new`, `/community/library/[id]/edit` | community members | `myMentorships`, `getItem` | `community/growth-actions` |
+| `/community/chat/[slug]` (`?thread=`) | community members | `listChannels`, `openChannel`, `openThread` | `community/chat/actions`: `postChatAction`, `reactChatAction`, `solveChatAction`, `deleteChatAction`, `reportChatAction`, `hideChatAction`, `suggestPeopleAction` |
+| `/api/community/chat` | community members | `?channel=&known=`, `?thread=&known=`, `?channels=1` (polled by the open chat; "unchanged" when nothing changed) | (GET) |
 | `/` and `/community` banner | everyone | `frontPage` (photos, welcome video) | |
 | `/community/front-page` | organizers | `frontPage`, `photosAvailable` | `community/front-page/actions`: `addPhotoAction`, `removePhotoAction`, `videoAction` |
 | `/front/photos/[id]` | everyone (public) | `openFrontPhoto` | (GET, image) |

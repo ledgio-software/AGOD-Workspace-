@@ -414,6 +414,20 @@
       "when": 1791472829145,
       "tag": "20261008152029_fix_session_call_link",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1791472976921,
+      "tag": "20261008152256_community_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1791472978639,
+      "tag": "20261008152258_community_chat_rules",
+      "breakpoints": true
     }
   ]
 }

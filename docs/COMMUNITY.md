@@ -177,6 +177,21 @@ instead of hiding the field.
 Photos and pictures need file storage (Vercel Blob or S3/R2, `docs/STORAGE.md`); videos don't (they
 stay on YouTube, Vimeo, Loom or Google Drive, which keeps hosting free and adapts to slow internet).
 
+## Chat and feedback conversations (Phase 36)
+
+| Page | Who | What |
+|---|---|---|
+| `/community/chat/<channel>` | members (posting after the code of conduct) | Channels like Discord: #general, #help, #ai-tools, #show-and-tell, #jobs-and-gigs and #off-topic. New messages appear within a few seconds without reloading. Reply in a thread, react with an emoji, tag people with @handle (they see an @ badge on the channel and the message highlighted), delete your own messages, report others'. In #help each message is a question: answer it in its thread, and the asker (or an organizer) marks it solved. |
+| `/showcase/<id>` | the project's author and the reviewer | Under each piece of feedback, the author and the reviewer reply to each other as often as they need; each reply emails the other one. |
+
+Keeping data use low: an open chat asks every 4 seconds "has anything changed?" and gets a tiny
+"no" unless something did; only then does it download the new messages. It stops asking while the
+tab is in the background. Members can send 20 messages a minute at most.
+
+Organizers hide messages straight away (or from the Reports page); hidden and deleted messages
+show as "hidden" or "deleted" so threads still make sense. The Discord and WhatsApp links
+(`docs/COMMUNITY.md`, Phase 25) stay for people who prefer them.
+
 ## Next
 
 Badges, events calendar, partners page and community numbers.

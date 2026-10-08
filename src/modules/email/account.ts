@@ -216,3 +216,14 @@ export function teamAnswerMessage(o: { name: string; author: string; title: stri
     footer: "You get this email because you used the community team finder.",
   });
 }
+
+/** Phase 36: a reply in the conversation under a piece of showcase feedback. */
+export function reviewReplyMessage(o: { name: string; from: string; title: string; reply: string; url: string }) {
+  return message({
+    subject: `${o.from} replied about "${o.title}"`,
+    name: o.name,
+    lines: [`${o.from} replied to the feedback on "${o.title}":`, `"${o.reply}"`, "Reply on the project page to keep the conversation going."],
+    button: { label: "See the conversation", url: o.url },
+    footer: "You get this email because you shared this project or gave feedback on it.",
+  });
+}

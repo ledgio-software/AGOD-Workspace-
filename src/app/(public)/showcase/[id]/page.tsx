@@ -207,15 +207,21 @@ export default async function PostPage({ params, searchParams }: Params) {
                       <span className="whitespace-pre-line break-words">{r.nextStep}</span>
                     </p>
                   </div>
-                  {r.authorReply && (
-                    <div className="ml-4 rounded-lg border-l-2 border-brand-300 bg-surface-muted px-3 py-2">
-                      <p className="text-xs text-muted">{author.name} replied</p>
-                      <p className="whitespace-pre-line break-words">{r.authorReply}</p>
-                    </div>
+                  {r.replies.length > 0 && (
+                    <ol className="ml-4 space-y-2 border-l-2 border-brand-300 pl-3">
+                      {r.replies.map((x) => (
+                        <li key={x.id} className="rounded-lg bg-surface-muted px-3 py-2">
+                          <p className="text-xs text-muted">
+                            <span className="font-medium text-fg">{x.authorName}</span> {x.byPostAuthor ? "(project author)" : "(gave the feedback)"} · {formatDateTime(x.createdAt)}
+                          </p>
+                          <p className="whitespace-pre-line break-words">{x.body}</p>
+                        </li>
+                      ))}
+                    </ol>
                   )}
                   <div className="flex flex-wrap gap-3">
-                    {self && !r.authorReply && !r.hidden && (
-                      <Disclosure summary="Reply">
+                    {(self || viewer?.id === r.reviewerId) && !r.hidden && (
+                      <Disclosure summary={r.replies.length > 0 ? "Reply" : self ? "Reply to this feedback" : "Add to your feedback"}>
                         <ReplyForm action={replyToReviewAction.bind(null, p.id, r.id)} />
                       </Disclosure>
                     )}

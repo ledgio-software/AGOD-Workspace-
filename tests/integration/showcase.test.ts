@@ -189,13 +189,22 @@ describe("reviews", () => {
     expect(await giveBack(reviewer.id)).toEqual({ posts: 0, reviews: 1 });
     expect(await giveBack(author.id)).toEqual({ posts: 1, reviews: 0 });
 
-    // Only the author replies, once.
-    await expect(replyToReview(reviewer, r.id, { reply: "Thanks me" })).rejects.toThrow(/not found/);
+    // Phase 36: the author and the reviewer talk back and forth; nobody else can join in; each reply emails the other.
+    const outsider = await member("Someone Else");
+    await expect(replyToReview(outsider, r.id, { reply: "Me too" })).rejects.toThrow(/not found/);
     await replyToReview(author, r.id, { reply: "Thank you, fixed!" });
-    await expect(replyToReview(author, r.id, { reply: "Again" })).rejects.toThrow(/already replied/);
+    await replyToReview(reviewer, r.id, { reply: "Nice, the login looks safe now." });
+    await replyToReview(author, r.id, { reply: "One more question: should I add 2FA?" });
+    expect(mails().some((x) => x.to === reviewer.email && x.subject === `${author.name} replied about "Farm Ledger"`)).toBe(true);
+    expect(mails().some((x) => x.to === author.email && x.text.includes("Nice, the login looks safe now."))).toBe(true);
     const page = (await getPost(p.id, reviewer))!;
     expect(page.reviewed).toBe(true);
-    expect(page.reviews[0]).toMatchObject({ reviewerName: "Kojo Reviewer", authorReply: "Thank you, fixed!" });
+    expect(page.reviews[0].reviewerName).toBe("Kojo Reviewer");
+    expect(page.reviews[0].replies.map((x) => [x.body, x.byPostAuthor])).toEqual([
+      ["Thank you, fixed!", true],
+      ["Nice, the login looks safe now.", false],
+      ["One more question: should I add 2FA?", true],
+    ]);
   });
 });
 
