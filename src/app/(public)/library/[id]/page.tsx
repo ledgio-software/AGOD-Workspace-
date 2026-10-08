@@ -11,8 +11,12 @@ import { LIBRARY_KINDS, getItem } from "@/modules/community/library";
 import { ReportForm } from "../../../(community)/community/forms";
 import { featureItemAction, removeItemAction, reportItemAction, unhideItemAction, usefulAction } from "../../../(community)/community/growth-actions";
 import { ButtonForm, CopyButton } from "../../../(community)/community/growth-forms";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Tools & prompts" };
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const item = await getItem(await getSignedIn(), (await params).id);
+  return item ? pageMetadata(item.title, item.summary) : { title: "Tools & prompts" };
+}
 
 export default async function LibraryItemPage({ params }: { params: Promise<{ id: string }> }) {
   const viewer = await getSignedIn();

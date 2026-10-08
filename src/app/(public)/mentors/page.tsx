@@ -9,8 +9,9 @@ import { signupOpen } from "@/modules/accounts";
 import { MAX_OPEN_AS_MENTEE, listMentors } from "@/modules/community/mentorship";
 import { requestMentorAction } from "../../(community)/community/growth-actions";
 import { AskMentorForm } from "../../(community)/community/growth-forms";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Mentors" };
+export const metadata: Metadata = pageMetadata("Mentors", "Find a mentor in Ghana's builder community: experienced developers and Reviewers who help you learn, review your work and grow.");
 
 // Phase 31: Reviewers who are open to mentoring, best match first for the signed-in member.
 

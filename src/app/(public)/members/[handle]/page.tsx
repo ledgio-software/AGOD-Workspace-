@@ -12,12 +12,13 @@ import { ArticleCard } from "../../articles/article-card";
 import { PostGrid } from "../../showcase/post-grid";
 import { reportProfileAction } from "../../../(community)/community/actions";
 import { OrganizerForm, ReportForm, UnhideForm } from "../../../(community)/community/forms";
+import { pageMetadata } from "@/lib/site";
 
 type Params = { params: Promise<{ handle: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const found = await getProfile((await params).handle, await getSignedIn());
-  return { title: found ? found.name : "Member" };
+  return found ? pageMetadata(found.name, found.profile.headline ?? found.profile.bio ?? `${found.name} on the community: projects, articles and what they build.`) : { title: "Member" };
 }
 
 const LINKS = [

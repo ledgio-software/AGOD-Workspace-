@@ -23,12 +23,13 @@ import {
 import { ArticleReviewForm, CommentForm, RepostForm } from "../../../(community)/community/article-forms";
 import { ReportForm } from "../../../(community)/community/forms";
 import { ButtonForm } from "../../../(community)/community/growth-forms";
+import { pageMetadata } from "@/lib/site";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const a = await getArticle(await getSignedIn(), (await params).id);
-  return a ? { title: a.title, description: a.summary } : { title: "Article" };
+  return a ? pageMetadata(a.title, a.summary, { type: "article", publishedTime: a.publishedAt }) : { title: "Article" };
 }
 
 const Name = ({ name, handle }: { name: string; handle: string | null }) =>

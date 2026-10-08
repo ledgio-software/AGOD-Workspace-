@@ -7,8 +7,9 @@ import { EmptyState, buttonClass, cx } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { LIBRARY_KINDS, libraryTags, listItems } from "@/modules/community/library";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Tools & prompts" };
+export const metadata: Metadata = pageMetadata("Tools & prompts", "AI tools, prompts that worked and guides shared by Ghana's builders, including ones that work on a slow or costly connection.");
 
 // Phase 31: the tools & prompts library: what members found useful, most useful first.
 

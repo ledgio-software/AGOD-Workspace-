@@ -10,8 +10,9 @@ import { canModerate } from "@/modules/community";
 import { NEWS_TOPICS, type NewsItem, newsFeed, newsUpdatedAt, refreshNews } from "@/modules/community/news";
 import { hideNewsAction, usefulNewsAction } from "../../(community)/community/news-actions";
 import { ButtonForm } from "../../(community)/community/growth-forms";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Tech news" };
+export const metadata: Metadata = pageMetadata("Tech news", "Headlines on African tech, AI, programming and new releases, updated every few hours.");
 // Fetching the sources after the page is sent can take a few seconds.
 export const maxDuration = 60;
 

@@ -7,8 +7,9 @@ import { EmptyState, buttonClass, cx } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { REWARDS, TEAM_KINDS, listTeamPosts } from "@/modules/community/teams";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Team finder" };
+export const metadata: Metadata = pageMetadata("Team finder", "Find teammates for a hackathon, a startup idea or a side project, or join someone else's team.");
 
 // Phase 33: the team finder. Ideas that need people, and people looking for a team.
 
