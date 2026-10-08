@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActionForm, SubmitButton, inputClass } from "@/components/form";
 import type { ActionResult } from "@/lib/action-result";
 
-// Phase 30: the message box, the new-conversation form, and keeping an open conversation fresh.
+// Phase 30: the new-conversation form, and keeping an open conversation fresh (the message box is
+// in composer.tsx).
 
 type Action<T = undefined> = (prev: ActionResult<T> | null, form: FormData) => Promise<ActionResult<T>>;
 
@@ -32,32 +33,6 @@ export function ScrollToEnd({ count, conversationId }: { count: number; conversa
     window.dispatchEvent(new Event("messages:read"));
   }, [count, conversationId]);
   return <div ref={ref} />;
-}
-
-export function Composer({ action }: { action: Action }) {
-  return (
-    <ActionForm action={action} resetOnSuccess className="flex items-end gap-2">
-      <label className="sr-only" htmlFor="message-body">
-        Message
-      </label>
-      <textarea
-        id="message-body"
-        name="body"
-        required
-        maxLength={4000}
-        rows={2}
-        placeholder="Write a message… (Ctrl+Enter to send)"
-        className={`${inputClass} min-h-11 flex-1 resize-y`}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            e.currentTarget.form?.requestSubmit();
-          }
-        }}
-      />
-      <SubmitButton pendingText="Sending…">Send</SubmitButton>
-    </ActionForm>
-  );
 }
 
 export function NewConversationForm({ action, people, preselected }: { action: Action<string>; people: { id: string; name: string; email: string }[]; preselected: string[] }) {

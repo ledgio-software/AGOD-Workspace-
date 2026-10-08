@@ -234,6 +234,12 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 35 — Front page photos and video ✓
+- The community front page shows organizers' photos as a slideshow behind the welcome text, with a welcome video beside it (loads only when tapped); organizers manage both on `/community/front-page`. Showcase project videos now play on the project page, and the share form has a clear "Pictures and video" section (`docs/COMMUNITY.md`)
+
+### Phase 34 — Emojis, stickers, voice notes and tagging in messages ✓
+- An emoji picker and emoji reactions, 16 stickers with Ghanaian phrases (Akwaaba, Ayekoo, Medaase, Chale…), voice notes up to 2 minutes recorded in the browser and played only by the people in the conversation, and @-tagging that notifies the person tagged (`docs/DECISIONS.md`)
+
 ### Phase 33 — Jobs & gigs and the team finder ✓
 - A public board of paid jobs, gigs and internships (pay always shown; no fees from applicants); members apply with a message and their profile, posters shortlist, hire or decline. A team finder where members post ideas that need people or say they want to join a team, and send requests; accepting shares both emails (`docs/COMMUNITY.md`)
 

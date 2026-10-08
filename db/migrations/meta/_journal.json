@@ -379,6 +379,41 @@
       "when": 1791466163990,
       "tag": "20261008132923_jobs_teams_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1791469121219,
+      "tag": "20261008141841_message_extras",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1791469123451,
+      "tag": "20261008141843_message_extras_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1791471237863,
+      "tag": "20261008145357_front_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1791471239547,
+      "tag": "20261008145359_front_page_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1791472829145,
+      "tag": "20261008152029_fix_session_call_link",
+      "breakpoints": true
     }
   ]
 }

@@ -70,6 +70,6 @@ export function communityGroup(o: { organizer: boolean }): NavGroup {
     { href: "/members", label: "Members", icon: "members" },
     { href: "/community/profile", label: "My profile", icon: "profile" },
   ];
-  if (o.organizer) items.push({ href: "/community/reports", label: "Reports", icon: "reports" });
+  if (o.organizer) items.push({ href: "/community/reports", label: "Reports", icon: "reports" }, { href: "/community/front-page", label: "Front page", icon: "frontPage" });
   return { label: "Community", items };
 }

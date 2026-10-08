@@ -131,9 +131,11 @@ company pays the team in step with the client).
 | Start a conversation with active people in the company | ✓ | ✓ | ✓ |
 | Read and write in conversations they are in | ✓ | ✓ | ✓ |
 | Read anyone else's conversation | | | |
+| Send emojis, stickers and voice notes, tag people and react in conversations they are in (Phase 34) | ✓ | ✓ | ✓ |
+| Play a voice note from a conversation they are not in | | | |
 
-Row-level security: `app_in_conversation()` limits `conversations`, `conversation_members` and
-`messages` to the people in each conversation; messages are written only as yourself and never
+Row-level security: `app_in_conversation()` limits `conversations`, `conversation_members`,
+`messages` and (Phase 34) `message_reactions` to the people in each conversation; messages are written only as yourself and never
 updated or deleted by the app role.
 
 ### Release approvals (Phase 32)
@@ -176,6 +178,7 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | See open jobs and team finder posts | ✓ | ✓ | ✓ |
 | Post jobs and team finder posts (after the code of conduct); apply, ask to join or invite; manage own posts, applicants and requests; report | | ✓ | ✓ |
 | Feature library items; pick a finished month's project of the month | | | ✓ |
+| Change the front page photos and welcome video | | | ✓ |
 | See reports; hide or show profiles, projects, feedback, sessions, library items, jobs and team finder posts; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in

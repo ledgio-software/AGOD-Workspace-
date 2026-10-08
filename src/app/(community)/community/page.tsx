@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, BriefcaseBusiness, Building2, CircleCheck, Circle, Flag, MessageCircle, Sparkles } from "lucide-react";
 import { Badge } from "@/components/badges";
-import { Callout, Card, PageHeader, buttonClass } from "@/components/ui";
+import { Callout, Card, buttonClass } from "@/components/ui";
 import { companiesOf, requireMember } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { canModerate, chatLinks, ensureProfile, listMembers, listReports, onboarding } from "@/modules/community";
+import { frontPage } from "@/modules/community/front";
 import { openJobCount } from "@/modules/community/jobs";
 import { mySessions, sessionsTakenPart } from "@/modules/community/sessions";
 import { openTeamPostCount } from "@/modules/community/teams";
 import { giveBack, reviewRequests } from "@/modules/community/showcase";
 import { switchCompanyAction } from "../../(authenticated)/company/actions";
+import { FrontHero } from "../../(public)/front-hero";
 import { MemberGrid } from "../../(public)/members/member-grid";
 import { SessionList } from "../../(public)/sessions/session-list";
 import { PostGrid } from "../../(public)/showcase/post-grid";
@@ -32,7 +34,7 @@ function Step({ done, title, children, soon }: { done: boolean; title: string; c
 export default async function CommunityHomePage() {
   const { member } = await requireMember();
   const profile = await ensureProfile(member);
-  const [steps, companies, organizer, recent, counts, waiting, sessionsDone, upcomingMine, jobs, teams] = await Promise.all([
+  const [steps, companies, organizer, recent, counts, waiting, sessionsDone, upcomingMine, jobs, teams, front] = await Promise.all([
     onboarding(profile),
     companiesOf(member.id),
     canModerate(member),
@@ -43,6 +45,7 @@ export default async function CommunityHomePage() {
     mySessions(member),
     openJobCount(),
     openTeamPostCount(),
+    frontPage(),
   ]);
   const openReports = organizer ? (await listReports(member)).filter((r) => r.status === "OPEN").length : 0;
   const chat = chatLinks();
@@ -50,16 +53,26 @@ export default async function CommunityHomePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Community"
-        title={`Welcome, ${firstName}`}
-        description="A home for people in Ghana who build software, by hand or with AI tools: share your work, get honest feedback and help one another."
-        actions={
-          <Link href={`/members/${profile.handle}`} className={buttonClass("secondary", "sm")}>
+      <FrontHero front={front}>
+        <p className="text-sm font-medium uppercase tracking-wide text-amber-300">Community</p>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">Akwaaba, {firstName}</h1>
+        <p className="max-w-xl text-white/90">
+          A home for people in Ghana who build software, by hand or with AI tools: share your work, get honest feedback and help one another.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/community/showcase/new" className={buttonClass("primary", "sm")}>
+            Share a project
+          </Link>
+          <Link href={`/members/${profile.handle}`} className="inline-flex items-center rounded-lg border border-white/60 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/20">
             View my profile
           </Link>
-        }
-      />
+          {organizer && (
+            <Link href="/community/front-page" className="inline-flex items-center rounded-lg border border-white/60 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/20">
+              Change photos and video
+            </Link>
+          )}
+        </div>
+      </FrontHero>
 
       {organizer && openReports > 0 && (
         <Callout tone="warn" icon={Flag}>

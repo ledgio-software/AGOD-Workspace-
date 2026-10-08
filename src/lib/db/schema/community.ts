@@ -250,7 +250,7 @@ export const communitySessions = pgTable(
     check("community_sessions_topics", sql`cardinality(${t.topics}) <= 8`),
     check("community_sessions_times", sql`${t.endsAt} > ${t.startsAt} AND ${t.endsAt} <= ${t.startsAt} + interval '6 hours'`),
     check("community_sessions_capacity", sql`${t.capacity} IS NULL OR ${t.capacity} BETWEEN 2 AND 1000`),
-    check("community_sessions_urls", sql`(${t.callUrl} ~ '^https://[^\s]+$') AND (${httpsUrl(t.recordingUrl)})`),
+    check("community_sessions_urls", sql`(${t.callUrl} ~ '^https://[^\\s]+$') AND (${httpsUrl(t.recordingUrl)})`),
     check("community_sessions_notes", sql`${t.notes} IS NULL OR length(${t.notes}) <= 5000`),
     check("community_sessions_cancelled", sql`(${t.cancelledAt} IS NULL) = (${t.cancelReason} IS NULL)`),
     check("community_sessions_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
@@ -533,6 +533,46 @@ export const teamRequests = pgTable(
     check("team_requests_status", sql`${t.status} IN ('PENDING', 'ACCEPTED', 'DECLINED', 'WITHDRAWN')`),
     check("team_requests_message", sql`length(btrim(${t.message})) BETWEEN 10 AND 1000`),
     check("team_requests_note", sql`${t.responseNote} IS NULL OR length(${t.responseNote}) <= 500`),
+  ],
+);
+
+// Phase 35: the community front page: organizers choose background photos (a slideshow behind the
+// welcome text) and a welcome video shown beside it.
+export const frontPhotos = pgTable(
+  "front_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storageKey: text("storage_key").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    // What the photo shows, for screen readers.
+    alt: text("alt").notNull(),
+    position: integer("position").notNull().default(0),
+    addedBy: userRef("added_by").notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    check("front_photos_alt", sql`length(btrim(${t.alt})) BETWEEN 3 AND 200`),
+    check("front_photos_type", sql`${t.contentType} IN ('image/png', 'image/jpeg', 'image/webp', 'image/gif')`),
+  ],
+);
+
+/** One row of settings for the community front page. */
+export const communitySettings = pgTable(
+  "community_settings",
+  {
+    id: integer("id").primaryKey().default(1),
+    welcomeVideoUrl: text("welcome_video_url"),
+    welcomeVideoTitle: text("welcome_video_title"),
+    updatedBy: userRef("updated_by"),
+    updatedAt,
+  },
+  (t) => [
+    check("community_settings_one_row", sql`${t.id} = 1`),
+    check("community_settings_video", httpsUrl(t.welcomeVideoUrl)),
+    check("community_settings_title", sql`${t.welcomeVideoTitle} IS NULL OR length(btrim(${t.welcomeVideoTitle})) BETWEEN 2 AND 120`),
   ],
 );
 

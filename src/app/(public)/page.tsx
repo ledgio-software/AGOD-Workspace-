@@ -6,7 +6,9 @@ import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { communityStats, listMembers } from "@/modules/community";
 import { listSessions } from "@/modules/community/sessions";
+import { frontPage } from "@/modules/community/front";
 import { listPosts } from "@/modules/community/showcase";
+import { FrontHero } from "./front-hero";
 import { MemberGrid } from "./members/member-grid";
 import { SessionList } from "./sessions/session-list";
 import { PostGrid } from "./showcase/post-grid";
@@ -25,25 +27,26 @@ const pillars = [
 const audience = ["Beginners and non-coders who build with AI tools", "Working developers who want a local peer group", "Students who want real projects and feedback", "Founders who need a prototype reviewed"];
 
 export default async function HomePage() {
-  const [signedIn, stats, recent, projects, sessions] = await Promise.all([
+  const [signedIn, stats, recent, projects, sessions, front] = await Promise.all([
     getSignedIn(),
     communityStats(),
     listMembers(null),
     listPosts(null),
     listSessions("upcoming", { limit: 4 }),
+    frontPage(),
   ]);
   const open = signupOpen();
 
   return (
     <div className="space-y-16">
-      <section className="space-y-6 pt-4 text-center sm:pt-10">
-        <p className="text-sm font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">Built in Ghana, for Ghana&apos;s builders</p>
-        <h1 className="mx-auto max-w-3xl text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">{PRODUCT_NAME}</h1>
-        <p className="mx-auto max-w-2xl text-base text-muted sm:text-lg">
+      <FrontHero front={front}>
+        <p className="text-sm font-medium uppercase tracking-wide text-amber-300">Built in Ghana, for Ghana&apos;s builders</p>
+        <h1 className="max-w-3xl text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">{PRODUCT_NAME}</h1>
+        <p className="max-w-2xl text-base text-white/90 sm:text-lg">
           A home for people in Ghana who build software, whether you write every line yourself or build with AI tools like Claude, Cursor or Lovable. Finish
           projects, show them, and get better together.
         </p>
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-wrap gap-3">
           {signedIn ? (
             <Link href="/community" className={buttonClass("primary")}>
               Go to the community <ArrowRight className="size-4" aria-hidden />
@@ -57,18 +60,18 @@ export default async function HomePage() {
               Sign in
             </Link>
           )}
-          <Link href="/members" className={buttonClass("secondary")}>
+          <Link href="/members" className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/60 bg-white/10 px-3.5 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/20">
             Meet the members
           </Link>
         </div>
         {stats.members > 0 && (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-white/80">
             {stats.members} {stats.members === 1 ? "member" : "members"}
             {stats.reviewers > 0 && ` · ${stats.reviewers} ${stats.reviewers === 1 ? "reviewer" : "reviewers"}`}
             {stats.cities > 0 && ` · ${stats.cities} ${stats.cities === 1 ? "city" : "cities"}`}
           </p>
         )}
-      </section>
+      </FrontHero>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {pillars.map(({ icon: Icon, title, text }) => (
