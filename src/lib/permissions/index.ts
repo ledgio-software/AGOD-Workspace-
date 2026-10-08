@@ -51,7 +51,9 @@ export type Action =
   | "invoice.recordPayment"
   | "invoice.settings"
   | "google.manage"
-  | "company.manage";
+  | "company.manage"
+  | "release.manage"
+  | "release.approve";
 
 /** Facts about the record being acted on, when the rule depends on it. */
 export type ResourceContext = {
@@ -119,6 +121,10 @@ const rules: Record<Action, (actor: Actor, resource: ResourceContext) => boolean
   "google.manage": isAdmin,
   // Phase 22: the company's name and project code prefix.
   "company.manage": isAdmin,
+  // Phase 32: release approvals. Anyone on the project records releases, does the security check
+  // and marks them deployed; managers approve. The author never checks, approves or deploys their own.
+  "release.manage": (a, r) => isManager(a) || r.isProjectMember === true,
+  "release.approve": isManager,
 };
 
 // Phase 28: companies make their own roles by starting from Team Member, Project Manager or Admin
@@ -150,7 +156,14 @@ export const PERMISSION_GROUPS: readonly PermissionGroup[] = [
     base: "PROJECT_MANAGER",
     actions: ["project.create", "project.edit", "project.configureCompensation", "project.overrideHealth", "template.manage", "task.update"],
   },
-  { key: "projects.approve", label: "Approve finished projects", description: "Approve (which creates the payouts) or send back for changes.", base: "PROJECT_MANAGER", actions: ["project.approve", "project.reject"], money: true },
+  {
+    key: "projects.approve",
+    label: "Approve finished projects",
+    description: "Approve (which creates the payouts) or send back for changes; approve releases.",
+    base: "PROJECT_MANAGER",
+    actions: ["project.approve", "project.reject", "release.approve"],
+    money: true,
+  },
   { key: "projects.reopen", label: "Reopen approved projects", description: "Undo an approval before anyone is paid.", base: "ADMIN", actions: ["project.reopen"], money: true },
   {
     key: "payouts.view",

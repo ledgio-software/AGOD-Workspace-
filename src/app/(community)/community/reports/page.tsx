@@ -8,7 +8,7 @@ import { requireMember } from "@/lib/session";
 import { canModerate, listReports } from "@/modules/community";
 import { ResolveReportForm } from "../forms";
 
-const TARGET = { PROFILE: "Profile", POST: "Project", REVIEW: "Feedback", SESSION: "Session" } as const;
+const TARGET = { PROFILE: "Profile", POST: "Project", REVIEW: "Feedback", SESSION: "Session", LIBRARY: "Library item" } as const;
 
 export default async function ReportsPage() {
   const { member } = await requireMember();

@@ -7,7 +7,7 @@ import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { COMPANY_COOKIE, companiesOf, getSignedIn, requireUser } from "@/lib/session";
 import { updateMoneyFlowSettings } from "@/modules/billing";
-import { setSelfApproval, updateOrganization } from "@/modules/orgs";
+import { setReleaseControl, setSelfApproval, updateOrganization } from "@/modules/orgs";
 
 /** Remembers the chosen company for this browser (only one the person is an active member of). */
 export async function switchCompanyAction(form: FormData): Promise<void> {
@@ -40,6 +40,18 @@ export async function selfApprovalAction(_prev: ActionResult | null, form: FormD
     return undefined;
   }, allow ? "Done. One person may now approve and pay their own work." : "Done. Money now always needs two people.");
   if (result.ok) revalidatePath("/company");
+  return result;
+}
+
+/** Phase 32: release approvals (change control) on or off. */
+export async function releaseControlAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const on = form.get("on") === "true";
+  const result = await runAction(async () => {
+    await setReleaseControl(actor, { on, reason: String(form.get("reason") ?? "") }, await getRequestMeta());
+    return undefined;
+  }, on ? "Done. Projects now have a Releases tab." : "Done. Release approvals are off; past releases stay on the Releases page.");
+  if (result.ok) revalidatePath("/", "layout");
   return result;
 }
 

@@ -48,6 +48,8 @@ const matrix: Record<Action, [boolean, boolean, boolean]> = {
   "invoice.settings": [false, false, true],
   "google.manage": [false, false, true],
   "company.manage": [false, false, true],
+  "release.manage": [false, true, true],
+  "release.approve": [false, true, true],
 };
 
 describe("can: role matrix", () => {
@@ -97,7 +99,7 @@ describe("Phase 28: permission groups and company-made roles", () => {
       const groups = PERMISSION_GROUPS.filter((g) => g.actions.includes(action));
       const [, pmCan, adminCan] = matrix[action];
       const memberAlways = matrix[action][0];
-      const scoped = ["project.view", "project.requestApproval", "comment.create", "audit.viewProject"].includes(action);
+      const scoped = ["project.view", "project.requestApproval", "comment.create", "audit.viewProject", "release.manage"].includes(action);
       if (memberAlways || scoped) expect(groups, action).toHaveLength(0);
       else expect(groups, action).toHaveLength(1);
       if (groups.length === 1) {

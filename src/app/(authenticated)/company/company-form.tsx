@@ -40,6 +40,21 @@ export function SelfApprovalForm({ action, allow }: { action: Action; allow: boo
   );
 }
 
+/** Phase 32: release approvals on or off, always with a reason. */
+export function ReleaseControlForm({ action, on }: { action: Action; on: boolean }) {
+  return (
+    <ActionForm action={action} resetOnSuccess className="space-y-3">
+      <input type="hidden" name="on" value={String(!on)} />
+      <Field label="Reason for the change">
+        <input name="reason" required minLength={3} maxLength={500} placeholder={on ? "e.g. We don't ship software for clients" : "e.g. Our bank client asks for change control"} className={inputClass} />
+      </Field>
+      <SubmitButton variant={on ? "danger" : "primary"} pendingText="Saving…">
+        {on ? "Switch release approvals off" : "Switch release approvals on"}
+      </SubmitButton>
+    </ActionForm>
+  );
+}
+
 /** Phase 29: deposits, client review time and when the team is paid. */
 export function MoneyFlowForm({
   action,

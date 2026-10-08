@@ -59,7 +59,7 @@ export async function createOrganization(input: { name: string; ownerId: string;
       return await db.transaction(async (tx) => {
         const [org] = await tx
           .insert(organizations)
-          .values({ name: companyName, slug, projectCodePrefix: codePrefix, createdBy: input.ownerId, teamType: input.teamType ?? "OTHER" })
+          .values({ name: companyName, slug, projectCodePrefix: codePrefix, createdBy: input.ownerId, teamType: input.teamType ?? "OTHER", releaseControl: input.teamType === "FINTECH" })
           .returning();
         await tx.insert(memberships).values({ organizationId: org.id, userId: input.ownerId, role: "ADMIN" });
         if (input.teamType) {
@@ -128,6 +128,33 @@ export async function setSelfApproval(actor: Actor, raw: z.input<typeof selfAppr
       action: "company.self_approval_changed",
       before: { allowSelfApproval: before.allow },
       after: { allowSelfApproval: input.allow },
+      reason: input.reason,
+      request,
+    });
+  });
+}
+
+export const releaseControlInput = z.object({ on: z.boolean(), reason: z.string().trim().min(3, "Give a reason (at least 3 characters)").max(500) });
+
+/**
+ * Phase 32: release approvals (change control) on or off for the company. On by default for fintech
+ * teams. Every change is in the audit log with its reason.
+ */
+export async function setReleaseControl(actor: Actor, raw: z.input<typeof releaseControlInput>, request?: RequestMeta) {
+  assertCan(actor, "company.manage");
+  const input = releaseControlInput.parse(raw);
+  await withActor(actor, async (tx) => {
+    const [before] = await tx.select({ on: organizations.releaseControl }).from(organizations).where(eq(organizations.id, actor.orgId));
+    if (!before) throw new ServiceError("Company not found.");
+    if (before.on === input.on) return;
+    await tx.update(organizations).set({ releaseControl: input.on }).where(eq(organizations.id, actor.orgId)).catch(rethrowDbGuard);
+    await recordAudit(tx, {
+      actorId: actor.id,
+      entityType: "organization",
+      entityId: actor.orgId,
+      action: "company.release_control_changed",
+      before: { releaseControl: before.on },
+      after: { releaseControl: input.on },
       reason: input.reason,
       request,
     });

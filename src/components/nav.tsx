@@ -5,7 +5,7 @@ export type NavItem = { href: string; label: string; icon: IconName };
 export type NavGroup = { label: string; items: NavItem[] };
 
 /** The sidebar sections a person can see. The pages check access again; this only hides links. */
-export function navGroups(actor: Actor): NavGroup[] {
+export function navGroups(actor: Actor & { releaseControl?: boolean }): NavGroup[] {
   const groups: { label: string; items: (NavItem & { show: boolean })[] }[] = [
     {
       label: "Overview",
@@ -18,6 +18,7 @@ export function navGroups(actor: Actor): NavGroup[] {
       label: "Work",
       items: [
         { href: "/projects", label: "Projects", icon: "projects", show: true },
+        { href: "/releases", label: "Releases", icon: "releases", show: actor.releaseControl === true },
         { href: "/workload", label: "Workload", icon: "workload", show: can(actor, "workload.view") },
         { href: "/summary", label: "Weekly summary", icon: "weekly", show: can(actor, "report.weekly") },
       ],
@@ -61,6 +62,9 @@ export function communityGroup(o: { organizer: boolean }): NavGroup {
     { href: "/community", label: "Community home", icon: "community" },
     { href: "/showcase", label: "Showcase", icon: "showcase" },
     { href: "/sessions", label: "Sessions", icon: "sessions" },
+    { href: "/library", label: "Tools & prompts", icon: "library" },
+    { href: "/mentors", label: "Mentors", icon: "mentors" },
+    { href: "/community/mentoring", label: "My mentoring", icon: "mentoring" },
     { href: "/members", label: "Members", icon: "members" },
     { href: "/community/profile", label: "My profile", icon: "profile" },
   ];

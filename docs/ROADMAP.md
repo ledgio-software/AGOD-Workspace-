@@ -45,15 +45,14 @@ The product is also a community for people in Ghana who build software (`docs/CO
 Done: member sign-up without a company, profiles and member list, roles, code of conduct, reports
 (Phase 25); showcase with screenshots and video demo links, review requests and feedback (Phase 26).
 Teaching sessions with join, calendar files, reminders and a recordings archive (Phase 27).
-Next: mentorship matching,
-tools and prompts library, project of the month; later jobs board, team finder, badges, events
-calendar, partners page and metrics.
+Mentorship matching, the tools & prompts library and project of the month (Phase 31).
+Later: jobs board, team finder, badges, events calendar, partners page and metrics.
 
 ## Company workflow (Phase 28 onwards)
 
 From the workflow research (software and fintech teams, October 2026). Done: company-made roles,
 job titles, "what kind of team are you?" set-up, two people for money (Phase 28); client money
 flow: payment plans, deposit rule, client sign-off, change requests, paying the team in step with
-the client (Phase 29); in-app messages with an unread icon (Phase 30). Later: fintech extras
-(security check, release approval, evidence export), tax rates as settings (withholding tax on
-client payments), and a client portal for online sign-off.
+the client (Phase 29); in-app messages with an unread icon (Phase 30); release approvals with a security
+check, an emergency path and evidence export for auditors (Phase 32). Later: tax rates as settings
+(withholding tax on client payments), and a client portal for online sign-off.

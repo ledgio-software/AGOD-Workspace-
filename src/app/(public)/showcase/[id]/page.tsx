@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CircleCheck, Code2, ExternalLink, EyeOff, PlayCircle, Sparkles, TriangleAlert } from "lucide-react";
+import { CircleCheck, Code2, ExternalLink, EyeOff, PlayCircle, Sparkles, TriangleAlert, Trophy } from "lucide-react";
 import { Badge } from "@/components/badges";
 import { Avatar, Callout, Card, Disclosure, buttonClass } from "@/components/ui";
 import { formatDateTime } from "@/lib/dates";
@@ -20,6 +20,9 @@ import {
   unhideShowcaseAction,
 } from "../../../(community)/community/actions";
 import { ReportForm } from "../../../(community)/community/forms";
+import { pickProjectAction, voteAction } from "../../../(community)/community/growth-actions";
+import { PickForm, VoteButton } from "../../../(community)/community/growth-forms";
+import { monthLabel, monthsWon, myVote, previousMonth, thisMonth, votesThisMonth } from "@/modules/community/project-month";
 import { ButtonForm, ReplyForm, ReviewForm, ScreenshotForm } from "../../../(community)/community/showcase/forms";
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string; screenshot?: string }> };
@@ -36,6 +39,9 @@ export default async function PostPage({ params, searchParams }: Params) {
   const found = await getPost((await params).id, viewer);
   if (!found) notFound();
   const { post: p, author, images, reviews, self, organizer, reviewed } = found;
+  // Phase 31: project of the month.
+  const [vote, votes, won] = await Promise.all([myVote(viewer), votesThisMonth([p.id]), monthsWon([p.id])]);
+  const lastMonth = previousMonth(thisMonth());
   const flags = await searchParams;
   const img = (id: string) => `/showcase/${p.id}/images/${id}`;
   const links = [
@@ -72,6 +78,12 @@ export default async function PostPage({ params, searchParams }: Params) {
             </Badge>
           )}
           {p.visibility === "MEMBERS" && <Badge>Members only</Badge>}
+          {(won.get(p.id) ?? []).map((m) => (
+            <Badge key={m} tone="amber">
+              <Trophy className="mr-0.5 inline size-3" aria-hidden />
+              Project of the month, {monthLabel(m)}
+            </Badge>
+          ))}
         </div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{p.title}</h1>
         <p className="text-lg text-muted">{p.pitch}</p>
@@ -86,6 +98,19 @@ export default async function PostPage({ params, searchParams }: Params) {
           )}
           <span>· {formatDateTime(p.createdAt)}</span>
         </div>
+        {viewer && !self && !p.hiddenAt && (
+          <div className="pt-1">
+            <VoteButton action={voteAction.bind(null, p.id)} voted={vote === p.id} votes={votes.get(p.id) ?? 0} />
+          </div>
+        )}
+        {organizer && !p.hiddenAt && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted hover:text-fg">Organizers: project of the month</summary>
+            <div className="mt-2 max-w-md">
+              <PickForm action={pickProjectAction.bind(null, p.id)} month={monthLabel(lastMonth)} />
+            </div>
+          </details>
+        )}
         {links.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {links.map(({ url, label, icon: Icon }, i) => (

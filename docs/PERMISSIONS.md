@@ -87,7 +87,7 @@ titles** by copying a role and switching permission groups off. The groups (`PER
 | Group | Actions | Lowest built-in role with it |
 |---|---|---|
 | Create and edit projects | `project.create`, `project.edit`, `project.configureCompensation`, `project.overrideHealth`, `template.manage`, `task.update` (any task) | Project Manager |
-| Approve finished projects | `project.approve`, `project.reject` | Project Manager |
+| Approve finished projects | `project.approve`, `project.reject`, `release.approve` | Project Manager |
 | Reopen approved projects | `project.reopen` | Admin |
 | See everyone's payouts | `payout.viewAll`, `ledger.export`, `period.view`, `payoutQuestion.review` | Project Manager |
 | Pay the team | `payment.record`, `adjustment.create`, `payoutQuestion.resolve`, `period.close` | Admin |
@@ -136,6 +136,20 @@ Row-level security: `app_in_conversation()` limits `conversations`, `conversatio
 `messages` to the people in each conversation; messages are written only as yourself and never
 updated or deleted by the app role.
 
+### Release approvals (Phase 32)
+
+| Action | Team Member | Project Manager | Admin |
+|---|:---:|:---:|:---:|
+| Write, submit, security-check, deploy and roll back releases on projects they can see (`release.manage`) | own projects | ✓ | ✓ |
+| Approve or reject releases (`release.approve`, group "Approve finished projects") | | ✓ | ✓ |
+| Switch release approvals on or off (`company.manage`) | | | ✓ |
+| Download the release evidence CSV (`audit.viewAll`) | | | ✓ |
+
+Nobody security-checks, approves or deploys a release they wrote (unless the company allows one
+person to approve and pay their own work). Row-level security: `releases` follow the project
+(`app_can_view_project`); the trigger `releases_guard` enforces the order of steps and the
+"not the author" rules.
+
 ### Community (Phase 25)
 
 Community roles are separate from company roles: everyone signed in is a Builder; Reviewer is a
@@ -155,7 +169,12 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Join or leave a session (after the code of conduct); see its call link once joined | | ✓ | ✓ |
 | Host sessions (with the Reviewer badge); edit, cancel, add recordings to own sessions | | Reviewers | ✓ |
 | Cancel any session | | | ✓ |
-| See reports; hide or show profiles, projects, feedback and sessions; make or remove organizers | | | ✓ |
+| See mentors and the tools & prompts library | ✓ | ✓ | ✓ |
+| Ask a mentor (2 at a time); answer requests and offer to mentor (Reviewers); end a mentorship you are in | | ✓ | ✓ |
+| Share, edit, remove own library items; mark others' useful; report them | | ✓ | ✓ |
+| Vote for project of the month (one a month, not your own project) | | ✓ | ✓ |
+| Feature library items; pick a finished month's project of the month | | | ✓ |
+| See reports; hide or show profiles, projects, feedback, sessions and library items; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
 another, and no role ever reaches another company's data. An Admin sets a temporary password only for

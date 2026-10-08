@@ -31,6 +31,8 @@ export const organizations = pgTable(
     // ON_APPROVAL: in full once the project is approved. ON_CLIENT_PAYMENT: in step with what the
     // client has paid for the project (internal projects: on approval).
     payoutRelease: text("payout_release").notNull().default("ON_APPROVAL"),
+    // Phase 32: change control (release approvals). On for fintech teams.
+    releaseControl: boolean("release_control").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
