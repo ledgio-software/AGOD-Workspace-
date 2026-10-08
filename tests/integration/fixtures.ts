@@ -38,7 +38,9 @@ function ensureTestOrg() {
   testOrg ??= (async () => {
     await db
       .insert(organizations)
-      .values({ id: TEST_ORG_ID, name: "Test company", slug: "test-company", projectCodePrefix: "AGOD" })
+      // Like every company that existed before Phase 28: one person may approve and pay themselves.
+      // The "two people for money" rule is tested in companies made with createCompany.
+      .values({ id: TEST_ORG_ID, name: "Test company", slug: "test-company", projectCodePrefix: "AGOD", allowSelfApproval: true })
       .onConflictDoNothing();
     const [template] = await db.select({ id: projectTemplates.id }).from(projectTemplates).where(eq(projectTemplates.organizationId, TEST_ORG_ID)).limit(1);
     if (!template) await db.insert(projectTemplates).values(STARTER_TEMPLATES.map((t) => ({ ...t, organizationId: TEST_ORG_ID })));

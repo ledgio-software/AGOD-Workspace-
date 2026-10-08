@@ -193,9 +193,26 @@ export default async function CommunityHomePage() {
             </div>
           </Card>
 
-          <Card title="What's coming" aside={<Sparkles className="size-4 text-muted" aria-hidden />}>
-            <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-              <li>Mentorship matching and a tools &amp; prompts library</li>
+          <Card title="Learn and get help" aside={<Sparkles className="size-4 text-muted" aria-hidden />}>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/mentors" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  Find a mentor
+                </Link>
+                <span className="block text-xs text-muted">Experienced builders who help one to one.</span>
+              </li>
+              <li>
+                <Link href="/library" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  Tools &amp; prompts
+                </Link>
+                <span className="block text-xs text-muted">What other members found useful. Share yours too.</span>
+              </li>
+              <li>
+                <Link href="/showcase" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  Vote for project of the month
+                </Link>
+                <span className="block text-xs text-muted">One vote a month for the project you liked most.</span>
+              </li>
             </ul>
           </Card>
         </div>

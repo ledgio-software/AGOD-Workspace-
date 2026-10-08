@@ -11,6 +11,7 @@ import { syncDrive } from "@/modules/google";
 import { syncCalendars } from "@/modules/google/calendar";
 import { refreshDeadlineAlerts } from "@/modules/notifications/deadlines";
 import { refreshInvoiceAlerts } from "@/modules/invoices";
+import { refreshMessageAlert } from "@/modules/messages";
 import { refreshRenewalAlerts } from "@/modules/subscriptions";
 
 // Phase 19: the daily job (Vercel Cron → /api/cron/daily). It creates every active person's task,
@@ -114,7 +115,8 @@ async function runCompany(company: { id: string; name: string }, options: DailyR
     for (const person of people) {
       const actor: Actor = { id: person.id, role: person.role, orgId: company.id };
       try {
-        summary.remindersCreated += (await refreshDeadlineAlerts(actor, now)) + (await refreshRenewalAlerts(actor)) + (await refreshInvoiceAlerts(actor));
+        summary.remindersCreated +=
+          (await refreshDeadlineAlerts(actor, now)) + (await refreshRenewalAlerts(actor)) + (await refreshInvoiceAlerts(actor)) + (await refreshMessageAlert(actor, now));
       } catch (error) {
         summary.reminderFailures += 1;
         console.error("Daily reminders failed for a user", person.id, error instanceof Error ? error.message : error);

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getRequestMeta } from "@/lib/request-meta";
 import { requireUser } from "@/lib/session";
+import { setMemberJobTitle } from "@/modules/roles";
 import { changeRole, createMember, resetPassword, setActive, setCapacity } from "@/modules/team";
 
 /**
@@ -93,5 +94,15 @@ export async function setCapacityAction(_prev: ActionResult | null, form: FormDa
     revalidatePath("/team");
     revalidatePath("/workload");
   }
+  return result;
+}
+
+export async function setJobTitleAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const result = await runAction(async () => {
+    await setMemberJobTitle(actor, String(form.get("userId")), String(form.get("jobTitleId") ?? "") || null, await getRequestMeta());
+    return undefined;
+  }, "Job title saved.");
+  if (result.ok) revalidatePath("/team");
   return result;
 }

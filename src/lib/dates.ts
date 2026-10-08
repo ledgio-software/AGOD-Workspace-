@@ -31,3 +31,15 @@ export function zonedTime(date: string, time: string, zone = timeZone): Date {
   const asZone = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
   return new Date(guess.getTime() - (asZone - guess.getTime()));
 }
+
+/** Phase 29: a calendar date (YYYY-MM-DD) plus n working days (Monday to Friday; holidays not counted). */
+export function addWorkingDays(date: string, n: number): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  let left = n;
+  while (left > 0) {
+    d.setUTCDate(d.getUTCDate() + 1);
+    const day = d.getUTCDay();
+    if (day !== 0 && day !== 6) left--;
+  }
+  return d.toISOString().slice(0, 10);
+}

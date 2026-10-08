@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Plug, ShieldCheck, UserCheck, UserPlus, Users } from "lucide-react";
+import { KeyRound, MessageCircle, Plug, ShieldCheck, UserCheck, UserPlus, Users } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge } from "@/components/badges";
 import { Avatar, ButtonLink, Card, Disclosure, PageHeader, StatCard, cx, table } from "@/components/ui";
 import { formatDate } from "@/lib/dates";
-import { roleLabel } from "@/lib/labels";
 import { can } from "@/lib/permissions";
 import { emailConfig } from "@/lib/email";
 import { requireUser } from "@/lib/session";
+import { listJobTitles, listRoles } from "@/modules/roles";
 import { listTeam } from "@/modules/team";
 import { CreateMemberForm, MemberActions } from "./team-forms";
 
@@ -18,8 +18,12 @@ export default async function TeamPage() {
   const viaEmail = emailConfig() !== null;
   if (!can(actor, "team.view")) return <AccessDenied what="the team list" />;
 
-  const members = await listTeam(actor);
+  const [members, roles, titles] = await Promise.all([listTeam(actor), listRoles(actor), listJobTitles(actor)]);
   const canManage = can(actor, "team.manage");
+  const roleName = new Map(roles.map((r) => [r.ref, r.name]));
+  const titleName = new Map(titles.map((t) => [t.id, t.name]));
+  const roleChoices = roles.filter((r) => !r.archived).map((r) => ({ ref: r.ref, name: r.name }));
+  const titleChoices = titles.filter((t) => !t.archived).map((t) => ({ id: t.id, name: t.name }));
   const active = members.filter((m) => m.active);
 
   return (
@@ -29,15 +33,20 @@ export default async function TeamPage() {
         title="Team"
         description={
           canManage
-            ? "Add members, change roles and deactivate accounts. Every change is recorded in the audit log."
-            : "Team members and their roles. Only Admins can make changes."
+            ? "Add members, change roles and job titles, and deactivate accounts. Every change is recorded in the audit log."
+            : "Team members, their roles and job titles. Only Admins can make changes."
         }
         actions={
-          canManage && (
-            <ButtonLink href="/integrations">
-              <Plug className="size-4" aria-hidden /> GitHub integration
+          <>
+            <ButtonLink href="/team/roles">
+              <KeyRound className="size-4" aria-hidden /> Roles &amp; job titles
             </ButtonLink>
-          )
+            {canManage && can(actor, "audit.viewAll") && (
+              <ButtonLink href="/integrations">
+                <Plug className="size-4" aria-hidden /> GitHub integration
+              </ButtonLink>
+            )}
+          </>
         }
       />
 
@@ -57,7 +66,7 @@ export default async function TeamPage() {
             </span>
           }
         >
-          <CreateMemberForm />
+          <CreateMemberForm roles={roleChoices} />
         </Disclosure>
       )}
 
@@ -78,16 +87,24 @@ export default async function TeamPage() {
               {members.map((member) => (
                 <tr key={member.id} className={cx(table.row, "align-top", !member.active && "text-muted")}>
                   <td className={table.td}>
-                    <Link href={`/team/${member.id}`} className="flex items-center gap-3 hover:text-brand-600">
-                      <Avatar name={member.name} />
-                      <span className="min-w-0">
-                        <span className="block font-medium">{member.name}</span>
-                        <span className="block text-xs text-muted">{member.email}</span>
-                      </span>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/team/${member.id}`} className="flex min-w-0 items-center gap-3 hover:text-brand-600">
+                        <Avatar name={member.name} />
+                        <span className="min-w-0">
+                          <span className="block font-medium">{member.name}</span>
+                          <span className="block text-xs text-muted">{member.email}</span>
+                        </span>
+                      </Link>
+                      {member.active && member.id !== actor.id && (
+                        <Link href={`/messages?to=${member.id}`} aria-label={`Message ${member.name}`} title={`Message ${member.name}`} className="ml-auto rounded-lg p-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+                          <MessageCircle className="size-4" aria-hidden />
+                        </Link>
+                      )}
+                    </div>
                   </td>
                   <td className={table.td}>
-                    <Badge tone={roleTone[member.role]}>{roleLabel[member.role]}</Badge>
+                    <Badge tone={roleTone[member.role]}>{roleName.get(member.companyRoleId ?? member.role) ?? member.role}</Badge>
+                    {member.jobTitleId && <span className="mt-1 block text-xs text-muted">{titleName.get(member.jobTitleId)}</span>}
                   </td>
                   <td className={table.td}>
                     <Badge tone={member.active ? "green" : "gray"}>{member.active ? "Active" : "Inactive"}</Badge>
@@ -96,7 +113,7 @@ export default async function TeamPage() {
                   <td className={`${table.td} whitespace-nowrap text-muted`}>{formatDate(member.createdAt)}</td>
                   {canManage && (
                     <td className={`${table.td} text-right`}>
-                      {member.id === actor.id ? <span className="text-xs text-muted">You</span> : <MemberActions member={member} viaEmail={viaEmail} />}
+                      {member.id === actor.id ? <span className="text-xs text-muted">You</span> : <MemberActions member={member} viaEmail={viaEmail} roles={roleChoices} titles={titleChoices} />}
                     </td>
                   )}
                 </tr>

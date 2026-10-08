@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarCheck, CircleCheck, Download, Inbox, Lock, LockOpen } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge, PayoutStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Callout, Card, PageHeader, buttonClass, cx } from "@/components/ui";
 import { formatCalendarDate, formatDateTime } from "@/lib/dates";
 import { adjustmentTypeLabel, paymentMethodLabel } from "@/lib/labels";

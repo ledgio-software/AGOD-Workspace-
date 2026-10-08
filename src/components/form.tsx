@@ -4,8 +4,8 @@ import { createContext, useActionState, useContext, useEffect, useRef, useTransi
 import { useFormStatus } from "react-dom";
 import { buttonClass } from "@/components/ui";
 
-export const inputClass =
-  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-fg shadow-xs placeholder:text-muted focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50";
+// Server pages import it from "@/components/input-class" (a client module's exports aren't plain values there).
+export { inputClass } from "./input-class";
 
 type State = { ok: boolean; error?: string; message?: string } | null;
 

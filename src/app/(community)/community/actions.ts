@@ -32,6 +32,7 @@ import {
   updateSession,
 } from "@/modules/community/sessions";
 import { ServiceError } from "@/modules/errors";
+import { teamTypeInput } from "@/modules/roles";
 import { createOrganization } from "@/modules/orgs";
 
 // Phase 25: community actions. Any signed-in person may use them (company or not); the module
@@ -121,7 +122,8 @@ export async function createCompanyAction(_prev: ActionResult | null, form: Form
   const result = await runAction(async () => {
     if (!signupOpen()) throw new ServiceError("Creating new companies is closed right now.");
     if ((await companiesOf(me.id)).length > 0) throw new ServiceError("You already belong to a company.");
-    orgId = (await createOrganization({ name: text(form, "name"), ownerId: me.id })).id;
+    const teamType = teamTypeInput.catch("OTHER").parse(text(form, "teamType"));
+    orgId = (await createOrganization({ name: text(form, "name"), ownerId: me.id, teamType })).id;
     return undefined;
   });
   if (!result.ok) return result;

@@ -9,7 +9,7 @@ import type { Health, ProjectStatus, TaskStatus } from "@/modules/projects/rules
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
 type Option = { id: string; name: string };
 
-export function StatusControls({ action, allowed }: { action: Action; allowed: ProjectStatus[] }) {
+export function StatusControls({ action, allowed, depositPending = false }: { action: Action; allowed: ProjectStatus[]; depositPending?: boolean }) {
   const [to, setTo] = useState<ProjectStatus | "">("");
   if (allowed.length === 0) return null;
   return (
@@ -29,6 +29,11 @@ export function StatusControls({ action, allowed }: { action: Action; allowed: P
       {to === "CANCELLED" && (
         <Field label="Reason for cancelling">
           <input name="reason" required className={inputClass} />
+        </Field>
+      )}
+      {to === "IN_PROGRESS" && depositPending && (
+        <Field label="Reason to start before the deposit is paid (optional)">
+          <input name="reason" placeholder="Leave empty to wait for the deposit" className={inputClass} />
         </Field>
       )}
       <SubmitButton variant={to === "CANCELLED" ? "danger" : "primary"}>Update status</SubmitButton>
@@ -66,15 +71,28 @@ export function AddAssignmentForm({
   action,
   members,
   splitMode,
+  titles,
 }: {
   action: Action;
-  members: Option[];
+  members: (Option & { jobTitle?: string | null })[];
   splitMode: "PERCENTAGE" | "FIXED_AMOUNT";
+  /** Phase 28: the company's job titles; the role on the project is picked from them. */
+  titles: string[];
 }) {
+  const [role, setRole] = useState("");
   return (
     <ActionForm action={action} resetOnSuccess className="grid gap-3 sm:grid-cols-5 sm:items-end">
       <Field label="Member">
-        <select name="memberId" required defaultValue="" className={inputClass}>
+        <select
+          name="memberId"
+          required
+          defaultValue=""
+          onChange={(e) => {
+            const title = members.find((m) => m.id === e.target.value)?.jobTitle;
+            if (title && titles.includes(title)) setRole(title);
+          }}
+          className={inputClass}
+        >
           <option value="" disabled>
             Choose…
           </option>
@@ -85,9 +103,24 @@ export function AddAssignmentForm({
           ))}
         </select>
       </Field>
-      <Field label="Role on project">
-        <input name="roleOnProject" required placeholder="e.g. Backend developer" className={inputClass} />
-      </Field>
+      {titles.length > 0 ? (
+        <Field label="Role on project">
+          <select name="roleOnProject" required value={role} onChange={(e) => setRole(e.target.value)} className={inputClass}>
+            <option value="" disabled>
+              Choose…
+            </option>
+            {titles.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : (
+        <Field label="Role on project" hint="Set up job titles under Team › Roles & job titles to pick from a list.">
+          <input name="roleOnProject" required placeholder="e.g. Backend developer" className={inputClass} />
+        </Field>
+      )}
       <Field label={splitMode === "PERCENTAGE" ? "Share (%)" : "Amount (GHS)"}>
         <input name="split" required inputMode="decimal" placeholder={splitMode === "PERCENTAGE" ? "40" : "2500.00"} className={inputClass} />
       </Field>

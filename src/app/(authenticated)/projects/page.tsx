@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FolderKanban, LayoutTemplate, Plus, Search } from "lucide-react";
 import { HealthBadge, ProgressBar, ProjectStatusBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, ButtonLink, Card, EmptyState, PageHeader, buttonClass, table } from "@/components/ui";
 import { formatCalendarDate } from "@/lib/dates";
 import { projectStatusLabel } from "@/lib/labels";
@@ -26,7 +26,7 @@ export default async function ProjectsPage({
       <PageHeader
         eyebrow="Work"
         title="Projects"
-        description={canCreate ? "All AGOD projects, their progress and health." : "Projects you are part of."}
+        description={canCreate ? "All the company's projects, their progress and health." : "Projects you are part of."}
         actions={
           canCreate && (
             <>

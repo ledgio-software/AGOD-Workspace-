@@ -295,6 +295,76 @@
       "when": 1791302456737,
       "tag": "20261006160056_sessions_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791315136880,
+      "tag": "20261006193216_roles_and_titles",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791315169684,
+      "tag": "20261006193249_roles_and_titles_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791318964056,
+      "tag": "20261006203604_client_money_flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1791318965401,
+      "tag": "20261006203605_client_money_flow_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1791320983673,
+      "tag": "20261006210943_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791320985155,
+      "tag": "20261006210945_messages_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1791322037183,
+      "tag": "20261006212717_community_growth",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1791322038836,
+      "tag": "20261006212718_community_growth_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791323415991,
+      "tag": "20261006215015_releases",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1791323417329,
+      "tag": "20261006215017_releases_rules",
+      "breakpoints": true
     }
   ]
 }

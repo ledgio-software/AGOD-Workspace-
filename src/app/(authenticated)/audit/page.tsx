@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { Avatar, Card, EmptyState, PageHeader, buttonClass } from "@/components/ui";
 import { formatDateTime } from "@/lib/dates";
 import { describeAuditAction } from "@/lib/labels";

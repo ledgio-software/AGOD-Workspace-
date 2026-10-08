@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { buttonClass, cx } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { listPosts } from "@/modules/community/showcase";
 import { PostGrid } from "./post-grid";
+import { ProjectOfMonth } from "./project-of-month";
 
 export const metadata: Metadata = { title: "Showcase" };
 
@@ -41,6 +42,7 @@ export default async function ShowcasePage({ searchParams }: { searchParams: Pro
           </Link>
         ) : null}
       </div>
+      {page === 1 && !params.q && <ProjectOfMonth />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Filter" className="flex flex-wrap gap-1 rounded-lg bg-surface-muted p-1 text-sm">
           {TABS.map((t) => (

@@ -89,7 +89,7 @@ export async function getProjectStatement(actor: Actor, projectId: string) {
           ? s.allocatedMinor + s.snapshot.agodShareMinor === s.snapshot.projectTotalValueMinor
           : s.allocatedMinor <= s.snapshot.projectTotalValueMinor;
         checks.push({
-          label: `Snapshot ${s.snapshot.sequence}: allocations ${pct ? (s.snapshot.agodShareMinor > 0 ? "plus the AGOD share equal" : "equal") : "do not exceed"} the project value`,
+          label: `Snapshot ${s.snapshot.sequence}: allocations ${pct ? (s.snapshot.agodShareMinor > 0 ? "plus the company share equal" : "equal") : "do not exceed"} the project value`,
           ok,
           detail: `${s.allocatedMinor}${pct && s.snapshot.agodShareMinor > 0 ? ` + ${s.snapshot.agodShareMinor}` : ""} of ${s.snapshot.projectTotalValueMinor} pesewas`,
         });

@@ -1209,3 +1209,185 @@ export const projectMeetings = pgTable(
   ],
 );
 
+
+// Phase 29: the client money flow. A project's payment plan (deposit, milestone and final
+// payments, and approved change requests), each invoiced on its own and signed off by the client;
+// and change requests that add to the project's value. Managers only (row-level security).
+
+export const changeRequests = pgTable(
+  "change_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    amountMinor: money("amount_minor").notNull(),
+    extraDays: integer("extra_days").notNull().default(0),
+    // DRAFT → SENT (to the client) → APPROVED (adds to the project) or REJECTED.
+    status: text("status").notNull().default("DRAFT"),
+    decidedOn: date("decided_on"),
+    decisionNote: text("decision_note"),
+    decidedBy: userRef("decided_by"),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("change_requests_project_idx").on(t.projectId),
+    check("change_requests_status", sql`${t.status} IN ('DRAFT', 'SENT', 'APPROVED', 'REJECTED')`),
+    check("change_requests_title", sql`length(btrim(${t.title})) BETWEEN 3 AND 200`),
+    check("change_requests_amount", sql`${t.amountMinor} >= 0`),
+    check("change_requests_days", sql`${t.extraDays} BETWEEN 0 AND 365`),
+    check("change_requests_decided", sql`(${t.status} IN ('APPROVED', 'REJECTED')) = (${t.decidedOn} IS NOT NULL)`),
+  ],
+);
+
+export const billingStages = pgTable(
+  "billing_stages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    position: integer("position").notNull(),
+    // DEPOSIT (before work starts), MILESTONE, FINAL, or CHANGE (an approved change request).
+    kind: text("kind").notNull(),
+    label: text("label").notNull(),
+    amountMinor: money("amount_minor").notNull(),
+    milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "restrict" }),
+    changeRequestId: uuid("change_request_id").references(() => changeRequests.id, { onDelete: "restrict" }),
+    // The invoice line that bills this stage (cleared if a draft line is removed; a void invoice's
+    // line is marked voided, and the stage can be invoiced again).
+    invoiceLineId: uuid("invoice_line_id").references(() => invoiceLines.id, { onDelete: "set null" }),
+    // Client sign-off: when the work was sent for review, and when (and how) the client accepted.
+    reviewSentOn: date("review_sent_on"),
+    signedOffOn: date("signed_off_on"),
+    signedOffBy: userRef("signed_off_by"),
+    signOffNote: text("sign_off_note"),
+    createdBy: userRef("created_by").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("billing_stages_project_position").on(t.projectId, t.position),
+    uniqueIndex("billing_stages_invoice_line").on(t.invoiceLineId),
+    check("billing_stages_kind", sql`${t.kind} IN ('DEPOSIT', 'MILESTONE', 'FINAL', 'CHANGE')`),
+    check("billing_stages_label", sql`length(btrim(${t.label})) BETWEEN 2 AND 120`),
+    check("billing_stages_amount", sql`${t.amountMinor} > 0`),
+    check("billing_stages_signoff", sql`(${t.signedOffOn} IS NULL) = (${t.signedOffBy} IS NULL)`),
+  ],
+);
+
+// Phase 30: in-app messages between people of the same company: one-to-one and small group
+// conversations. Only the people in a conversation can read it (row-level security); Admins
+// can't read other people's messages.
+
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    // Group conversations may have a name; one-to-one conversations don't.
+    title: text("title"),
+    createdBy: userRef("created_by").notNull(),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt,
+  },
+  (t) => [check("conversations_title", sql`${t.title} IS NULL OR length(btrim(${t.title})) BETWEEN 2 AND 80`)],
+);
+
+export const conversationMembers = pgTable(
+  "conversation_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("conversation_members_unique").on(t.conversationId, t.userId), index("conversation_members_user_idx").on(t.userId)],
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "restrict" }),
+    authorId: userRef("author_id").notNull(),
+    body: text("body").notNull(),
+    createdAt,
+  },
+  (t) => [
+    index("messages_conversation_idx").on(t.conversationId, t.createdAt),
+    check("messages_body", sql`length(btrim(${t.body})) BETWEEN 1 AND 4000`),
+  ],
+);
+
+// Phase 32: change control for regulated (fintech) teams. Each release of a project's software is
+// recorded with what changed, why, its security impact, how it was tested and how to undo it, and
+// goes through approval by someone who didn't write it before it is deployed. Urgent fixes may be
+// deployed first and approved afterwards (emergency path).
+
+export const releases = pgTable(
+  "releases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    versionLabel: text("version_label"),
+    changeSummary: text("change_summary").notNull(),
+    reason: text("reason").notNull(),
+    // LOW, MEDIUM, HIGH; HIGH needs a security review by someone other than the author.
+    securityImpact: text("security_impact").notNull(),
+    testEvidence: text("test_evidence").notNull(),
+    rollbackPlan: text("rollback_plan").notNull(),
+    emergency: boolean("emergency").notNull().default(false),
+    // DRAFT → SUBMITTED → APPROVED → DEPLOYED (→ ROLLED_BACK); or REJECTED. Emergency: SUBMITTED →
+    // DEPLOYED, approved afterwards (decided_* set while DEPLOYED).
+    status: text("status").notNull().default("DRAFT"),
+    createdBy: userRef("created_by").notNull(),
+    submittedBy: userRef("submitted_by"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    securityReviewedBy: userRef("security_reviewed_by"),
+    securityReviewedAt: timestamp("security_reviewed_at", { withTimezone: true }),
+    securityNote: text("security_note"),
+    decidedBy: userRef("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decision: text("decision"),
+    decisionNote: text("decision_note"),
+    deployedBy: userRef("deployed_by"),
+    deployedAt: timestamp("deployed_at", { withTimezone: true }),
+    deployNote: text("deploy_note"),
+    rolledBackBy: userRef("rolled_back_by"),
+    rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+    rollbackNote: text("rollback_note"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("releases_project_idx").on(t.projectId),
+    index("releases_status_idx").on(t.status),
+    check("releases_status", sql`${t.status} IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'DEPLOYED', 'ROLLED_BACK')`),
+    check("releases_impact", sql`${t.securityImpact} IN ('LOW', 'MEDIUM', 'HIGH')`),
+    check("releases_decision", sql`${t.decision} IS NULL OR ${t.decision} IN ('APPROVED', 'REJECTED')`),
+    check("releases_title", sql`length(btrim(${t.title})) BETWEEN 3 AND 200`),
+    check(
+      "releases_texts",
+      sql`length(btrim(${t.changeSummary})) BETWEEN 10 AND 4000 AND length(btrim(${t.reason})) BETWEEN 3 AND 2000
+        AND length(btrim(${t.testEvidence})) BETWEEN 3 AND 4000 AND length(btrim(${t.rollbackPlan})) BETWEEN 3 AND 2000`,
+    ),
+  ],
+);

@@ -57,6 +57,11 @@ export default async function MemberPage({ params }: Params) {
               {p.communityRole === "ORGANIZER" && <Badge tone="violet">Organizer</Badge>}
               {p.reviewer && <Badge tone="green">Reviewer</Badge>}
               {p.wantsMentor && <Badge tone="amber">Looking for a mentor</Badge>}
+              {p.mentorOpen && p.reviewer && (
+                <Link href="/mentors">
+                  <Badge tone="green">Open to mentoring</Badge>
+                </Link>
+              )}
               <span>
                 {counts.posts} {counts.posts === 1 ? "project" : "projects"} · {counts.reviews} {counts.reviews === 1 ? "review" : "reviews"} given
               </span>

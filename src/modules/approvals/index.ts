@@ -1,9 +1,11 @@
-import { and, asc, count, eq, inArray, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
 import {
+  auditEvents,
+  organizations,
   compensationSnapshotLines,
   compensationSnapshots,
   paymentTransactions,
@@ -51,6 +53,37 @@ async function managersAndOwner(tx: Tx, project: { projectOwnerId: string }) {
 async function teamMemberIds(tx: Tx, projectId: string) {
   const rows = await tx.execute<{ member_id: string }>(sql`select member_id from app_project_team(${projectId})`);
   return [...new Set(rows.rows.map((r) => r.member_id))];
+}
+
+/**
+ * Phase 28, two people for money: unless the company allows it (small teams), nobody approves a
+ * project that pays them, or that they asked to have approved. Returns why, or null.
+ */
+async function selfApprovalBlock(tx: Tx, actor: Actor, projectId: string, payees: { memberId: string; amountMinor: number }[]): Promise<string | null> {
+  const [org] = await tx.select({ allow: organizations.allowSelfApproval }).from(organizations).where(eq(organizations.id, actor.orgId));
+  if (org?.allow) return null;
+  const tail = " A company with only one manager can allow this on the Company page.";
+  if (payees.some((p) => p.memberId === actor.id && p.amountMinor > 0)) {
+    return `You are paid on this project, so someone else must approve it.${tail}`;
+  }
+  const [requested] = await tx
+    .select({ actorId: auditEvents.actorId })
+    .from(auditEvents)
+    .where(and(eq(auditEvents.projectId, projectId), eq(auditEvents.action, "project.approval_requested")))
+    .orderBy(desc(auditEvents.createdAt))
+    .limit(1);
+  if (requested?.actorId === actor.id) return `You asked for this approval, so someone else must approve it.${tail}`;
+  return null;
+}
+
+/** For the project page: why this person can't approve the project (or null). */
+export async function approvalBlockFor(actor: Actor, projectId: string): Promise<string | null> {
+  return withActor(actor, async (tx) => {
+    const [project] = await tx.select().from(projects).where(eq(projects.id, projectId));
+    if (!project) return null;
+    const plan = await previewCompensationTx(tx, project);
+    return selfApprovalBlock(tx, actor, projectId, plan.lines);
+  });
 }
 
 /** Members (for their own projects) and managers ask for the work to be approved. */
@@ -123,6 +156,8 @@ export async function approveProject(
     }
 
     const plan = await previewCompensationTx(tx, project);
+    const blocked = await selfApprovalBlock(tx, actor, projectId, plan.lines);
+    if (blocked) throw new ServiceError(blocked);
     const taskRows = await tx
       .select({ id: tasks.id, title: tasks.title, status: tasks.status, required: tasks.required })
       .from(tasks)
@@ -143,8 +178,8 @@ export async function approveProject(
       plan.roundingNote,
       plan.agodShareMinor > 0
         ? project.splitMode === "PERCENTAGE"
-          ? `AGOD share (${formatPercent(project.agodShareBasisPoints)}): ${formatMoney(plan.agodShareMinor, project.currency)}.`
-          : `Not allocated to the team, kept by AGOD: ${formatMoney(plan.agodShareMinor, project.currency)}.`
+          ? `Company share (${formatPercent(project.agodShareBasisPoints)}): ${formatMoney(plan.agodShareMinor, project.currency)}.`
+          : `Not allocated to the team, kept by the company: ${formatMoney(plan.agodShareMinor, project.currency)}.`
         : null,
     ]
       .filter(Boolean)

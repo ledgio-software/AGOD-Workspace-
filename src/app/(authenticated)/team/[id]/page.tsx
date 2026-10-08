@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CircleCheck, CircleSlash, Clock, FolderKanban, Hourglass, ListChecks, Loader, Wallet } from "lucide-react";
+import { ArrowLeft, CircleCheck, CircleSlash, Clock, FolderKanban, Hourglass, ListChecks, Loader, MessageCircle, Wallet } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { Badge, PayoutStatusBadge, ProjectStatusBadge, TaskStatusBadge } from "@/components/badges";
-import { Avatar, Card, EmptyState, StatCard, compactTable as ct, table } from "@/components/ui";
+import { Avatar, Card, EmptyState, StatCard, buttonClass, compactTable as ct, table } from "@/components/ui";
 import { formatCalendarDate, formatDate, formatDateTime } from "@/lib/dates";
 import { adjustmentTypeLabel, paymentMethodLabel, roleLabel } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
@@ -58,6 +58,11 @@ export default async function ContributionHistoryPage({ params }: { params: Prom
         <div className="flex gap-2 sm:ml-auto">
           <Badge tone="blue">{roleLabel[member.role]}</Badge>
           <Badge tone={member.active ? "green" : "gray"}>{member.active ? "Active" : "Inactive"}</Badge>
+          {member.active && member.id !== actor.id && (
+            <Link href={`/messages?to=${member.id}`} className={buttonClass("secondary", "sm")}>
+              <MessageCircle className="size-4" aria-hidden /> Message
+            </Link>
+          )}
         </div>
       </div>
 

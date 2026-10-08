@@ -11,6 +11,7 @@ import {
   users,
   orgMembers,
   organizations,
+  jobTitles,
 } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { DEFAULT_CURRENCY, parseMoney, parsePercent } from "@/lib/money";
@@ -72,7 +73,7 @@ export const projectInput = z
         if (!v || v.trim() === "") return 0;
         const bps = parsePercent(v);
         if (bps === null) {
-          ctx.addIssue({ code: "custom", message: "Enter the AGOD share as a percentage from 0 to 100, e.g. 30" });
+          ctx.addIssue({ code: "custom", message: "Enter the company share as a percentage from 0 to 100, e.g. 30" });
           return z.NEVER;
         }
         return bps;
@@ -269,6 +270,13 @@ export async function changeProjectStatus(
     if (!canTransition(project.status, input.to)) {
       throw new ServiceError(`A project cannot move from ${project.status} to ${input.to} here.`);
     }
+    // Phase 29: "no deposit, no work" (company setting); a manager may start anyway with a reason.
+    let depositOverride: string | null = null;
+    if (input.to === "IN_PROGRESS" && project.status === "PLANNING") {
+      const { depositBlock } = await import("@/modules/billing");
+      depositOverride = await depositBlock(tx, actor.orgId, project);
+      if (depositOverride && !input.reason) throw new ServiceError(depositOverride);
+    }
     await tx
       .update(projects)
       .set({ status: input.to, version: project.version + 1 })
@@ -280,7 +288,7 @@ export async function changeProjectStatus(
       projectId,
       action: "project.status_changed",
       before: { status: project.status },
-      after: { status: input.to },
+      after: { status: input.to, ...(depositOverride ? { startedWithoutDeposit: true } : {}) },
       reason: input.reason ?? null,
       request,
     });
@@ -549,8 +557,10 @@ export async function previewCompensationTx(tx: Tx, project: ProjectRow): Promis
 export async function listActiveMembers(actor: Actor) {
   return withActor(actor, (tx) =>
     tx
-      .select({ id: orgMembers.id, name: orgMembers.name, role: orgMembers.role })
+      // Phase 28: with their job title, the usual role on a project.
+      .select({ id: orgMembers.id, name: orgMembers.name, role: orgMembers.role, jobTitle: jobTitles.name })
       .from(orgMembers)
+      .leftJoin(jobTitles, eq(jobTitles.id, orgMembers.jobTitleId))
       .where(eq(orgMembers.active, true))
       .orderBy(asc(orgMembers.name)),
   );

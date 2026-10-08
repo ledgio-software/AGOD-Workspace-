@@ -121,6 +121,21 @@ Redeploy after changing them.
 - Public pages are listed in `src/proxy.ts`; they read the session when there is one
   (`getSignedIn`), and community pages use `requireMember()` (signed in, company optional).
 
+## Mentors, tools & prompts, project of the month (Phase 31)
+
+| Page | Who | What |
+|---|---|---|
+| `/mentors` | everyone | Reviewers open to mentoring, best match first for a signed-in member (shared tools score two, the same city one; mentors with space first). Members ask with a goal. |
+| `/community/mentoring` | members | Offer to mentor (Reviewers: on/off, 1 to 5 people, what you help with); answer requests; your mentors and mentees. Once a mentor accepts, both see each other's email to agree how to meet. A member asks at most 2 mentors at a time; either side can end it. Emails on a new request and on the answer. |
+| `/library`, `/library/<id>` | everyone | Tools (link), prompts (text with a Copy button) and guides (link) shared by members, with tags, "works on slow internet" and "free". Members mark items useful (not their own); featured and most useful first. Organizers feature items and hide reported ones. |
+| `/community/library/new` | members (after the code of conduct) | Share an item; 10 a day. The author edits or removes it. |
+| `/showcase` | everyone | Last month's project of the month and this month's leaders. |
+| `/showcase/<id>` | members | One vote a month for a project that isn't yours (vote again to take it back, or vote for another to move it). Organizers can pick last month's project themselves, with a note. |
+
+When a month ends, the daily job (and the first page that shows it) settles it: the project with
+the most votes becomes project of the month; on a tie, the one that got there first. Months are in
+Accra time. Winners get a "Project of the month" badge on their project.
+
 ## Next
 
-Mentorship matching, the tools and prompts library and project of the month (Phase 28).
+Jobs board, team finder, badges, events calendar, partners page and metrics.

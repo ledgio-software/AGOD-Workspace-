@@ -98,10 +98,10 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
-          <Card title="Contacts" description="The primary contact is who AGOD talks to first.">
+          <Card title="Contacts" description="The primary contact is who you talk to first.">
             {activeContacts.length === 0 ? (
               <EmptyState icon={UserRound} title="No contacts yet">
-                {canEdit ? "Add the person AGOD deals with. The first contact becomes the primary one." : undefined}
+                {canEdit ? "Add the person you deal with. The first contact becomes the primary one." : undefined}
               </EmptyState>
             ) : (
               <ul className="-my-2 divide-y divide-line">

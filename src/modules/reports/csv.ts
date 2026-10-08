@@ -34,7 +34,7 @@ const amountField = (minor: number) => `"${major(minor)}"`;
 
 type Cell = string | { amount: number };
 
-function toCsv(headers: string[], rows: Cell[][]): string {
+export function toCsv(headers: string[], rows: Cell[][]): string {
   const lines = rows.map((cells) => cells.map((v) => (typeof v === "object" ? amountField(v.amount) : csvField(v))).join(","));
   // BOM so Excel opens UTF-8 correctly.
   return `\uFEFF${headers.map(csvField).join(",")}\r\n${lines.join("\r\n")}${lines.length ? "\r\n" : ""}`;

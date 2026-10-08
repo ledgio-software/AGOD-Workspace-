@@ -322,3 +322,68 @@ Phase 9 (file attachments in Vercel Blob).
 | Emails | Confirmation on joining, a reminder from the daily job for sessions in the next 24 hours, and emails on time/link changes and cancellations. |
 | Archive | The host adds a recording link and notes after the session; past sessions are listed with them. |
 | Not included | Waitlists, recurring sessions, in-app video, attendance tracking. |
+
+## Phase 28 decisions (2026-10-06): roles, job titles, two people for money
+
+| Decision | Choice |
+|---|---|
+| Roles | Built-in Team Member, Project Manager and Admin stay (unchangeable). A company makes its own roles by copying one and switching **permission groups** off (12 groups, e.g. "Pay the team", "Approve finished projects"). A company role can only narrow its starting role, never widen it. |
+| Enforcement | The application checks the role's groups. Row-level security keeps enforcing the starting role, which the database copies onto the membership (a trigger), so a bug can never give more than the starting role. What data someone sees (all projects or only their own) follows the starting role. |
+| Safety | Always one active Admin with the full built-in role (database guard). Nobody changes their own role, hands out access they don't have, or changes/deactivates/sets a temporary password for someone with more access. Role, job title and setting changes are audited. |
+| Job titles | Each company's own list; they grant nothing. "Role on project" is picked from the list (pre-filled from the person's title); free text remains when a company has no titles. |
+| Team type | "What kind of team are you?" (Software, Fintech, Other) on the Roles page (and when creating a company from the community): adds suggested titles and roles (Team Lead, Finance, and Compliance for fintech), only what's missing. The dashboard asks until the company has job titles. |
+| Two people for money | On for new companies: nobody approves a project that pays them or that they asked to have approved, and nobody records a payment or adjustment on their own payout (the database refuses the payout and payment rows too). A one-manager company may switch it off on the Company page, with a reason (audited). Companies that existed before Phase 28 start with it off, so nothing breaks; Admins should switch it on. |
+| Password reset | Completing a reset link also confirms the email (and finishes sign-up), since it proves the person owns the address. |
+| Wording | "AGOD share" is now "company share" in the app, since every company uses it. |
+
+## Phase 29 decisions (2026-10-06): client money flow
+
+| Decision | Choice |
+|---|---|
+| Payment plan | Per client (external) project: stages of kind Deposit, Milestone, Final or Change, in amounts (pesewas) that never add up to more than the project's value. Presets 50/50 (the company's usual deposit), 40/30/30, 100% upfront, 100% on completion; the last stage takes the rounding remainder. Presets replace only stages not yet invoiced; change payments stay. |
+| Invoicing | One draft invoice per stage, for the project's customer, from the Billing tab (`invoice.manage`). The stage's status follows its invoice: not invoiced, draft, invoiced, part paid, paid. A voided invoice frees the stage. An invoiced stage keeps its amount and is never deleted (database guard). |
+| Deposit rule | Company setting "No deposit, no work" (off by default): a client project can't move from Planning to In progress until its deposit stage is paid. A manager may start anyway with a written reason, recorded in the audit log. |
+| Client sign-off | Recorded by a manager on each stage: when the work went for review, and when and how the client accepted (e.g. "Email from Ama"). The answer deadline is the company's review days in working days (default 10, Mon–Fri, holidays not counted). Silence is not turned into acceptance automatically; the page says when the time is up. No client portal yet. |
+| Change requests | Draft → sent → approved or rejected (with date and how the client decided). Approval needs the project to be editable; it adds the price to the project's value (so percentage splits grow with it), adds a Change payment to the plan, and moves the target date by the extra days. Decided requests never change (database guard). |
+| Paying the team | Company setting: on approval (default, as before) or in step with the client. In step: for a client project, a payout can be paid up to owed × (client paid ÷ project value), whole pesewas rounded down; internal projects are paid on approval. Client paid = each issued invoice's payments shared across its lines in proportion. Enforced in the app and by a database trigger (`app_payout_releasable`). |
+| Who | Plans, sign-off and change requests: "Create and edit projects". Invoices: "Invoices". Settings: "Company settings". Team members never see a project's billing. |
+| Not included | Withholding tax and VAT on client payments (tax rates as settings come later, after advice), online client sign-off links, automatic reminders to clients. |
+
+## Phase 30 decisions (2026-10-06): messages
+
+| Decision | Choice |
+|---|---|
+| What | Private conversations inside a company: one-to-one (one per pair, reused) and groups of up to 10 people with an optional name. Project discussion stays on the project's Discussion tab. The community keeps Discord and WhatsApp (Phase 25); this is for a company's own team. |
+| Privacy | Only the people in a conversation can read or write in it, whatever their role: Admins can't read other people's messages (row-level security). Messages can't be edited or deleted. The page reminds people not to share passwords or payout amounts. |
+| Who | Anyone active in the company can message anyone active in it. People added later can't join an existing conversation (start a new group). Nobody can write into a conversation whose other people have all left. |
+| Unread | Per person and conversation, from their last read time. The icon (sidebar and phone top bar) checks every 30 seconds while the page is visible; an open conversation refreshes every 10 seconds. No WebSockets or paid real-time service. |
+| Reminders | The daily job adds one notification a day when someone has messages unread for over an hour; it shows in My work and goes out in the daily email (which people can turn off), linking to the conversation. |
+| Not included | Attachments, reactions, editing, read receipts, typing indicators, push notifications, adding people to existing conversations, clients in conversations. |
+
+## Phase 31 decisions (2026-10-06): mentorship, tools & prompts library, project of the month
+
+| Decision | Choice |
+|---|---|
+| Who mentors | Reviewers who switch on "open to mentoring", for 1 to 5 people at once, with a note on what they help with. |
+| Matching | Simple and explainable: mentors with space first, then shared tools (2 points each) and the same city (1 point). The card says why it's a good match. No algorithmic profiling. |
+| Asking | A member asks with a goal (10 to 500 characters); at most 2 open requests or mentorships at a time; one open request per mentor. The mentor accepts (only with space) or declines, with an optional note. |
+| Contact | Accepting shares both email addresses (both agreed); before that, no email is shown. Meetings happen outside the app (call, WhatsApp, meet-up). |
+| Library | Tools and guides need a link; prompts need the text (no passwords or personal data, the form says). Tags, "works on slow internet", "free". "Useful" marks (one per member, not on your own). Organizers feature and hide; 10 new items a day per member. Public, so visitors learn too. |
+| Project of the month | One vote per member per month (Accra time), movable until the month ends, never for your own project. The month's leader wins; ties go to whoever reached the count first. Organizers can override with a note (shown). Settled by the daily job, and lazily by the first page that shows it. |
+| Not included | Mentorship sessions tracking, ratings of mentors, comments on library items, prizes. |
+
+## Phase 32 decisions (2026-10-06): release approvals (fintech extras)
+
+| Decision | Choice |
+|---|---|
+| What | Change control for teams that must show who changed what (fintech, banks' suppliers): every change going live is a release on its project with what changes, why, how it was tested, how to undo it and its security impact (low, medium, high). Details in `docs/RELEASES.md`. |
+| Switch | Company setting "Release approvals", off by default and on for fintech teams (sign-up or "What kind of team are you?"). Changing it needs a reason and is audited. With it off, existing releases stay visible. |
+| Steps | Draft → submitted → approved or rejected → deployed → (rolled back). A submitted release can't be edited; it can go back to draft only before the security check. |
+| Not the author | The security check, the approval and the deployment are each done by someone other than the author (the approver also not the person who submitted it). A company that allows one person to approve and pay their own work (Phase 28) also allows this, so one-manager teams aren't stuck. |
+| Security check | Anyone on the project other than the author, with a note on what they checked. Needed before a high-impact release can be approved; optional otherwise. |
+| Who approves | Managers with "Approve finished projects" (`release.approve`). Anyone on the project writes releases, does the security check, deploys and records rollbacks (`release.manage`). |
+| Emergency | A release marked emergency can be deployed once submitted, before approval, by someone other than the author with a written reason; managers are told and approve or reject it afterwards. Rejecting a deployed release asks for a rollback. |
+| Enforced by | The release service and the database (`releases_guard`: order of steps, no edits after submitting, each step recorded once, not the author, managers decide, the security check first for high impact). |
+| Evidence | Admins with "Company settings" (`audit.viewAll`) download a CSV of every release written in a date range with each step, who did it (name and email) and when, and two yes/no columns saying the approval and deployment were by someone other than the author. Each download is audited. |
+| Not included | Links to a deployment pipeline (CI/CD gates), automatic release notes, four-eyes on infrastructure changes outside the app, tax settings. |
+

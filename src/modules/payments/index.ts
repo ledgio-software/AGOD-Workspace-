@@ -1,8 +1,8 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { adjustments, paymentTransactions, payoutLedgerEntries, projects, users } from "@/lib/db/schema";
+import { adjustments, organizations, paymentTransactions, payoutLedgerEntries, projects, users } from "@/lib/db/schema";
 import { todayInOperatingZone } from "@/lib/dates";
 import { formatMoney, parseMoney } from "@/lib/money";
 import { type Actor, assertCan } from "@/lib/permissions";
@@ -65,6 +65,20 @@ function rethrowGuard(error: unknown): never {
   throw error;
 }
 
+/** Phase 29: how much of a payout may be paid so far (see app_payout_releasable). */
+async function releasableOf(tx: Tx, entryId: string): Promise<number> {
+  return Number((await tx.execute<{ r: string }>(sql`select app_payout_releasable(${entryId}) as r`)).rows[0].r);
+}
+
+/** Phase 28, two people for money (the database refuses it too). */
+async function assertNotOwnPayout(tx: Tx, actor: Actor, payeeId: string) {
+  if (payeeId !== actor.id) return;
+  const [org] = await tx.select({ allow: organizations.allowSelfApproval }).from(organizations).where(eq(organizations.id, actor.orgId));
+  if (!org?.allow) {
+    throw new ServiceError("This is your own payout, so someone else must record it. A company with only one Admin can allow this on the Company page.");
+  }
+}
+
 async function loadEntry(tx: Tx, entryId: string) {
   const [row] = await tx
     .select({ entry: payoutLedgerEntries, projectCode: projects.code, projectName: projects.name })
@@ -100,6 +114,15 @@ export async function recordPayment(
   if (input.paidOn > todayInOperatingZone()) throw new ServiceError("The payment date cannot be in the future.");
   return withActor(actor, async (tx) => {
     const { entry, projectCode, projectName } = await loadEntry(tx, entryId);
+    await assertNotOwnPayout(tx, actor, entry.memberId);
+    // Phase 29: when the company pays the team in step with the client (the database refuses it too).
+    const before = await balanceOf(tx, entry);
+    const releasable = await releasableOf(tx, entryId);
+    if (releasable < before.effectiveOwedMinor && before.paidMinor + input.amount > releasable) {
+      throw new ServiceError(
+        `Only ${formatMoney(Math.max(releasable - before.paidMinor, 0), entry.currency)} of this payout can be paid now: the team is paid in step with what the client has paid for ${projectCode}.`,
+      );
+    }
     let payment;
     try {
       [payment] = await tx
@@ -173,6 +196,7 @@ export async function createAdjustmentTx(
 ) {
   assertCan(actor, "adjustment.create");
   const { entry, projectCode } = await loadEntry(tx, entryId);
+  await assertNotOwnPayout(tx, actor, entry.memberId);
   let adjustment;
   try {
     [adjustment] = await tx
@@ -251,6 +275,8 @@ export async function getPayout(actor: Actor, entryId: string) {
     return {
       ...row,
       balance,
+      /** Phase 29: what may be paid so far in total (less than owed while the client hasn't paid enough). */
+      releasableMinor: await releasableOf(tx, entryId),
       payments: payments.map((p) => ({ ...p.payment, recordedByName: p.recordedByName })),
       adjustments: adjustmentRows.map((a) => ({ ...a.adjustment, createdByName: a.createdByName })),
     };

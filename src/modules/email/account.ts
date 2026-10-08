@@ -137,3 +137,27 @@ export function sessionChangedMessage(o: { name: string; title: string; when: st
     footer: "You get this because you joined the session.",
   });
 }
+
+/** Phase 31: a member asks someone to mentor them. */
+export function mentorRequestMessage(o: { name: string; mentee: string; goal: string; url: string }) {
+  return message({
+    subject: `${o.mentee} would like you to mentor them`,
+    name: o.name,
+    lines: [`${o.mentee} asked you to mentor them in the community.`, `What they want help with: "${o.goal}"`, "Accept or decline on your Mentoring page. If you accept, you both see each other's email to arrange how you meet."],
+    button: { label: "Answer the request", url: o.url },
+    footer: "You get this email because you're open to mentoring. Turn it off on your Mentoring page.",
+  });
+}
+
+/** Phase 31: the mentor's answer. */
+export function mentorAnswerMessage(o: { name: string; mentor: string; accepted: boolean; note: string | null; mentorEmail: string | null; url: string }) {
+  return message({
+    subject: o.accepted ? `${o.mentor} will mentor you` : `${o.mentor} can't mentor you right now`,
+    name: o.name,
+    lines: o.accepted
+      ? [`Good news: ${o.mentor} accepted your mentoring request.`, ...(o.note ? [`Their note: "${o.note}"`] : []), `Write to them at ${o.mentorEmail} to agree how and when you meet.`]
+      : [`${o.mentor} can't take you on right now.`, ...(o.note ? [`Their note: "${o.note}"`] : []), "Try another mentor: the list shows who has space."],
+    button: { label: o.accepted ? "See your mentorship" : "Find another mentor", url: o.url },
+    footer: "You get this email because you asked for a mentor in the community.",
+  });
+}

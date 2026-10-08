@@ -98,7 +98,7 @@ describe("AGOD share", () => {
   it("requires the team to total 100% minus the share", () => {
     const result = calculateCompensation(plan({ agodShareBasisPoints: 3_000, lines: [pct(6_000), pct(4_000)] }));
     expect(result.valid).toBe(false);
-    expect(result.errors[0]).toMatch(/total exactly 70.00%.*30.00% AGOD share.*currently 100.00%/);
+    expect(result.errors[0]).toMatch(/total exactly 70.00%.*30.00% company share.*currently 100.00%/);
   });
 
   it("keeps the rounding remainder in the AGOD share, so members get exact floors", () => {
@@ -109,7 +109,7 @@ describe("AGOD share", () => {
     expect(result.lines.map((l) => [l.amountMinor, l.roundingAdjustmentMinor])).toEqual([[3_500, 0], [3_500, 0]]);
     expect(result.agodShareMinor).toBe(3_001);
     expect(result.allocatedMinor + result.agodShareMinor).toBe(10_001);
-    expect(result.roundingNote).toMatch(/1 pesewa .* AGOD share/);
+    expect(result.roundingNote).toMatch(/1 pesewa .* company share/);
   });
 
   it("allows AGOD to keep everything only if the team lines are 0%", () => {

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, FilePen, FileText, Plus, Search, Settings, Wallet } from "lucide-react";
 import { AccessDenied } from "@/components/access-denied";
 import { InvoiceStateBadge } from "@/components/badges";
-import { inputClass } from "@/components/form";
+import { inputClass } from "@/components/input-class";
 import { ButtonLink, Card, EmptyState, PageHeader, StatCard, buttonClass, table } from "@/components/ui";
 import { addDays } from "@/modules/notifications/deadlines";
 import { formatCalendarDate, todayInOperatingZone } from "@/lib/dates";
@@ -29,7 +29,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <PageHeader
         eyebrow="Money"
         title="Invoices"
-        description="What customers owe AGOD: drafts, issued invoices and payments received."
+        description="What customers owe the company: drafts, issued invoices and payments received."
         actions={
           <>
             {can(actor, "invoice.settings") && (

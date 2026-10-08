@@ -112,7 +112,7 @@ export function ProjectForm({
       </Field>
       <Field
         label="Compensation split"
-        hint={splitModeLocked ? "Remove all team splits to switch modes." : "One mode per project (decision 3)."}
+        hint={splitModeLocked ? "Remove all team splits to switch modes." : "Percentages: the company keeps a share and the team splits the rest. Fixed amounts: each person gets a set amount and the company keeps the rest."}
       >
         <select
           name="splitMode"
@@ -120,12 +120,12 @@ export function ProjectForm({
           onChange={(e) => setSplitMode(e.target.value as "PERCENTAGE" | "FIXED_AMOUNT")}
           className={inputClass}
         >
-          <option value="PERCENTAGE">Percentages (AGOD share + team = 100%)</option>
-          <option value="FIXED_AMOUNT">Fixed amounts (AGOD keeps the rest)</option>
+          <option value="PERCENTAGE">Percentages (company share + team = 100%)</option>
+          <option value="FIXED_AMOUNT">Fixed amounts (company keeps the rest)</option>
         </select>
       </Field>
       {splitMode === "PERCENTAGE" ? (
-        <Field label="AGOD share (%)" hint="What the company keeps. Team percentages must total the rest.">
+        <Field label="Company share (%)" hint="What the company keeps. Team percentages must total the rest.">
           <input
             name="agodShare"
             inputMode="decimal"
@@ -134,7 +134,7 @@ export function ProjectForm({
           />
         </Field>
       ) : (
-        <p className="self-end text-sm text-muted">AGOD keeps whatever the fixed amounts don&apos;t use.</p>
+        <p className="self-end text-sm text-muted">The company keeps whatever the fixed amounts don&apos;t use.</p>
       )}
       <div className="sm:col-span-2 border-t border-line pt-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Owner and dates</h3>

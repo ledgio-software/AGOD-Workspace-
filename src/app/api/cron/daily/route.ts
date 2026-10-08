@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { previousMonth, settleMonth, thisMonth } from "@/modules/community/project-month";
 import { sendSessionReminders } from "@/modules/community/sessions";
 import { runDailyReminders } from "@/modules/jobs/daily";
 
@@ -25,7 +26,12 @@ export async function GET(request: Request) {
       console.error("Session reminders failed", error instanceof Error ? error.message : error);
       return { sent: 0, failed: -1 };
     });
-    return Response.json({ ...companies, sessionReminders: sessions });
+    // Phase 31: once a month is over, its project of the month is settled from the votes.
+    const projectOfTheMonth = await settleMonth(previousMonth(thisMonth())).catch((error) => {
+      console.error("Project of the month failed", error instanceof Error ? error.message : error);
+      return null;
+    });
+    return Response.json({ ...companies, sessionReminders: sessions, projectOfTheMonth });
   } catch (error) {
     console.error("Daily reminders job failed", error instanceof Error ? error.message : error);
     return Response.json({ error: "Job failed" }, { status: 500 });

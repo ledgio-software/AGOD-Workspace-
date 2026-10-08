@@ -35,6 +35,10 @@ export const memberProfiles = pgTable(
     // Volunteers to review work and mentor (the handbook's Reviewer role).
     reviewer: boolean("reviewer").notNull().default(false),
     wantsMentor: boolean("wants_mentor").notNull().default(false),
+    // Phase 31: open to mentoring (Reviewers), for how many people at once, and what with.
+    mentorOpen: boolean("mentor_open").notNull().default(false),
+    mentorCapacity: integer("mentor_capacity").notNull().default(2),
+    mentorNote: text("mentor_note"),
     // BUILDER (everyone) or ORGANIZER (moderators).
     communityRole: text("community_role").notNull().default("BUILDER"),
     // PUBLIC: anyone can see it; MEMBERS: only signed-in members.
@@ -56,6 +60,8 @@ export const memberProfiles = pgTable(
     check("member_profiles_city", sql`${t.city} IS NULL OR length(${t.city}) <= 60`),
     check("member_profiles_tools", sql`cardinality(${t.tools}) <= 15`),
     check("member_profiles_role", sql`${t.communityRole} IN ('BUILDER', 'ORGANIZER')`),
+    check("member_profiles_mentor_capacity", sql`${t.mentorCapacity} BETWEEN 1 AND 5`),
+    check("member_profiles_mentor_note", sql`${t.mentorNote} IS NULL OR length(${t.mentorNote}) <= 300`),
     check("member_profiles_visibility", sql`${t.visibility} IN ('PUBLIC', 'MEMBERS')`),
     check("member_profiles_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
     check("member_profiles_urls", sql`(${httpsUrl(t.websiteUrl)}) AND (${httpsUrl(t.githubUrl)}) AND (${httpsUrl(t.linkedinUrl)}) AND (${httpsUrl(t.xUrl)})`),
@@ -82,7 +88,7 @@ export const communityReports = pgTable(
     index("community_reports_status_idx").on(t.status, t.createdAt),
     // One open report per person and thing.
     uniqueIndex("community_reports_one_open").on(t.reporterId, t.targetType, t.targetId).where(sql`${t.status} = 'OPEN'`),
-    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION')`),
+    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION', 'LIBRARY')`),
     check("community_reports_reason", sql`length(btrim(${t.reason})) BETWEEN 10 AND 1000`),
     check("community_reports_status", sql`${t.status} IN ('OPEN', 'RESOLVED', 'DISMISSED')`),
     check("community_reports_resolved", sql`(${t.status} = 'OPEN') = (${t.resolvedAt} IS NULL) AND (${t.resolvedAt} IS NULL) = (${t.resolvedBy} IS NULL)`),
@@ -264,4 +270,124 @@ export const communitySessionAttendees = pgTable(
     createdAt,
   },
   (t) => [uniqueIndex("community_session_attendees_one").on(t.sessionId, t.userId), index("community_session_attendees_user_idx").on(t.userId)],
+);
+
+// Phase 31: mentorship, the tools & prompts library, and project of the month.
+
+/** A member asks a mentor for help with a goal; the mentor accepts or declines. */
+export const mentorships = pgTable(
+  "mentorships",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mentorId: userRef("mentor_id").notNull(),
+    menteeId: userRef("mentee_id").notNull(),
+    goal: text("goal").notNull(),
+    // PENDING → ACTIVE (accepted) or DECLINED; WITHDRAWN by the mentee before an answer; ENDED by either.
+    status: text("status").notNull().default("PENDING"),
+    responseNote: text("response_note"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    endedBy: userRef("ended_by"),
+    createdAt,
+  },
+  (t) => [
+    index("mentorships_mentor_idx").on(t.mentorId),
+    index("mentorships_mentee_idx").on(t.menteeId),
+    uniqueIndex("mentorships_one_open").on(t.mentorId, t.menteeId).where(sql`${t.status} IN ('PENDING', 'ACTIVE')`),
+    check("mentorships_status", sql`${t.status} IN ('PENDING', 'ACTIVE', 'DECLINED', 'WITHDRAWN', 'ENDED')`),
+    check("mentorships_self", sql`${t.mentorId} <> ${t.menteeId}`),
+    check("mentorships_goal", sql`length(btrim(${t.goal})) BETWEEN 10 AND 500`),
+    check("mentorships_note", sql`${t.responseNote} IS NULL OR length(${t.responseNote}) <= 500`),
+  ],
+);
+
+/** A tool, a prompt that works, or a guide, shared by a member. */
+export const libraryItems = pgTable(
+  "library_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    authorId: userRef("author_id").notNull(),
+    // TOOL (a link), PROMPT (the text to copy), GUIDE (a link to a tutorial or article)
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    url: text("url"),
+    body: text("body"),
+    tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+    // Works on a slow or costly connection (the handbook's Ghana note), and free to use.
+    lowData: boolean("low_data").notNull().default(false),
+    free: boolean("free").notNull().default(false),
+    featuredAt: timestamp("featured_at", { withTimezone: true }),
+    featuredBy: userRef("featured_by"),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    hiddenReason: text("hidden_reason"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("library_items_created_idx").on(t.createdAt),
+    check("library_items_kind", sql`${t.kind} IN ('TOOL', 'PROMPT', 'GUIDE')`),
+    check("library_items_title", sql`length(btrim(${t.title})) BETWEEN 3 AND 120`),
+    check("library_items_summary", sql`length(btrim(${t.summary})) BETWEEN 10 AND 300`),
+    check("library_items_url", httpsUrl(t.url)),
+    check("library_items_body", sql`${t.body} IS NULL OR length(${t.body}) <= 4000`),
+    check("library_items_content", sql`(${t.kind} = 'PROMPT' AND ${t.body} IS NOT NULL) OR (${t.kind} <> 'PROMPT' AND ${t.url} IS NOT NULL)`),
+    check("library_items_tags", sql`cardinality(${t.tags}) <= 8`),
+    check("library_items_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+/** "Useful" marks on library items: one per member and item. */
+export const libraryVotes = pgTable(
+  "library_votes",
+  {
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => libraryItems.id, { onDelete: "restrict" }),
+    voterId: userRef("voter_id").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("library_votes_unique").on(t.itemId, t.voterId)],
+);
+
+/** Each member's vote for project of the month: one per month, never their own project. */
+export const projectVotes = pgTable(
+  "project_votes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => showcasePosts.id, { onDelete: "restrict" }),
+    voterId: userRef("voter_id").notNull(),
+    // "2026-10" (Accra time)
+    month: text("month").notNull(),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("project_votes_one_per_month").on(t.voterId, t.month),
+    index("project_votes_month_idx").on(t.month, t.postId),
+    check("project_votes_month", sql`${t.month} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
+  ],
+);
+
+/** The month's winner: the most votes when the month ends, or an organizer's pick. */
+export const projectOfMonth = pgTable(
+  "project_of_month",
+  {
+    month: text("month").primaryKey(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => showcasePosts.id, { onDelete: "restrict" }),
+    votes: integer("votes").notNull().default(0),
+    // Null when chosen by votes.
+    pickedBy: userRef("picked_by"),
+    note: text("note"),
+    createdAt,
+  },
+  (t) => [
+    check("project_of_month_month", sql`${t.month} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
+    check("project_of_month_note", sql`${t.note} IS NULL OR length(${t.note}) <= 500`),
+  ],
 );
