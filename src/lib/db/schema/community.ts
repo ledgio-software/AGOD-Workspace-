@@ -88,7 +88,7 @@ export const communityReports = pgTable(
     index("community_reports_status_idx").on(t.status, t.createdAt),
     // One open report per person and thing.
     uniqueIndex("community_reports_one_open").on(t.reporterId, t.targetType, t.targetId).where(sql`${t.status} = 'OPEN'`),
-    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION', 'LIBRARY', 'JOB', 'TEAM', 'CHAT')`),
+    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION', 'LIBRARY', 'JOB', 'TEAM', 'CHAT', 'ARTICLE', 'ARTICLE_COMMENT')`),
     check("community_reports_reason", sql`length(btrim(${t.reason})) BETWEEN 10 AND 1000`),
     check("community_reports_status", sql`${t.status} IN ('OPEN', 'RESOLVED', 'DISMISSED')`),
     check("community_reports_resolved", sql`(${t.status} = 'OPEN') = (${t.resolvedAt} IS NULL) AND (${t.resolvedAt} IS NULL) = (${t.resolvedBy} IS NULL)`),
@@ -675,5 +675,125 @@ export const chatReads = pgTable(
     lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("chat_reads_unique").on(t.userId, t.channelId)],
+);
+
+// Phase 37: articles. Members write (drafts, then published); everyone reads; members mark them
+// useful, comment and reply, bookmark, and repost with a note; Reviewers stamp them reviewed.
+export const articles = pgTable(
+  "articles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    authorId: userRef("author_id").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    body: text("body").notNull(),
+    tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+    readingMinutes: integer("reading_minutes").notNull().default(1),
+    coverKey: text("cover_key"),
+    coverType: text("cover_type"),
+    coverBytes: integer("cover_bytes"),
+    // DRAFT → PUBLISHED (and back to DRAFT to take it down for edits)
+    status: text("status").notNull().default("DRAFT"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    hiddenReason: text("hidden_reason"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("articles_author_idx").on(t.authorId),
+    index("articles_published_idx").on(t.publishedAt),
+    check("articles_status", sql`${t.status} IN ('DRAFT', 'PUBLISHED')`),
+    check("articles_published", sql`${t.status} = 'DRAFT' OR ${t.publishedAt} IS NOT NULL`),
+    check("articles_title", sql`length(btrim(${t.title})) BETWEEN 5 AND 150`),
+    check("articles_summary", sql`length(btrim(${t.summary})) BETWEEN 10 AND 300`),
+    check("articles_body", sql`length(btrim(${t.body})) BETWEEN 50 AND 30000`),
+    check("articles_tags", sql`cardinality(${t.tags}) <= 5`),
+    check("articles_cover", sql`(${t.coverKey} IS NULL) = (${t.coverType} IS NULL) AND (${t.coverType} IS NULL OR ${t.coverType} IN ('image/png', 'image/jpeg', 'image/webp', 'image/gif'))`),
+    check("articles_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+export const articleClaps = pgTable(
+  "article_claps",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("article_claps_unique").on(t.articleId, t.userId)],
+);
+
+export const articleBookmarks = pgTable(
+  "article_bookmarks",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("article_bookmarks_unique").on(t.articleId, t.userId), index("article_bookmarks_user_idx").on(t.userId, t.createdAt)],
+);
+
+export const articleComments = pgTable(
+  "article_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "restrict" }),
+    authorId: userRef("author_id").notNull(),
+    // A reply to another comment (one level).
+    parentId: uuid("parent_id"),
+    body: text("body").notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    hiddenReason: text("hidden_reason"),
+    createdAt,
+  },
+  (t) => [
+    index("article_comments_article_idx").on(t.articleId, t.createdAt),
+    check("article_comments_body", sql`length(btrim(${t.body})) BETWEEN 2 AND 2000`),
+    check("article_comments_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+/** A Reviewer's stamp: they read it and vouch for it, with a short note. */
+export const articleReviews = pgTable(
+  "article_reviews",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "restrict" }),
+    reviewerId: userRef("reviewer_id").notNull(),
+    note: text("note").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("article_reviews_unique").on(t.articleId, t.reviewerId), check("article_reviews_note", sql`length(btrim(${t.note})) BETWEEN 10 AND 500`)],
+);
+
+/** Sharing an article to your profile and the feed, with your own note on top. */
+export const articleReposts = pgTable(
+  "article_reposts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    note: text("note"),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("article_reposts_unique").on(t.articleId, t.userId),
+    index("article_reposts_created_idx").on(t.createdAt),
+    check("article_reposts_note", sql`${t.note} IS NULL OR length(${t.note}) <= 280`),
+  ],
 );
 

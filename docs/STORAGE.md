@@ -11,6 +11,7 @@ screenshots) its fingerprint.
 | **Pictures are made smaller in the browser** before upload | Largest side at most 1600 pixels, saved as WebP (JPEG on browsers without WebP). GIFs are kept as they are. | A 3 to 7 MB phone screenshot usually becomes 100 to 300 KB: less storage, less mobile data for members, faster pages. Hidden photo details (like GPS location) are removed. |
 | **Each screenshot gets a fingerprint** (SHA-256) | The same picture is stored once, however many projects use it, and can't be added twice to one project. | No duplicates. |
 | **Video demos are links** | Members upload to YouTube (unlisted), Loom or Google Drive and paste the link. | Those services store and compress video for free. |
+| **Article covers** (Phase 37) | One optional cover per article, shrunk in the browser like screenshots. | About the same as one screenshot per article. |
 | **Limits** | 4 MB per file after shrinking, four screenshots per project, five projects a day. | Predictable growth. |
 
 Roughly: at about 250 KB per screenshot, **10 GB holds about 40,000 screenshots**.

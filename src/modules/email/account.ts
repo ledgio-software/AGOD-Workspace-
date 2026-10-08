@@ -227,3 +227,14 @@ export function reviewReplyMessage(o: { name: string; from: string; title: strin
     footer: "You get this email because you shared this project or gave feedback on it.",
   });
 }
+
+/** Phase 37: someone commented on, reviewed or reposted an article (or replied to a comment). */
+export function articleActivityMessage(o: { name: string; from: string; title: string; what: string; quote: string | null; url: string }) {
+  return message({
+    subject: `${o.from} ${o.what} "${o.title}"`,
+    name: o.name,
+    lines: [`${o.from} ${o.what} "${o.title}".`, ...(o.quote ? [`"${o.quote.length > 300 ? `${o.quote.slice(0, 300)}…` : o.quote}"`] : [])],
+    button: { label: "Read it", url: o.url },
+    footer: "You get this email because you wrote this article or commented on it.",
+  });
+}

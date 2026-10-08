@@ -75,6 +75,10 @@ rules, audit) lives behind these functions, not in the pages.
 | `/mentors`, `/library`, `/library/[id]` | everyone (public) | `listMentors`, `listItems`, `getItem` | `community/growth-actions` (signed-in members) |
 | `/community/mentoring`, `/community/library/new`, `/community/library/[id]/edit` | community members | `myMentorships`, `getItem` | `community/growth-actions` |
 | `/community/chat/[slug]` (`?thread=`) | community members | `listChannels`, `openChannel`, `openThread` | `community/chat/actions`: `postChatAction`, `reactChatAction`, `solveChatAction`, `deleteChatAction`, `reportChatAction`, `hideChatAction`, `suggestPeopleAction` |
+| `/articles` (`?sort=useful\|reviewed&tag=&q=`) | public | `articleFeed`, `articleTags` | — |
+| `/articles/[id]` | public (drafts: author; hidden: author and organizers) | `getArticle` | `community/article-actions`: `usefulArticleAction`, `bookmarkAction`, `commentAction`, `deleteCommentAction`, `repostAction`, `reviewArticleAction`, `reportArticleAction`, `reportCommentAction`, `publishAction`, `removeArticleAction`, `unhideArticleAction` |
+| `/articles/[id]/cover` | public (published, visible) | `openCover` | (GET) |
+| `/community/articles`, `/community/articles/new`, `/community/articles/[id]/edit` | members | `myArticles`, `getArticle`, `coversAvailable` | `createArticleAction`, `updateArticleAction` (cover upload; `intent=publish` publishes) |
 | `/api/community/chat` | community members | `?channel=&known=`, `?thread=&known=`, `?channels=1` (polled by the open chat; "unchanged" when nothing changed) | (GET) |
 | `/` and `/community` banner | everyone | `frontPage` (photos, welcome video) | |
 | `/community/front-page` | organizers | `frontPage`, `photosAvailable` | `community/front-page/actions`: `addPhotoAction`, `removePhotoAction`, `videoAction` |

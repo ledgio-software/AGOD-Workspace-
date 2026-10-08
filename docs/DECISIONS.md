@@ -421,6 +421,18 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 37 decisions (2026-10-08): articles
+
+| Decision | Choice |
+|---|---|
+| What | Members write articles (drafts, then publish); everyone reads them without an account. Members mark them useful, save them, comment with one level of replies, and repost them with a note to their profile and the feed. |
+| Format | A small Markdown (headings, lists, quotes, code blocks, bold, italic, code, links) turned straight into React elements, never HTML strings; only https or same-site links become links. No rich-text editor: a Write/Preview switch is lighter on phones and data. |
+| Reviews | Only members with the Reviewer badge stamp an article "Reviewed", once each, with a short note shown on the article; the feed has a Reviewed tab. Readers learn which articles someone checked. |
+| Pictures | One optional cover picture per article (PNG, JPG, WebP, GIF), stored like showcase screenshots and served only for published, visible articles. Without picture storage the editor says covers come later. Pictures inside the text are left out for now. |
+| Emails | The author for comments, reviews and reposts; a commenter for replies to them. Useful marks and bookmarks send nothing. |
+| Safety | Code of conduct first; 5 new articles a day; 30 comments an hour; reports on articles and comments go to the organizers, who hide them; deleted and hidden comments leave a placeholder. |
+| Not included | Pictures inside articles, following writers, a newsletter of new articles, editing comments. |
+
 ## Phase 36 decisions (2026-10-08): community chat and feedback conversations
 
 | Decision | Choice |

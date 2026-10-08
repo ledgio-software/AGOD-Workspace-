@@ -192,6 +192,27 @@ Organizers hide messages straight away (or from the Reports page); hidden and de
 show as "hidden" or "deleted" so threads still make sense. The Discord and WhatsApp links
 (`docs/COMMUNITY.md`, Phase 25) stay for people who prefer them.
 
+## Articles (Phase 37)
+
+| Page | Who | What |
+|---|---|---|
+| `/articles` | everyone, no account needed | The feed: Latest (new articles and reposts, newest first; each article once), Most useful (useful marks in the last 30 days) and Reviewed. Filter by tag, search by words. |
+| `/articles/<id>` | everyone reads; members take part | The article (headings, lists, quotes, code, https links), cover picture, reading time. Members mark it useful, save it for later, comment and reply, repost it with a note, and report it. Members with the Reviewer badge mark it reviewed with a short note. |
+| `/community/articles` | members | My drafts and published articles, and my reading list. |
+| `/community/articles/new`, `/community/articles/<id>/edit` | the author (after the code of conduct) | Write with a Write/Preview switch, tags (up to 5), a cover picture (when picture uploads are on, `docs/STORAGE.md`); save a draft or publish; take it back to draft or delete it. |
+| `/members/<handle>` | everyone | A member's articles and reposts. |
+
+The author gets an email for each comment, review and repost; a commenter gets one when someone
+replies to them. Articles are written in a small Markdown that is turned into page elements (never
+raw HTML), and only https links (or links on this site) become links, so nothing in an article can
+run code in a reader's browser. Limits: 5 new articles a day, 30 comments an hour. Organizers hide
+articles and comments from the Reports page; a hidden article can't be published again until they
+show it.
+
+Learning from other members' work: articles, showcase project pages (screenshots, the video demo
+playing on the page, the live link and the feedback conversations), session recordings and the tools
+& prompts library are all public, so visitors learn without an account.
+
 ## Next
 
 Badges, events calendar, partners page and community numbers.
