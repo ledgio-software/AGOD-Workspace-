@@ -19,6 +19,8 @@ async function member(name: string): Promise<Member> {
 }
 
 const run = randomUUID().slice(0, 8);
+// Hacker News ids are numbers; fresh ones each run, so a reused test database has no clashes.
+const hnId = 1_000_000 + Math.floor(Math.random() * 1_000_000_000);
 const today = new Date().toUTCString();
 const old = new Date(Date.now() - 30 * 86_400_000).toUTCString();
 
@@ -42,8 +44,8 @@ function fakeFetcher(options: { failing?: string[]; points?: number } = {}): { f
     if (source.kind === "hn") {
       return Response.json({
         hits: [
-          { objectID: "4242", title: `Show HN: a tool ${run}`, url: `https://tool.example/${run}`, points: options.points ?? 120, num_comments: 40, created_at: new Date().toISOString() },
-          { objectID: "4243", title: `Ask HN: how do you learn ${run}?`, url: null, points: 80, num_comments: 90, created_at: new Date().toISOString() },
+          { objectID: String(hnId), title: `Show HN: a tool ${run}`, url: `https://tool.example/${run}`, points: options.points ?? 120, num_comments: 40, created_at: new Date().toISOString() },
+          { objectID: String(hnId + 1), title: `Ask HN: how do you learn ${run}?`, url: null, points: 80, num_comments: 90, created_at: new Date().toISOString() },
         ],
       });
     }
@@ -88,9 +90,9 @@ describe("tech news", () => {
     expect(feed.find((i) => i.title === `OpenAI ships a model techcabal ${run}`)!.topic).toBe("AFRICA");
 
     const hn = feed.find((i) => i.title === `Show HN: a tool ${run}`)!;
-    expect(hn).toMatchObject({ url: `https://tool.example/${run}`, points: 120, comments: 40, discussionUrl: "https://news.ycombinator.com/item?id=4242" });
+    expect(hn).toMatchObject({ url: `https://tool.example/${run}`, points: 120, comments: 40, discussionUrl: `https://news.ycombinator.com/item?id=${hnId}` });
     // Ask HN has no link of its own, so the headline links to the discussion.
-    expect(feed.find((i) => i.title === `Ask HN: how do you learn ${run}?`)!.url).toBe("https://news.ycombinator.com/item?id=4243");
+    expect(feed.find((i) => i.title === `Ask HN: how do you learn ${run}?`)!.url).toBe(`https://news.ycombinator.com/item?id=${hnId + 1}`);
 
     expect(mine(await newsFeed(null, { topic: "AFRICA" })).every((i) => i.topic === "AFRICA")).toBe(true);
     expect(mine(await newsFeed(null, { q: `techcabal headline ${run}` }))).toHaveLength(1);
