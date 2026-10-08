@@ -7,6 +7,8 @@ import { Avatar, Callout, Card, Disclosure, buttonClass } from "@/components/ui"
 import { formatDateTime } from "@/lib/dates";
 import { getSignedIn } from "@/lib/session";
 import { FEEDBACK_AREAS, MAX_IMAGES, NEEDS, STATUS_LABEL, getPost, screenshotsAvailable, videoHost } from "@/modules/community/showcase";
+import { videoEmbed } from "@/modules/community/video";
+import { LiteVideo } from "@/components/lite-video";
 import { STATUS_TONE } from "@/modules/community/showcase-labels";
 import {
   addReviewAction,
@@ -44,9 +46,11 @@ export default async function PostPage({ params, searchParams }: Params) {
   const lastMonth = previousMonth(thisMonth());
   const flags = await searchParams;
   const img = (id: string) => `/showcase/${p.id}/images/${id}`;
+  // Phase 35: YouTube, Vimeo, Loom and Drive videos play on the page; other links open elsewhere.
+  const embed = videoEmbed(p.videoUrl);
   const links = [
     p.liveUrl && { url: p.liveUrl, label: "Try it", icon: ExternalLink },
-    p.videoUrl && { url: p.videoUrl, label: `Watch the demo (${videoHost(p.videoUrl)})`, icon: PlayCircle },
+    p.videoUrl && !embed && { url: p.videoUrl, label: `Watch the demo (${videoHost(p.videoUrl)})`, icon: PlayCircle },
     p.repoUrl && { url: p.repoUrl, label: "Code", icon: Code2 },
   ].filter(Boolean) as { url: string; label: string; icon: typeof ExternalLink }[];
 
@@ -121,6 +125,8 @@ export default async function PostPage({ params, searchParams }: Params) {
           </div>
         )}
       </div>
+
+      {embed && <LiteVideo embed={embed} title={`${p.title}: demo`} />}
 
       {images.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -285,7 +291,11 @@ export default async function PostPage({ params, searchParams }: Params) {
                   {p.status !== "SHIPPED" && <ButtonForm action={setPostStatusAction.bind(null, p.id, "SHIPPED")} label="Mark as shipped" />}
                   {p.status !== "NEEDS_REVIEW" && <ButtonForm action={setPostStatusAction.bind(null, p.id, "NEEDS_REVIEW")} label="Ask for more feedback" />}
                 </div>
-                {screenshotsAvailable() && images.length < MAX_IMAGES && <ScreenshotForm action={addScreenshotAction.bind(null, p.id)} />}
+                {screenshotsAvailable() ? (
+                  images.length < MAX_IMAGES && <ScreenshotForm action={addScreenshotAction.bind(null, p.id)} />
+                ) : (
+                  <p className="text-muted">Picture uploads aren&apos;t switched on on this site yet. Add a video link with Edit.</p>
+                )}
                 <ButtonForm action={removePostAction.bind(null, p.id)} label="Take it down" variant="danger" confirmMessage="Take this project down? It disappears from the showcase with its screenshots and feedback." />
               </div>
             </Card>

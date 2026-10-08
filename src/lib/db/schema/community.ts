@@ -536,3 +536,43 @@ export const teamRequests = pgTable(
   ],
 );
 
+// Phase 35: the community front page: organizers choose background photos (a slideshow behind the
+// welcome text) and a welcome video shown beside it.
+export const frontPhotos = pgTable(
+  "front_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storageKey: text("storage_key").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    // What the photo shows, for screen readers.
+    alt: text("alt").notNull(),
+    position: integer("position").notNull().default(0),
+    addedBy: userRef("added_by").notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    check("front_photos_alt", sql`length(btrim(${t.alt})) BETWEEN 3 AND 200`),
+    check("front_photos_type", sql`${t.contentType} IN ('image/png', 'image/jpeg', 'image/webp', 'image/gif')`),
+  ],
+);
+
+/** One row of settings for the community front page. */
+export const communitySettings = pgTable(
+  "community_settings",
+  {
+    id: integer("id").primaryKey().default(1),
+    welcomeVideoUrl: text("welcome_video_url"),
+    welcomeVideoTitle: text("welcome_video_title"),
+    updatedBy: userRef("updated_by"),
+    updatedAt,
+  },
+  (t) => [
+    check("community_settings_one_row", sql`${t.id} = 1`),
+    check("community_settings_video", httpsUrl(t.welcomeVideoUrl)),
+    check("community_settings_title", sql`${t.welcomeVideoTitle} IS NULL OR length(btrim(${t.welcomeVideoTitle})) BETWEEN 2 AND 120`),
+  ],
+);
+

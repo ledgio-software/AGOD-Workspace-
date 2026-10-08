@@ -133,14 +133,25 @@ export function PostForm({
                 <input name="repoUrl" defaultValue={defaults.repoUrl ?? ""} placeholder="https://github.com/…" className={inputClass} />
               </Field>
             </div>
-            <Field label="Video demo (optional)" hint="1 to 3 minutes of screen recording on Loom, YouTube or Google Drive (shared so anyone with the link can view).">
-              <input name="videoUrl" defaultValue={defaults.videoUrl ?? ""} placeholder="https://www.loom.com/share/…" className={inputClass} />
-            </Field>
-            {withScreenshot && (
-              <Field label="Screenshot (optional)" hint="PNG, JPG, WebP or GIF. Pictures are made smaller before upload. You can add up to four on the project page.">
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold">Pictures and video</h2>
+            {withScreenshot ? (
+              <Field label="Picture of your project (optional)" hint="A screenshot: PNG, JPG, WebP or GIF. It's made smaller before upload. You can add up to four on the project page.">
                 <ImageInput name="screenshot" />
               </Field>
+            ) : (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                Picture uploads aren&apos;t switched on on this site yet (an admin needs to connect file storage). You can still add a video link below.
+              </p>
             )}
+            <Field
+              label="Video of your project (optional)"
+              hint="Record 1 to 3 minutes of your screen, upload it to YouTube, Loom or Google Drive (shared so anyone with the link can view), and paste the link here. It plays on your project page."
+            >
+              <input name="videoUrl" defaultValue={defaults.videoUrl ?? ""} placeholder="https://www.youtube.com/watch?v=… or https://www.loom.com/share/…" className={inputClass} />
+            </Field>
           </section>
 
           <section className="space-y-4">

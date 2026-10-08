@@ -411,3 +411,13 @@ Phase 9 (file attachments in Vercel Blob).
 | Enforced by | Row-level security: reactions follow their message (only the conversation's people see or add them; each person adds and removes only their own). Messages still can't be edited or deleted; database checks keep stickers, voice notes and text consistent. |
 | Not included | Custom sticker packs, GIFs, transcribing voice notes, editing or deleting messages, file attachments in messages. |
 
+## Phase 35 decisions (2026-10-08): front page photos and video
+
+| Decision | Choice |
+|---|---|
+| Who chooses | Community organizers, on `/community/front-page`. Up to 6 photos, each with a short description for screen readers. |
+| Photos | Checked like screenshots (PNG, JPG, WebP, GIF, up to 4 MB, made smaller in the browser first), stored once, public, cached for a day. A dark wash over them keeps the text readable on any photo; people who prefer less motion see the first photo only. |
+| Video | A YouTube, Vimeo, Loom or Google Drive link, not an upload: hosting video ourselves would cost storage and data, and those players adapt to slow connections. Only well-formed links from those four are framed; YouTube uses its privacy-enhanced domain. Nothing loads until someone taps play. |
+| Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
+| Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
+

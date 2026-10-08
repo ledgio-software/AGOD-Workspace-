@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  ImagePlay,
   BriefcaseBusiness,
   UsersRound,
   Rocket,
@@ -69,6 +70,7 @@ const icons = {
   releases: Rocket,
   jobs: BriefcaseBusiness,
   teams: UsersRound,
+  frontPage: ImagePlay,
 } as const;
 
 export type IconName = keyof typeof icons;
