@@ -236,6 +236,26 @@ its HTML, never images); entries older than 14 days are skipped and headlines ar
 days. Only https links are stored. A source that fails (blocked, down, not a feed) is skipped and
 its error shown to organizers; the others carry on.
 
+## Search and Google (Phase 39)
+
+| Page | Who | What |
+|---|---|---|
+| `/search` | everyone, no account needed | One search box (the magnifying glass in the header, *Search* in the sidebar) for members, projects, articles, jobs & gigs, sessions, tools & prompts, team finder posts and tech news. Results are grouped by kind (the first 5 of each) with *See all* opening that section already searched. Each section is searched with the same rules as its own page, so visitors find public profiles only and nobody finds hidden posts, drafts or closed jobs. At least 2 letters. |
+
+Google and link previews:
+
+- `/sitemap.xml` lists the public pages and every published article, visible project, open job,
+  session, library item, team finder post and public profile (built from the same lists a visitor
+  sees). `/robots.txt` lets search engines read the public pages and keeps them out of the
+  signed-in areas (`/community`, sign-in pages, company pages).
+- Only production is indexed: Vercel previews and staging answer `Disallow: /` and mark pages
+  `noindex`, so test copies never show up in Google. `SEARCH_INDEXING=off` keeps production out too.
+- Every public page has a title ("Page · Ghana Vibe Coders & Developers"), a description, and a
+  link preview with a branded picture (`src/app/opengraph-image.tsx`) for WhatsApp, X, LinkedIn and
+  Slack. Articles, projects, jobs, sessions, tools, team posts and profiles use their own title and
+  summary. Search result pages aren't indexed (they repeat the sections).
+- After go-live, submit the sitemap in Google Search Console (`docs/GO-LIVE.md`, step 13).
+
 ## Next
 
 Badges, events calendar, partners page and community numbers.

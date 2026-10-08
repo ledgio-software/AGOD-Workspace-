@@ -188,6 +188,7 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Mark an article reviewed with a note (members with the Reviewer badge; not their own) | | Reviewers | ✓ |
 | Show a hidden article again | | | ✓ |
 | Read tech news (Phase 38) | ✓ | ✓ | ✓ |
+| Search the community (Phase 39; visitors find public profiles only, nobody finds hidden posts or drafts) | ✓ | ✓ | ✓ |
 | Mark headlines useful | | ✓ | ✓ |
 | Hide or show headlines; switch news sources off or on; fetch news now | | | ✓ |
 | See reports; hide or show profiles, projects, feedback, sessions, library items, jobs, team finder posts, chat messages, articles and comments; make or remove organizers | | | ✓ |

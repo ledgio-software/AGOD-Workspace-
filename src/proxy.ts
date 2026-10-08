@@ -4,7 +4,7 @@ import { getSessionCookie } from "better-auth/cookies";
 // Optimistic redirect only: a cookie being present is not proof of a valid session.
 // Every page and mutation still verifies the session server-side.
 // Phase 25: the community's public pages are open to visitors (Phase 38: and the news page; Phase 39: robots.txt, the sitemap and the link-preview picture).
-const PUBLIC = /^\/(?:members(?:\/.*)?|showcase(?:\/.*)?|sessions(?:\/.*)?|library(?:\/.*)?|mentors|jobs(?:\/.*)?|teams(?:\/.*)?|articles(?:\/.*)?|news|front\/photos\/[0-9a-f-]{36}|front\/[\w-]+\.webp|code-of-conduct|robots\.txt|sitemap\.xml|opengraph-image[\w-]*)?$/;
+const PUBLIC = /^\/(?:members(?:\/.*)?|showcase(?:\/.*)?|sessions(?:\/.*)?|library(?:\/.*)?|mentors|jobs(?:\/.*)?|teams(?:\/.*)?|articles(?:\/.*)?|news|search|front\/photos\/[0-9a-f-]{36}|front\/[\w-]+\.webp|code-of-conduct|robots\.txt|sitemap\.xml|opengraph-image[\w-]*)?$/;
 
 export function proxy(request: NextRequest) {
   if (!PUBLIC.test(request.nextUrl.pathname) && !getSessionCookie(request)) {

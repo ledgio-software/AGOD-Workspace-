@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, ilike, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { communitySessionAttendees, communitySessions, memberProfiles, users } from "@/lib/db/schema";
@@ -291,8 +291,10 @@ export type SessionCard = {
 const listable = and(isNull(communitySessions.hiddenAt), isNull(communitySessions.cancelledAt), eq(users.active, true));
 
 /** Upcoming (soonest first) or past (newest first, the recordings archive). */
-export async function listSessions(when: "upcoming" | "past", o: { limit?: number; page?: number; hostId?: string } = {}) {
+export async function listSessions(when: "upcoming" | "past", o: { limit?: number; page?: number; hostId?: string; q?: string } = {}) {
   const now = new Date();
+  const q = o.q?.trim().slice(0, 60);
+  const like = q ? `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%` : null;
   const limit = Math.min(o.limit ?? 30, 60);
   const page = Math.max(1, Math.min(o.page ?? 1, 1000));
   const rows = await db
@@ -300,7 +302,7 @@ export async function listSessions(when: "upcoming" | "past", o: { limit?: numbe
     .from(communitySessions)
     .innerJoin(users, eq(users.id, communitySessions.hostId))
     .leftJoin(memberProfiles, eq(memberProfiles.userId, communitySessions.hostId))
-    .where(and(listable, when === "upcoming" ? gt(communitySessions.endsAt, now) : lte(communitySessions.endsAt, now), o.hostId ? eq(communitySessions.hostId, o.hostId) : undefined))
+    .where(and(listable, when === "upcoming" ? gt(communitySessions.endsAt, now) : lte(communitySessions.endsAt, now), o.hostId ? eq(communitySessions.hostId, o.hostId) : undefined, like ? or(ilike(communitySessions.title, like), ilike(communitySessions.description, like), sql`array_to_string(${communitySessions.topics}, ' ') ILIKE ${like}`) : undefined))
     .orderBy(when === "upcoming" ? asc(communitySessions.startsAt) : desc(communitySessions.startsAt))
     .limit(limit + 1)
     .offset((page - 1) * limit);
