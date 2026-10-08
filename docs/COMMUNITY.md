@@ -177,6 +177,42 @@ instead of hiding the field.
 Photos and pictures need file storage (Vercel Blob or S3/R2, `docs/STORAGE.md`); videos don't (they
 stay on YouTube, Vimeo, Loom or Google Drive, which keeps hosting free and adapts to slow internet).
 
+## Chat and feedback conversations (Phase 36)
+
+| Page | Who | What |
+|---|---|---|
+| `/community/chat/<channel>` | members (posting after the code of conduct) | Channels like Discord: #general, #help, #ai-tools, #show-and-tell, #jobs-and-gigs and #off-topic. New messages appear within a few seconds without reloading. Reply in a thread, react with an emoji, tag people with @handle (they see an @ badge on the channel and the message highlighted), delete your own messages, report others'. In #help each message is a question: answer it in its thread, and the asker (or an organizer) marks it solved. |
+| `/showcase/<id>` | the project's author and the reviewer | Under each piece of feedback, the author and the reviewer reply to each other as often as they need; each reply emails the other one. |
+
+Keeping data use low: an open chat asks every 4 seconds "has anything changed?" and gets a tiny
+"no" unless something did; only then does it download the new messages. It stops asking while the
+tab is in the background. Members can send 20 messages a minute at most.
+
+Organizers hide messages straight away (or from the Reports page); hidden and deleted messages
+show as "hidden" or "deleted" so threads still make sense. The Discord and WhatsApp links
+(`docs/COMMUNITY.md`, Phase 25) stay for people who prefer them.
+
+## Articles (Phase 37)
+
+| Page | Who | What |
+|---|---|---|
+| `/articles` | everyone, no account needed | The feed: Latest (new articles and reposts, newest first; each article once), Most useful (useful marks in the last 30 days) and Reviewed. Filter by tag, search by words. |
+| `/articles/<id>` | everyone reads; members take part | The article (headings, lists, quotes, code, https links), cover picture, reading time. Members mark it useful, save it for later, comment and reply, repost it with a note, and report it. Members with the Reviewer badge mark it reviewed with a short note. |
+| `/community/articles` | members | My drafts and published articles, and my reading list. |
+| `/community/articles/new`, `/community/articles/<id>/edit` | the author (after the code of conduct) | Write with a Write/Preview switch, tags (up to 5), a cover picture (when picture uploads are on, `docs/STORAGE.md`); save a draft or publish; take it back to draft or delete it. |
+| `/members/<handle>` | everyone | A member's articles and reposts. |
+
+The author gets an email for each comment, review and repost; a commenter gets one when someone
+replies to them. Articles are written in a small Markdown that is turned into page elements (never
+raw HTML), and only https links (or links on this site) become links, so nothing in an article can
+run code in a reader's browser. Limits: 5 new articles a day, 30 comments an hour. Organizers hide
+articles and comments from the Reports page; a hidden article can't be published again until they
+show it.
+
+Learning from other members' work: articles, showcase project pages (screenshots, the video demo
+playing on the page, the live link and the feedback conversations), session recordings and the tools
+& prompts library are all public, so visitors learn without an account.
+
 ## Next
 
 Badges, events calendar, partners page and community numbers.

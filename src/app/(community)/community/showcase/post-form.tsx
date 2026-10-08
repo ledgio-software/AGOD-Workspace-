@@ -51,12 +51,15 @@ export function PostForm({
   defaults,
   authorName,
   withScreenshot,
+  picturesHref,
   submitLabel,
 }: {
   action: Action;
   defaults: PostDefaults;
   authorName: string;
   withScreenshot: boolean;
+  /** Editing: pictures are added and removed on the project page, so link there instead. */
+  picturesHref?: string;
   submitLabel: string;
 }) {
   const [preview, setPreview] = useState<CardData>({
@@ -137,7 +140,15 @@ export function PostForm({
 
           <section className="space-y-4">
             <h2 className="text-sm font-semibold">Pictures and video</h2>
-            {withScreenshot ? (
+            {picturesHref ? (
+              <p className="rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
+                Add or remove pictures (up to four) on{" "}
+                <a href={picturesHref} className="font-medium text-brand-600 underline dark:text-brand-400">
+                  your project page
+                </a>
+                , under &ldquo;Your project&rdquo;. Save your changes here first.
+              </p>
+            ) : withScreenshot ? (
               <Field label="Picture of your project (optional)" hint="A screenshot: PNG, JPG, WebP or GIF. It's made smaller before upload. You can add up to four on the project page.">
                 <ImageInput name="screenshot" />
               </Field>

@@ -12,11 +12,12 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
   const p = found.post;
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Showcase" title={`Edit ${p.title}`} description="Screenshots are managed on the project page." />
+      <PageHeader eyebrow="Showcase" title={`Edit ${p.title}`} description="Pictures are added on the project page." />
       <PostForm
         action={updatePostAction.bind(null, p.id)}
         authorName={member.name}
         withScreenshot={false}
+        picturesHref={`/showcase/${p.id}`}
         submitLabel="Save changes"
         defaults={{
           title: p.title,

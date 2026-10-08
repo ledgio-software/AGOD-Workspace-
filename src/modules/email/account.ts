@@ -216,3 +216,25 @@ export function teamAnswerMessage(o: { name: string; author: string; title: stri
     footer: "You get this email because you used the community team finder.",
   });
 }
+
+/** Phase 36: a reply in the conversation under a piece of showcase feedback. */
+export function reviewReplyMessage(o: { name: string; from: string; title: string; reply: string; url: string }) {
+  return message({
+    subject: `${o.from} replied about "${o.title}"`,
+    name: o.name,
+    lines: [`${o.from} replied to the feedback on "${o.title}":`, `"${o.reply}"`, "Reply on the project page to keep the conversation going."],
+    button: { label: "See the conversation", url: o.url },
+    footer: "You get this email because you shared this project or gave feedback on it.",
+  });
+}
+
+/** Phase 37: someone commented on, reviewed or reposted an article (or replied to a comment). */
+export function articleActivityMessage(o: { name: string; from: string; title: string; what: string; quote: string | null; url: string }) {
+  return message({
+    subject: `${o.from} ${o.what} "${o.title}"`,
+    name: o.name,
+    lines: [`${o.from} ${o.what} "${o.title}".`, ...(o.quote ? [`"${o.quote.length > 300 ? `${o.quote.slice(0, 300)}…` : o.quote}"`] : [])],
+    button: { label: "Read it", url: o.url },
+    footer: "You get this email because you wrote this article or commented on it.",
+  });
+}
