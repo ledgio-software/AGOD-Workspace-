@@ -63,6 +63,7 @@ export function communityGroup(o: { organizer: boolean }): NavGroup {
     { href: "/community/chat", label: "Chat", icon: "chat" },
     { href: "/showcase", label: "Showcase", icon: "showcase" },
     { href: "/articles", label: "Articles", icon: "articles" },
+    { href: "/news", label: "Tech news", icon: "news" },
     { href: "/sessions", label: "Sessions", icon: "sessions" },
     { href: "/library", label: "Tools & prompts", icon: "library" },
     { href: "/mentors", label: "Mentors", icon: "mentors" },
@@ -72,6 +73,6 @@ export function communityGroup(o: { organizer: boolean }): NavGroup {
     { href: "/members", label: "Members", icon: "members" },
     { href: "/community/profile", label: "My profile", icon: "profile" },
   ];
-  if (o.organizer) items.push({ href: "/community/reports", label: "Reports", icon: "reports" }, { href: "/community/front-page", label: "Front page", icon: "frontPage" });
+  if (o.organizer) items.push({ href: "/community/reports", label: "Reports", icon: "reports" }, { href: "/community/front-page", label: "Front page", icon: "frontPage" }, { href: "/community/news", label: "News sources", icon: "news" });
   return { label: "Community", items };
 }

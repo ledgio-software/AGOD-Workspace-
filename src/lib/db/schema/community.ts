@@ -797,3 +797,62 @@ export const articleReposts = pgTable(
   ],
 );
 
+
+// Phase 38: tech news. Headlines fetched from public feeds (RSS/Atom, Hacker News, DEV) on a
+// schedule; the sources themselves are listed in code (src/modules/community/news.ts) and this
+// table only keeps their state, so organizers can switch one off and see when it last worked.
+export const newsSources = pgTable("news_sources", {
+  key: text("key").primaryKey(),
+  enabled: boolean("enabled").notNull().default(true),
+  lastFetchedAt: timestamp("last_fetched_at", { withTimezone: true }),
+  lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  createdAt,
+});
+
+/** One headline: title, link and a short plain-text summary; the article stays on its own site. */
+export const newsItems = pgTable(
+  "news_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sourceKey: text("source_key")
+      .notNull()
+      .references(() => newsSources.key, { onDelete: "restrict" }),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    // AI, PROGRAMMING, AFRICA, RELEASES, TECH
+    topic: text("topic").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
+    // Hacker News and DEV: points and comments there, and the link to that discussion.
+    points: integer("points"),
+    comments: integer("comments"),
+    discussionUrl: text("discussion_url"),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("news_items_url_unique").on(t.url),
+    index("news_items_published_idx").on(t.publishedAt),
+    index("news_items_topic_idx").on(t.topic, t.publishedAt),
+    check("news_items_topic", sql`${t.topic} IN ('AI', 'PROGRAMMING', 'AFRICA', 'RELEASES', 'TECH')`),
+    check("news_items_url", sql`${t.url} ~ '^https://[^\\s]+$' AND length(${t.url}) <= 2000`),
+    check("news_items_discussion_url", httpsUrl(t.discussionUrl)),
+    check("news_items_title", sql`length(btrim(${t.title})) BETWEEN 1 AND 200`),
+    check("news_items_summary", sql`${t.summary} IS NULL OR length(${t.summary}) <= 300`),
+    check("news_items_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+export const newsUseful = pgTable(
+  "news_useful",
+  {
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => newsItems.id, { onDelete: "cascade" }),
+    userId: userRef("user_id").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("news_useful_unique").on(t.itemId, t.userId), index("news_useful_created_idx").on(t.createdAt)],
+);

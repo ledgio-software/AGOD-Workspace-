@@ -187,6 +187,9 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Write, publish, edit, take back and delete own articles (after the code of conduct); mark others' useful, save, comment and reply, repost, report (Phase 37) | | ✓ | ✓ |
 | Mark an article reviewed with a note (members with the Reviewer badge; not their own) | | Reviewers | ✓ |
 | Show a hidden article again | | | ✓ |
+| Read tech news (Phase 38) | ✓ | ✓ | ✓ |
+| Mark headlines useful | | ✓ | ✓ |
+| Hide or show headlines; switch news sources off or on; fetch news now | | | ✓ |
 | See reports; hide or show profiles, projects, feedback, sessions, library items, jobs, team finder posts, chat messages, articles and comments; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in

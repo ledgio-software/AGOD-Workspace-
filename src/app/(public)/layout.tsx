@@ -23,31 +23,34 @@ export default async function PublicLayout({ children }: { children: React.React
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
           <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2.5 xl:shrink">
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-600 text-xs font-bold text-white shadow-sm">{initials}</span>
-            <span className="hidden max-w-56 truncate text-sm font-semibold xl:block">{PRODUCT_NAME}</span>
+            <span className="hidden max-w-48 truncate text-sm font-semibold xl:block">{PRODUCT_NAME}</span>
           </Link>
           <nav aria-label="Community" className="ml-2 flex min-w-0 items-center gap-1 overflow-x-auto text-sm">
-            <Link href="/showcase" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+            <Link href="/showcase" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg">
               Showcase
             </Link>
-            <Link href="/articles" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+            <Link href="/articles" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg">
               Articles
             </Link>
-            <Link href="/sessions" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg sm:block">
+            <Link href="/news" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg sm:block">
+              News
+            </Link>
+            <Link href="/sessions" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg sm:block">
               Sessions
             </Link>
-            <Link href="/library" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
+            <Link href="/library" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg md:block">
               Tools &amp; prompts
             </Link>
-            <Link href="/mentors" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
+            <Link href="/mentors" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg md:block">
               Mentors
             </Link>
-            <Link href="/jobs" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg min-[400px]:block">
+            <Link href="/jobs" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg min-[400px]:block">
               Jobs
             </Link>
-            <Link href="/teams" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg xl:block">
+            <Link href="/teams" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg xl:block">
               Team finder
             </Link>
-            <Link href="/members" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg lg:block">
+            <Link href="/members" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg lg:block">
               Members
             </Link>
           </nav>

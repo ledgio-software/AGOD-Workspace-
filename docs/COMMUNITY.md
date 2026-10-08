@@ -213,6 +213,29 @@ Learning from other members' work: articles, showcase project pages (screenshots
 playing on the page, the live link and the feedback conversations), session recordings and the tools
 & prompts library are all public, so visitors learn without an account.
 
+## Tech news (Phase 38)
+
+| Page | Who | What |
+|---|---|---|
+| `/news` | everyone, no account needed | Headlines on African tech, AI, programming and new releases. Tabs: Top this week (what members marked useful in the last 7 days), All, AI, Programming, Africa tech, Releases, Tech; search by words. Each headline links to the original site; Hacker News and DEV headlines also show their points and a link to the discussion there. Members mark headlines useful. |
+| `/community/news` | organizers | Every source with when it last worked, its last error and how many headlines it has; switch a source off or on; *Fetch all now*. Organizers also hide single headlines from `/news`. |
+
+Sources (all free, none needs a key): TechCabal and Disrupt Africa (Africa tech); the Hacker News
+front page through Algolia's API; DEV (today's top posts, and the week's top `#ai` posts); the
+GitHub Blog; Hugging Face and Simon Willison (AI); TechCrunch, The Verge, Ars Technica and MIT
+Technology Review (tech); Next.js and Vercel (releases). Headlines about AI from the general sources
+are filed under AI. Techpoint Africa blocks automated readers, so it isn't included. To add a
+source, add its RSS or Atom feed (https) and topic to `NEWS_SOURCES` in
+`src/modules/community/news.ts`.
+
+How it stays fresh: when someone opens `/news` and a source hasn't been checked for 3 hours, it is
+fetched *after* the page has been sent (nobody waits), and the daily job (`/api/cron/daily`) fetches
+too. Each source is claimed in the database first, so it is never fetched twice at once. Only the
+title, link, date and a plain-text summary of up to 300 characters are kept (never the article or
+its HTML, never images); entries older than 14 days are skipped and headlines are deleted after 45
+days. Only https links are stored. A source that fails (blocked, down, not a feed) is skipped and
+its error shown to organizers; the others carry on.
+
 ## Next
 
 Badges, events calendar, partners page and community numbers.

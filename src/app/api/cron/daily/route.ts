@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { previousMonth, settleMonth, thisMonth } from "@/modules/community/project-month";
+import { refreshNews } from "@/modules/community/news";
 import { sendSessionReminders } from "@/modules/community/sessions";
 import { runDailyReminders } from "@/modules/jobs/daily";
 
@@ -31,7 +32,12 @@ export async function GET(request: Request) {
       console.error("Project of the month failed", error instanceof Error ? error.message : error);
       return null;
     });
-    return Response.json({ ...companies, sessionReminders: sessions, projectOfTheMonth });
+    // Phase 38: tech news, in case nobody opened the news page for a while.
+    const news = await refreshNews().catch((error) => {
+      console.error("News refresh failed", error instanceof Error ? error.message : error);
+      return null;
+    });
+    return Response.json({ ...companies, sessionReminders: sessions, projectOfTheMonth, news: news && { checked: news.checked, saved: news.saved, failed: news.failed.length } });
   } catch (error) {
     console.error("Daily reminders job failed", error instanceof Error ? error.message : error);
     return Response.json({ error: "Job failed" }, { status: 500 });
