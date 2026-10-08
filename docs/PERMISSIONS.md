@@ -131,9 +131,11 @@ company pays the team in step with the client).
 | Start a conversation with active people in the company | ✓ | ✓ | ✓ |
 | Read and write in conversations they are in | ✓ | ✓ | ✓ |
 | Read anyone else's conversation | | | |
+| Send emojis, stickers and voice notes, tag people and react in conversations they are in (Phase 34) | ✓ | ✓ | ✓ |
+| Play a voice note from a conversation they are not in | | | |
 
-Row-level security: `app_in_conversation()` limits `conversations`, `conversation_members` and
-`messages` to the people in each conversation; messages are written only as yourself and never
+Row-level security: `app_in_conversation()` limits `conversations`, `conversation_members`,
+`messages` and (Phase 34) `message_reactions` to the people in each conversation; messages are written only as yourself and never
 updated or deleted by the app role.
 
 ### Release approvals (Phase 32)

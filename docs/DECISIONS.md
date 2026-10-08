@@ -400,3 +400,14 @@ Phase 9 (file attachments in Vercel Blob).
 | Moderation | Jobs and team posts can be reported and hidden by organizers, like the rest of the community. |
 | Not included | Paying through the platform, contracts or escrow, ratings of employers or applicants, CV uploads, job alerts by email, and chat inside the app (messages stay inside companies). |
 
+## Phase 34 decisions (2026-10-08): emojis, stickers, voice notes and tagging in messages
+
+| Decision | Choice |
+|---|---|
+| Emojis | A picker of common emojis in the message box (any emoji can still be typed). Reactions on any message from a fixed set of 8 (👍 ❤️ 😂 🎉 🙏 👀 🔥 ✅); tap again to take yours back; hover or long-press shows who reacted. |
+| Stickers | 16 built-in stickers with Ghanaian phrases (Akwaaba, Ayekoo, Medaase, Chale, Ei, Sorry o, …) drawn from emojis, so no image files or licences are needed. |
+| Voice notes | Recorded in the browser (WebM/Opus, or MP4 on Safari), at most 2 minutes, at a low bitrate to save data (about 240 KB a minute). Checked by their first bytes, stored privately in the same storage as attachments, and played only through the app to the people in the conversation (Admins outside it get "not found"). Not available where file storage isn't set up. |
+| Tagging | Typing @ suggests the people in the conversation; a tag notifies that person (in My work and the daily email) with a link to the conversation, and their name is highlighted for them. Only people in the conversation can be tagged; at most 10 per message. |
+| Enforced by | Row-level security: reactions follow their message (only the conversation's people see or add them; each person adds and removes only their own). Messages still can't be edited or deleted; database checks keep stickers, voice notes and text consistent. |
+| Not included | Custom sticker packs, GIFs, transcribing voice notes, editing or deleting messages, file attachments in messages. |
+

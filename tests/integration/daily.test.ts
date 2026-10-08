@@ -2,7 +2,7 @@ import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { withActor } from "@/lib/db/actor";
 import { jobRuns, notificationPreferences, notifications } from "@/lib/db/schema";
 import { PermissionError } from "@/lib/permissions";
@@ -12,6 +12,8 @@ import { changeProjectStatus, createProject } from "@/modules/projects";
 import { addAssignment } from "@/modules/projects/team";
 import { createTask } from "@/modules/tasks";
 import { createUser, db } from "./fixtures";
+
+vi.mock("server-only", () => ({}));
 
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 

@@ -379,6 +379,20 @@
       "when": 1791466163990,
       "tag": "20261008132923_jobs_teams_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1791469121219,
+      "tag": "20261008141841_message_extras",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1791469123451,
+      "tag": "20261008141843_message_extras_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -3,9 +3,34 @@ import { ArrowLeft, Lock, MessageCircle, Plus, Users } from "lucide-react";
 import { Avatar, Card, EmptyState, PageHeader, buttonClass, cx } from "@/components/ui";
 import { formatDateTime } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
-import { listConversations, messageablePeople, openConversation } from "@/modules/messages";
-import { sendMessageAction, startConversationAction } from "./actions";
-import { AutoRefresh, Composer, NewConversationForm, ScrollToEnd } from "./message-forms";
+import { listConversations, messageablePeople, openConversation, voiceNotesAvailable } from "@/modules/messages";
+import { STICKERS, formatDuration, isSticker } from "@/modules/messages/catalog";
+import { reactAction, sendMessageAction, sendStickerAction, sendVoiceAction, startConversationAction } from "./actions";
+import { Composer, ReactionBar } from "./composer";
+import { AutoRefresh, NewConversationForm, ScrollToEnd } from "./message-forms";
+
+/** Shows "@Name" for people in the conversation in bold (and highlighted when it's me). */
+function withMentions(body: string, people: { id: string; name: string }[], me: string, mine: boolean) {
+  const names = people.map((p) => p.name).filter((n) => n.length >= 2).sort((a, b) => b.length - a.length);
+  if (names.length === 0 || !body.includes("@")) return body;
+  const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`@(${names.map(escape).join("|")})(?![\\p{L}\\p{N}._-])`, "giu");
+  const meName = people.find((p) => p.id === me)?.name.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of body.matchAll(pattern)) {
+    parts.push(body.slice(last, m.index));
+    const isMe = m[1].toLowerCase() === meName;
+    parts.push(
+      <span key={m.index} className={cx("font-semibold", isMe && (mine ? "underline" : "rounded bg-amber-100 px-0.5 text-amber-900 dark:bg-amber-400/20 dark:text-amber-200"))}>
+        {m[0]}
+      </span>,
+    );
+    last = m.index + m[0].length;
+  }
+  parts.push(body.slice(last));
+  return parts;
+}
 
 // Phase 30: messages between people of this company. The list on the left, the open conversation
 // (or a new one) on the right; on a phone, one at a time.
@@ -112,20 +137,47 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                 {open.messages.length === 0 && <p className="text-sm text-muted">No messages yet. Say hello.</p>}
                 {open.messages.map((m) => {
                   const mine = m.authorId === actor.id;
+                  const sticker = m.kind === "STICKER" && m.sticker && isSticker(m.sticker) ? STICKERS[m.sticker] : null;
                   return (
-                    <div key={m.id} className={cx("flex", mine ? "justify-end" : "justify-start")}>
-                      <div className={cx("max-w-[85%] rounded-2xl px-3.5 py-2 text-sm", mine ? "bg-brand-600 text-white" : "bg-surface-muted text-fg")}>
-                        {!mine && open.isGroup && <p className="text-xs font-semibold">{m.authorName}</p>}
-                        <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                        <p className={cx("mt-1 text-[11px]", mine ? "text-white/70" : "text-muted")}>{formatDateTime(m.createdAt)}</p>
-                      </div>
+                    <div key={m.id} className={cx("flex flex-col", mine ? "items-end" : "items-start")}>
+                      {sticker ? (
+                        <div className="max-w-[85%] px-1 text-center" data-kind="sticker">
+                          {!mine && open.isGroup && <p className="text-left text-xs font-semibold">{m.authorName}</p>}
+                          <p className="text-6xl leading-tight" aria-hidden>
+                            {sticker.emoji}
+                          </p>
+                          <p className="text-sm font-semibold">{sticker.label}</p>
+                          <p className="text-[11px] text-muted">{formatDateTime(m.createdAt)}</p>
+                        </div>
+                      ) : (
+                        <div className={cx("max-w-[85%] rounded-2xl px-3.5 py-2 text-sm", mine ? "bg-brand-600 text-white" : "bg-surface-muted text-fg")}>
+                          {!mine && open.isGroup && <p className="text-xs font-semibold">{m.authorName}</p>}
+                          {m.kind === "VOICE" ? (
+                            <div className="space-y-1 py-1" data-kind="voice">
+                              <audio controls preload="none" src={`/messages/voice/${m.id}`} className="h-10 w-60 max-w-full">
+                                <a href={`/messages/voice/${m.id}`}>Play the voice note</a>
+                              </audio>
+                              <p className={cx("text-xs", mine ? "text-white/80" : "text-muted")}>🎤 Voice note · {formatDuration(m.voiceSeconds ?? 0)}</p>
+                            </div>
+                          ) : (
+                            <p className="whitespace-pre-wrap break-words">{withMentions(m.body, open.people, actor.id, mine)}</p>
+                          )}
+                          <p className={cx("mt-1 text-[11px]", mine ? "text-white/70" : "text-muted")}>{formatDateTime(m.createdAt)}</p>
+                        </div>
+                      )}
+                      <ReactionBar reactions={m.reactions} react={reactAction.bind(null, m.id)} mine={mine} />
                     </div>
                   );
                 })}
                 <ScrollToEnd count={open.messages.length} conversationId={open.id} />
               </div>
               <div className="border-t border-line p-4">
-                <Composer action={sendMessageAction.bind(null, open.id)} />
+                <Composer
+                  action={sendMessageAction.bind(null, open.id)}
+                  sticker={sendStickerAction.bind(null, open.id)}
+                  voice={voiceNotesAvailable() ? sendVoiceAction.bind(null, open.id) : null}
+                  people={open.people.filter((p) => p.id !== actor.id)}
+                />
                 <p className="mt-2 inline-flex items-center gap-1 text-xs text-muted">
                   <Lock className="size-3" aria-hidden /> Only the people in this conversation can read it. Don&apos;t share passwords or payout amounts here.
                 </p>
