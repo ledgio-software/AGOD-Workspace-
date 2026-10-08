@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { withActor } from "@/lib/db/actor";
 import { memberships, messages, notifications } from "@/lib/db/schema";
 import {
@@ -12,6 +12,8 @@ import {
   unreadMessageCount,
 } from "@/modules/messages";
 import { createCompany, createUser, db, expectDbError } from "./fixtures";
+
+vi.mock("server-only", () => ({}));
 
 // Phase 30: in-app messages.
 

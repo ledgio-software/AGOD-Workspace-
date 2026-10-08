@@ -1324,12 +1324,48 @@ export const messages = pgTable(
       .notNull()
       .references(() => conversations.id, { onDelete: "restrict" }),
     authorId: userRef("author_id").notNull(),
+    // Phase 34: TEXT, STICKER (one of the built-in stickers) or VOICE (a recorded voice note).
+    kind: text("kind").notNull().default("TEXT"),
     body: text("body").notNull(),
+    sticker: text("sticker"),
+    voiceKey: text("voice_key"),
+    voiceMime: text("voice_mime"),
+    voiceSeconds: integer("voice_seconds"),
+    voiceBytes: integer("voice_bytes"),
+    // People tagged with @name (they get a notification).
+    mentionedIds: uuid("mentioned_ids").array().notNull().default(sql`'{}'::uuid[]`),
     createdAt,
   },
   (t) => [
     index("messages_conversation_idx").on(t.conversationId, t.createdAt),
-    check("messages_body", sql`length(btrim(${t.body})) BETWEEN 1 AND 4000`),
+    check("messages_kind", sql`${t.kind} IN ('TEXT', 'STICKER', 'VOICE')`),
+    check("messages_body", sql`(${t.kind} = 'TEXT' AND length(btrim(${t.body})) BETWEEN 1 AND 4000) OR (${t.kind} <> 'TEXT' AND length(${t.body}) <= 4000)`),
+    check("messages_sticker", sql`(${t.kind} = 'STICKER') = (${t.sticker} IS NOT NULL) AND (${t.sticker} IS NULL OR ${t.sticker} ~ '^[a-z]{2,20}$')`),
+    check(
+      "messages_voice",
+      sql`(${t.kind} = 'VOICE') = (${t.voiceKey} IS NOT NULL) AND (${t.voiceKey} IS NULL OR (${t.voiceMime} IS NOT NULL
+        AND ${t.voiceSeconds} BETWEEN 1 AND 120 AND ${t.voiceBytes} BETWEEN 1 AND 3145728))`,
+    ),
+    check("messages_mentions", sql`cardinality(${t.mentionedIds}) <= 10`),
+  ],
+);
+
+// Phase 34: emoji reactions on messages, one of each emoji per person.
+export const messageReactions = pgTable(
+  "message_reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: orgRef(),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => messages.id, { onDelete: "restrict" }),
+    userId: userRef("user_id").notNull(),
+    emoji: text("emoji").notNull(),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("message_reactions_unique").on(t.messageId, t.userId, t.emoji),
+    check("message_reactions_emoji", sql`length(${t.emoji}) BETWEEN 1 AND 16`),
   ],
 );
 

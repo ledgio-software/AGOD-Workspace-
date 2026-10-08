@@ -1,10 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Tx } from "@/lib/db";
 import { withActor } from "@/lib/db/actor";
-import { conversationMembers, conversations, messages, notifications, orgMembers } from "@/lib/db/schema";
+import { conversationMembers, conversations, messageReactions, messages, notifications, orgMembers } from "@/lib/db/schema";
 import type { Actor } from "@/lib/permissions";
+import { storage } from "@/lib/storage";
+import { findMentions } from "@/modules/comments/mentions";
 import { ServiceError, rethrowDbGuard } from "@/modules/errors";
+import { MAX_VOICE_BYTES, MAX_VOICE_SECONDS, STICKERS, formatDuration, isReaction, isSticker } from "./catalog";
 
 // Phase 30: in-app messages between people of the same company. One-to-one conversations (one per
 // pair, reused) and small groups (up to 10 people). Everyone in the company may message anyone in
@@ -23,7 +27,27 @@ export type ConversationSummary = {
   unread: number;
 };
 
-export type Message = { id: string; authorId: string; authorName: string; body: string; createdAt: Date };
+export type Reaction = { emoji: string; count: number; mine: boolean; names: string[] };
+
+export type Message = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  kind: "TEXT" | "STICKER" | "VOICE";
+  body: string;
+  sticker: string | null;
+  voiceSeconds: number | null;
+  mentionedIds: string[];
+  reactions: Reaction[];
+  createdAt: Date;
+};
+
+/** One line for the conversation list and notifications. */
+export function previewOf(m: { kind: string; body: string; sticker: string | null; voice_seconds?: number | null; voiceSeconds?: number | null }): string {
+  if (m.kind === "STICKER") return `Sticker: ${m.sticker && isSticker(m.sticker) ? `${STICKERS[m.sticker].emoji} ${STICKERS[m.sticker].label}` : ""}`;
+  if (m.kind === "VOICE") return `🎤 Voice note (${formatDuration(m.voiceSeconds ?? m.voice_seconds ?? 0)})`;
+  return m.body;
+}
 
 /** A conversation's name: its title, or the other people's names. */
 function nameOf(title: string | null, others: { name: string }[]) {
@@ -63,8 +87,8 @@ export async function listConversations(actor: Actor): Promise<ConversationSumma
       where m.conversation_id in ${ids} and m.author_id <> ${actor.id} and m.created_at > cm.last_read_at
       group by m.conversation_id`);
     const unreadBy = new Map(unread.rows.map((r) => [r.conversation_id, r.n]));
-    const last = await tx.execute<{ conversation_id: string; body: string; author_id: string; author_name: string }>(sql`
-      select distinct on (m.conversation_id) m.conversation_id, m.body, m.author_id, u.name as author_name
+    const last = await tx.execute<{ conversation_id: string; kind: string; body: string; sticker: string | null; voice_seconds: number | null; author_id: string; author_name: string }>(sql`
+      select distinct on (m.conversation_id) m.conversation_id, m.kind, m.body, m.sticker, m.voice_seconds, m.author_id, u.name as author_name
       from messages m join users u on u.id = m.author_id
       where m.conversation_id in ${ids}
       order by m.conversation_id, m.created_at desc`);
@@ -79,7 +103,7 @@ export async function listConversations(actor: Actor): Promise<ConversationSumma
         isGroup: everyone.length > 2 || c.title !== null,
         people: everyone,
         lastMessageAt: c.lastMessageAt,
-        lastMessage: l ? { authorName: l.author_name, body: l.body, mine: l.author_id === actor.id } : null,
+        lastMessage: l ? { authorName: l.author_name, body: previewOf(l), mine: l.author_id === actor.id } : null,
         unread: unreadBy.get(c.id) ?? 0,
       };
     });
@@ -138,7 +162,7 @@ export async function startConversation(actor: Actor, raw: z.input<typeof startI
         .values([actor.id, ...others].map((userId) => ({ conversationId: id!, userId, lastReadAt: userId === actor.id ? new Date() : new Date(0) })))
         .catch(rethrowDbGuard);
     }
-    if (input.body) await sendTx(tx, actor, id, input.body);
+    if (input.body) await sendTx(tx, actor, id, { kind: "TEXT", body: input.body });
     return id;
   });
 }
@@ -164,12 +188,39 @@ export async function openConversation(actor: Actor, conversationId: string) {
     const people = (await peopleOf(tx, [c.id])).get(c.id) ?? [];
     if (!people.some((p) => p.id === actor.id)) return null;
     const rows = await tx
-      .select({ id: messages.id, authorId: messages.authorId, body: messages.body, createdAt: messages.createdAt })
+      .select({
+        id: messages.id,
+        authorId: messages.authorId,
+        kind: messages.kind,
+        body: messages.body,
+        sticker: messages.sticker,
+        voiceSeconds: messages.voiceSeconds,
+        mentionedIds: messages.mentionedIds,
+        createdAt: messages.createdAt,
+      })
       .from(messages)
       .where(eq(messages.conversationId, c.id))
       .orderBy(desc(messages.createdAt))
       .limit(PAGE);
     const names = new Map(people.map((p) => [p.id, p.name]));
+    const reactionRows = rows.length
+      ? await tx
+          .select({ messageId: messageReactions.messageId, userId: messageReactions.userId, emoji: messageReactions.emoji })
+          .from(messageReactions)
+          .where(inArray(messageReactions.messageId, rows.map((m) => m.id)))
+          .orderBy(asc(messageReactions.createdAt))
+      : [];
+    const reactionsOf = (messageId: string): Reaction[] => {
+      const byEmoji = new Map<string, Reaction>();
+      for (const r of reactionRows.filter((x) => x.messageId === messageId)) {
+        const entry = byEmoji.get(r.emoji) ?? { emoji: r.emoji, count: 0, mine: false, names: [] };
+        entry.count++;
+        entry.mine ||= r.userId === actor.id;
+        entry.names.push(r.userId === actor.id ? "You" : (names.get(r.userId) ?? "Former member"));
+        byEmoji.set(r.emoji, entry);
+      }
+      return [...byEmoji.values()];
+    };
     await tx
       .update(conversationMembers)
       .set({ lastReadAt: new Date() })
@@ -181,40 +232,164 @@ export async function openConversation(actor: Actor, conversationId: string) {
       isGroup: people.length > 2 || c.title !== null,
       people,
       truncated: rows.length === PAGE,
-      messages: rows.reverse().map((m) => ({ ...m, authorName: names.get(m.authorId) ?? "Former member" })) as Message[],
+      messages: rows.reverse().map((m) => ({ ...m, authorName: names.get(m.authorId) ?? "Former member", reactions: reactionsOf(m.id) })) as Message[],
     };
   });
 }
 
 export const messageInput = z.object({ body: z.string().trim().min(1, "Write a message").max(4000, "Keep a message under 4,000 characters") });
 
-async function sendTx(tx: Tx, actor: Actor, conversationId: string, body: string) {
+type Content =
+  | { kind: "TEXT"; body: string }
+  | { kind: "STICKER"; sticker: string }
+  | { kind: "VOICE"; voiceKey: string; voiceMime: string; voiceSeconds: number; voiceBytes: number };
+
+/** Saves a message; people tagged with @name (who are in the conversation) get a notification. */
+async function sendTx(tx: Tx, actor: Actor, conversationId: string, content: Content): Promise<string> {
   const now = new Date();
-  await tx.insert(messages).values({ conversationId, authorId: actor.id, body, createdAt: now }).catch(rethrowDbGuard);
+  let mentionedIds: string[] = [];
+  if (content.kind === "TEXT" && content.body.includes("@")) {
+    const people = await tx
+      .select({ id: orgMembers.id, name: orgMembers.name, email: orgMembers.email })
+      .from(conversationMembers)
+      .innerJoin(orgMembers, eq(orgMembers.id, conversationMembers.userId))
+      .where(and(eq(conversationMembers.conversationId, conversationId), ne(conversationMembers.userId, actor.id)));
+    mentionedIds = findMentions(content.body, people).slice(0, 10);
+  }
+  const values =
+    content.kind === "TEXT"
+      ? { body: content.body }
+      : content.kind === "STICKER"
+        ? { kind: "STICKER", body: "", sticker: content.sticker }
+        : { kind: "VOICE", body: "", voiceKey: content.voiceKey, voiceMime: content.voiceMime, voiceSeconds: content.voiceSeconds, voiceBytes: content.voiceBytes };
+  const [row] = await tx
+    .insert(messages)
+    .values({ conversationId, authorId: actor.id, mentionedIds, createdAt: now, ...values })
+    .returning({ id: messages.id })
+    .catch(rethrowDbGuard);
   await tx.update(conversations).set({ lastMessageAt: now }).where(eq(conversations.id, conversationId));
   // Writing a message means I've read the conversation up to now.
   await tx
     .update(conversationMembers)
     .set({ lastReadAt: now })
     .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, actor.id)));
+  if (mentionedIds.length > 0 && content.kind === "TEXT") {
+    const [me] = await tx.select({ name: orgMembers.name }).from(orgMembers).where(eq(orgMembers.id, actor.id));
+    const [c] = await tx.select({ title: conversations.title }).from(conversations).where(eq(conversations.id, conversationId));
+    const text = content.body.length > 140 ? `${content.body.slice(0, 137)}…` : content.body;
+    await tx.insert(notifications).values(
+      mentionedIds.map((recipientId) => ({
+        recipientId,
+        type: "message.mention",
+        title: `${me?.name ?? "Someone"} mentioned you${c?.title ? ` in ${c.title}` : ""}`,
+        message: text,
+        entityType: "conversation",
+        entityId: conversationId,
+      })),
+    );
+  }
+  return row.id;
+}
+
+/** I'm in the conversation and someone else in it is still in the company. */
+async function assertCanWrite(tx: Tx, actor: Actor, conversationId: string) {
+  if (!z.uuid().safeParse(conversationId).success) throw new ServiceError("Conversation not found.");
+  const [me] = await tx
+    .select({ id: conversationMembers.id })
+    .from(conversationMembers)
+    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, actor.id)));
+  if (!me) throw new ServiceError("Conversation not found.");
+  // Nobody writes into a conversation whose other people have all left the company.
+  const others = await tx
+    .select({ id: orgMembers.id })
+    .from(conversationMembers)
+    .innerJoin(orgMembers, eq(orgMembers.id, conversationMembers.userId))
+    .where(and(eq(conversationMembers.conversationId, conversationId), ne(conversationMembers.userId, actor.id), eq(orgMembers.active, true)));
+  if (others.length === 0) throw new ServiceError("Nobody else in this conversation is still in the company.");
 }
 
 export async function sendMessage(actor: Actor, conversationId: string, raw: z.input<typeof messageInput>) {
   const { body } = messageInput.parse(raw);
   await withActor(actor, async (tx) => {
-    const [me] = await tx
-      .select({ id: conversationMembers.id })
-      .from(conversationMembers)
-      .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, actor.id)));
-    if (!me) throw new ServiceError("Conversation not found.");
-    // Nobody writes into a conversation whose other people have all left the company.
-    const others = await tx
-      .select({ id: orgMembers.id })
-      .from(conversationMembers)
-      .innerJoin(orgMembers, eq(orgMembers.id, conversationMembers.userId))
-      .where(and(eq(conversationMembers.conversationId, conversationId), ne(conversationMembers.userId, actor.id), eq(orgMembers.active, true)));
-    if (others.length === 0) throw new ServiceError("Nobody else in this conversation is still in the company.");
-    await sendTx(tx, actor, conversationId, body);
+    await assertCanWrite(tx, actor, conversationId);
+    await sendTx(tx, actor, conversationId, { kind: "TEXT", body });
+  });
+}
+
+/** Phase 34: sends one of the built-in stickers. */
+export async function sendSticker(actor: Actor, conversationId: string, sticker: string) {
+  if (!isSticker(sticker)) throw new ServiceError("Choose one of the stickers.");
+  await withActor(actor, async (tx) => {
+    await assertCanWrite(tx, actor, conversationId);
+    await sendTx(tx, actor, conversationId, { kind: "STICKER", sticker });
+  });
+}
+
+/** Whether voice notes can be stored in this environment. */
+export const voiceNotesAvailable = () => storage() !== null;
+
+/** The recording's real type, from its first bytes (not from what the browser says). */
+export function voiceType(bytes: Uint8Array): { mime: string; ext: string } | null {
+  const at = (i: number, ...b: number[]) => b.every((v, k) => bytes[i + k] === v);
+  if (at(0, 0x1a, 0x45, 0xdf, 0xa3)) return { mime: "audio/webm", ext: "webm" };
+  if (at(0, 0x4f, 0x67, 0x67, 0x53)) return { mime: "audio/ogg", ext: "ogg" };
+  if (at(4, 0x66, 0x74, 0x79, 0x70)) return { mime: "audio/mp4", ext: "m4a" };
+  return null;
+}
+
+/** Phase 34: sends a recorded voice note (at most two minutes). Stored privately; only the conversation's people can play it. */
+export async function sendVoiceNote(actor: Actor, conversationId: string, file: { bytes: Uint8Array; seconds: number }) {
+  const seconds = Math.round(file.seconds);
+  if (!Number.isFinite(seconds) || seconds < 1) throw new ServiceError("That recording is too short.");
+  if (seconds > MAX_VOICE_SECONDS) throw new ServiceError(`Voice notes can be at most ${MAX_VOICE_SECONDS / 60} minutes.`);
+  if (file.bytes.length < 100) throw new ServiceError("That recording is empty. Check your microphone and try again.");
+  if (file.bytes.length > MAX_VOICE_BYTES) throw new ServiceError("That recording is too large.");
+  const type = voiceType(file.bytes);
+  if (!type) throw new ServiceError("That isn't a recording this app can play.");
+  const store = storage();
+  if (!store) throw new ServiceError("Voice notes are not set up in this environment yet.");
+  // Check before storing anything.
+  await withActor(actor, (tx) => assertCanWrite(tx, actor, conversationId));
+  const key = await store.put(`messages/${actor.orgId}/${conversationId}/${randomUUID()}.${type.ext}`, file.bytes, type.mime);
+  try {
+    await withActor(actor, async (tx) => {
+      await assertCanWrite(tx, actor, conversationId);
+      await sendTx(tx, actor, conversationId, { kind: "VOICE", voiceKey: key, voiceMime: type.mime, voiceSeconds: seconds, voiceBytes: file.bytes.length });
+    });
+  } catch (error) {
+    await store.remove(key).catch(() => undefined);
+    throw error;
+  }
+}
+
+/** For the playback route: the voice note, if I'm in its conversation. */
+export async function openVoiceNote(actor: Actor, messageId: string): Promise<{ mime: string; bytes: Uint8Array } | null> {
+  if (!z.uuid().safeParse(messageId).success) return null;
+  const [row] = await withActor(actor, (tx) =>
+    tx.select({ key: messages.voiceKey, mime: messages.voiceMime }).from(messages).where(and(eq(messages.id, messageId), eq(messages.kind, "VOICE"))),
+  );
+  if (!row?.key || !row.mime) return null;
+  const file = await storage()?.get(row.key);
+  if (!file) return null;
+  const bytes = file.body instanceof Uint8Array ? file.body : new Uint8Array(await new Response(file.body).arrayBuffer());
+  return { mime: row.mime, bytes };
+}
+
+/** Phase 34: adds my reaction to a message, or takes it back. Returns whether it's on now. */
+export async function toggleReaction(actor: Actor, messageId: string, emoji: string): Promise<boolean> {
+  if (!isReaction(emoji)) throw new ServiceError("Choose one of the reactions.");
+  if (!z.uuid().safeParse(messageId).success) throw new ServiceError("Message not found.");
+  return withActor(actor, async (tx) => {
+    // Row-level security hides messages from conversations I'm not in.
+    const [m] = await tx.select({ id: messages.id }).from(messages).where(eq(messages.id, messageId));
+    if (!m) throw new ServiceError("Message not found.");
+    const removed = await tx
+      .delete(messageReactions)
+      .where(and(eq(messageReactions.messageId, messageId), eq(messageReactions.userId, actor.id), eq(messageReactions.emoji, emoji)))
+      .returning({ id: messageReactions.id });
+    if (removed.length > 0) return false;
+    await tx.insert(messageReactions).values({ messageId, userId: actor.id, emoji }).onConflictDoNothing().catch(rethrowDbGuard);
+    return true;
   });
 }
 
