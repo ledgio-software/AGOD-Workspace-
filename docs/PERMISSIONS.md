@@ -179,6 +179,10 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Post jobs and team finder posts (after the code of conduct); apply, ask to join or invite; manage own posts, applicants and requests; report | | ✓ | ✓ |
 | Feature library items; pick a finished month's project of the month | | | ✓ |
 | Change the front page photos and welcome video | | | ✓ |
+| Read the chat | | ✓ | ✓ |
+| Post in the chat (after the code of conduct), reply in threads, react, tag people, delete own messages, report others; mark own questions solved | | ✓ | ✓ |
+| Reply under feedback on their own project, or under feedback they gave (Phase 36) | | ✓ | ✓ |
+| Hide or show chat messages; mark any question solved | | | ✓ |
 | See reports; hide or show profiles, projects, feedback, sessions, library items, jobs and team finder posts; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in

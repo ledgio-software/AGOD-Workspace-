@@ -2,11 +2,11 @@ import { createHash } from "node:crypto";
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { memberProfiles, showcaseImages, showcasePosts, showcaseReviews, users } from "@/lib/db/schema";
+import { memberProfiles, showcaseImages, showcasePosts, showcaseReviewReplies, showcaseReviews, users } from "@/lib/db/schema";
 import { checkFile } from "@/lib/files";
 import { storage } from "@/lib/storage";
 import { appUrl, sendAccountEmail } from "@/modules/accounts";
-import { newReviewMessage } from "@/modules/email/account";
+import { newReviewMessage, reviewReplyMessage } from "@/modules/email/account";
 import { ServiceError } from "@/modules/errors";
 import { FEEDBACK_AREAS, NEEDS, type PostStatus, STATUS_LABEL } from "./showcase-labels";
 import { type Member, ensureProfile, fileReport, isOrganizer, reportInput } from "./index";
@@ -287,8 +287,8 @@ export type ReviewView = {
   whatWorks: string;
   toImprove: string | null;
   nextStep: string;
-  authorReply: string | null;
-  repliedAt: Date | null;
+  /** Phase 36: the back-and-forth between the project's author and the reviewer, oldest first. */
+  replies: { id: string; authorName: string; byPostAuthor: boolean; body: string; createdAt: Date }[];
   hidden: boolean;
   hiddenReason: string | null;
   createdAt: Date;
@@ -317,6 +317,14 @@ export async function getPost(postId: string, viewer: Member | null) {
     .leftJoin(memberProfiles, eq(memberProfiles.userId, showcaseReviews.reviewerId))
     .where(eq(showcaseReviews.postId, post.id))
     .orderBy(asc(showcaseReviews.createdAt));
+  const replies = rows.length
+    ? await db
+        .select({ id: showcaseReviewReplies.id, reviewId: showcaseReviewReplies.reviewId, authorId: showcaseReviewReplies.authorId, authorName: users.name, body: showcaseReviewReplies.body, createdAt: showcaseReviewReplies.createdAt })
+        .from(showcaseReviewReplies)
+        .innerJoin(users, eq(users.id, showcaseReviewReplies.authorId))
+        .where(inArray(showcaseReviewReplies.reviewId, rows.map(({ r }) => r.id)))
+        .orderBy(asc(showcaseReviewReplies.createdAt))
+    : [];
   const reviews: ReviewView[] = rows
     .filter(({ r }) => !r.hiddenAt || organizer || r.reviewerId === viewer?.id)
     .map(({ r, name, handle, isReviewer }) => ({
@@ -328,8 +336,9 @@ export async function getPost(postId: string, viewer: Member | null) {
       whatWorks: r.whatWorks,
       toImprove: r.toImprove,
       nextStep: r.nextStep,
-      authorReply: r.authorReply,
-      repliedAt: r.repliedAt,
+      replies: replies
+        .filter((x) => x.reviewId === r.id)
+        .map((x) => ({ id: x.id, authorName: x.authorName, byPostAuthor: x.authorId === post.authorId, body: x.body, createdAt: x.createdAt })),
       hidden: !!r.hiddenAt,
       hiddenReason: r.hiddenReason,
       createdAt: r.createdAt,
@@ -381,17 +390,32 @@ export async function addReview(member: Member, postId: string, raw: z.input<typ
 export const replyInput = z.object({ reply: z.string().trim().min(2, "Write a short reply").max(1000) });
 
 /** The post's author answers a review (once). */
+const MAX_REPLIES = 50;
+
+/**
+ * Phase 36: the project's author and the reviewer reply to each other under a review, as often as
+ * they need (the other one gets an email).
+ */
 export async function replyToReview(member: Member, reviewId: string, raw: z.input<typeof replyInput>) {
   const input = replyInput.parse(raw);
   if (!/^[0-9a-f-]{36}$/i.test(reviewId)) throw new ServiceError("Review not found.");
   const [row] = await db
-    .select({ review: showcaseReviews, authorId: showcasePosts.authorId })
+    .select({ review: showcaseReviews, authorId: showcasePosts.authorId, title: showcasePosts.title, postId: showcasePosts.id })
     .from(showcaseReviews)
     .innerJoin(showcasePosts, eq(showcasePosts.id, showcaseReviews.postId))
     .where(and(eq(showcaseReviews.id, reviewId), isNull(showcasePosts.removedAt)));
-  if (!row || row.authorId !== member.id) throw new ServiceError("Review not found.");
-  if (row.review.authorReply) throw new ServiceError("You already replied to this review.");
-  await db.update(showcaseReviews).set({ authorReply: input.reply, repliedAt: new Date() }).where(eq(showcaseReviews.id, reviewId));
+  if (!row || (row.authorId !== member.id && row.review.reviewerId !== member.id)) throw new ServiceError("Review not found.");
+  if (row.review.hiddenAt) throw new ServiceError("This feedback was hidden by the organizers.");
+  const [{ n }] = await db.select({ n: count() }).from(showcaseReviewReplies).where(eq(showcaseReviewReplies.reviewId, reviewId));
+  if (n >= MAX_REPLIES) throw new ServiceError("This conversation is long: continue it in the community chat.");
+  await db.insert(showcaseReviewReplies).values({ reviewId, authorId: member.id, body: input.reply });
+  const otherId = member.id === row.authorId ? row.review.reviewerId : row.authorId;
+  const [other] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, otherId));
+  if (other && otherId !== member.id) {
+    await sendAccountEmail(other.email, reviewReplyMessage({ name: other.name, from: member.name, title: row.title, reply: input.reply, url: appUrl(`/showcase/${row.postId}#reviews`) })).catch((error) =>
+      console.error("Review reply email failed", reviewId, error instanceof Error ? error.message : error),
+    );
+  }
 }
 
 // --- Reports and moderation ------------------------------------------------------------------

@@ -234,6 +234,12 @@ export default async function CommunityHomePage() {
           <Card title="Learn and get help" aside={<Sparkles className="size-4 text-muted" aria-hidden />}>
             <ul className="space-y-2 text-sm">
               <li>
+                <Link href="/community/chat/help" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  Ask in #help
+                </Link>
+                <span className="block text-xs text-muted">Stuck? Ask the community in the chat and get an answer fast.</span>
+              </li>
+              <li>
                 <Link href="/mentors" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
                   Find a mentor
                 </Link>
