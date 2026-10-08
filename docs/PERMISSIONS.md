@@ -173,8 +173,10 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Ask a mentor (2 at a time); answer requests and offer to mentor (Reviewers); end a mentorship you are in | | ✓ | ✓ |
 | Share, edit, remove own library items; mark others' useful; report them | | ✓ | ✓ |
 | Vote for project of the month (one a month, not your own project) | | ✓ | ✓ |
+| See open jobs and team finder posts | ✓ | ✓ | ✓ |
+| Post jobs and team finder posts (after the code of conduct); apply, ask to join or invite; manage own posts, applicants and requests; report | | ✓ | ✓ |
 | Feature library items; pick a finished month's project of the month | | | ✓ |
-| See reports; hide or show profiles, projects, feedback, sessions and library items; make or remove organizers | | | ✓ |
+| See reports; hide or show profiles, projects, feedback, sessions, library items, jobs and team finder posts; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
 another, and no role ever reaches another company's data. An Admin sets a temporary password only for

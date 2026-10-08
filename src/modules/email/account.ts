@@ -161,3 +161,58 @@ export function mentorAnswerMessage(o: { name: string; mentor: string; accepted:
     footer: "You get this email because you asked for a mentor in the community.",
   });
 }
+
+/** Phase 33: someone applied to a job the person posted. */
+export function jobApplicationMessage(o: { name: string; applicant: string; title: string; url: string }) {
+  return message({
+    subject: `${o.applicant} applied for "${o.title}"`,
+    name: o.name,
+    lines: [`${o.applicant} applied for "${o.title}" on the community jobs board.`, "Read their message and profile, then shortlist, hire or decline them on your Jobs page."],
+    button: { label: "See the application", url: o.url },
+    footer: "You get this email because you posted a job in the community.",
+  });
+}
+
+/** Phase 33: the poster changed the status of an application. */
+export function jobApplicationUpdateMessage(o: { name: string; title: string; hirer: string; status: "SHORTLISTED" | "HIRED" | "DECLINED"; posterEmail: string | null; url: string }) {
+  const lines = {
+    SHORTLISTED: [`Good news: ${o.hirer} shortlisted you for "${o.title}".`, `They may contact you. You can also write to them at ${o.posterEmail}.`],
+    HIRED: [`Congratulations: ${o.hirer} chose you for "${o.title}".`, `Write to them at ${o.posterEmail} to agree the next steps. Agree the pay and what you'll deliver in writing before you start.`],
+    DECLINED: [`${o.hirer} went with someone else for "${o.title}".`, "Don't give up: new jobs and gigs are posted every week."],
+  }[o.status];
+  return message({
+    subject: o.status === "DECLINED" ? `Update on "${o.title}"` : o.status === "HIRED" ? `You got "${o.title}"` : `You're shortlisted for "${o.title}"`,
+    name: o.name,
+    lines,
+    button: { label: "See your applications", url: o.url },
+    footer: "You get this email because you applied for a job in the community.",
+  });
+}
+
+/** Phase 33: someone wants to join (or invites the person to) a team. */
+export function teamRequestMessage(o: { name: string; from: string; title: string; idea: boolean; message: string; url: string }) {
+  return message({
+    subject: o.idea ? `${o.from} wants to join "${o.title}"` : `${o.from} invited you to their team`,
+    name: o.name,
+    lines: [
+      o.idea ? `${o.from} wants to join your team for "${o.title}".` : `${o.from} saw your post "${o.title}" and wants you on their team.`,
+      `Their message: "${o.message}"`,
+      "Accept or decline on your Team finder page. If you accept, you both see each other's email.",
+    ],
+    button: { label: "Answer", url: o.url },
+    footer: "You get this email because you posted on the community team finder.",
+  });
+}
+
+/** Phase 33: the answer to a team request. */
+export function teamAnswerMessage(o: { name: string; author: string; title: string; accepted: boolean; note: string | null; authorEmail: string | null; url: string }) {
+  return message({
+    subject: o.accepted ? `${o.author} said yes: "${o.title}"` : `Update on "${o.title}"`,
+    name: o.name,
+    lines: o.accepted
+      ? [`${o.author} accepted your request about "${o.title}".`, ...(o.note ? [`Their note: "${o.note}"`] : []), `Write to them at ${o.authorEmail} to plan your first steps.`]
+      : [`${o.author} said no to your request about "${o.title}" this time.`, ...(o.note ? [`Their note: "${o.note}"`] : []), "Other teams are looking: have a look at the team finder."],
+    button: { label: o.accepted ? "See your teams" : "Find another team", url: o.url },
+    footer: "You get this email because you used the community team finder.",
+  });
+}

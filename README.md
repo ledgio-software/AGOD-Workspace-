@@ -234,6 +234,9 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 33 — Jobs & gigs and the team finder ✓
+- A public board of paid jobs, gigs and internships (pay always shown; no fees from applicants); members apply with a message and their profile, posters shortlist, hire or decline. A team finder where members post ideas that need people or say they want to join a team, and send requests; accepting shares both emails (`docs/COMMUNITY.md`)
+
 ### Phase 32 — Release approvals (fintech extras) ✓
 - Projects get a Releases tab when the company switches on release approvals (on for fintech teams): each change going live says what changes, why, how it was tested and how to undo it; someone other than the author checks security (needed for high impact), a manager approves, and someone other than the author deploys. Emergency fixes can go live first and be approved afterwards. Admins download the evidence for auditors as a CSV (`docs/RELEASES.md`)
 

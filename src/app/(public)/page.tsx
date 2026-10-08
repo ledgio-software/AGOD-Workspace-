@@ -17,7 +17,7 @@ import { ProjectOfMonth } from "./showcase/project-of-month";
 
 const pillars = [
   { icon: Rocket, title: "Show your work", text: "Share what you build, from a first AI-made app to a product with real users, and get honest, kind feedback." },
-  { icon: MessageSquareHeart, title: "Help one another", text: "Experienced developers help vibe coders build safer, cleaner software. Vibe coders bring speed and fresh ideas." },
+  { icon: MessageSquareHeart, title: "Help one another", text: "Experienced developers help vibe coders build safer, cleaner software. Find teammates for your idea, and paid jobs and gigs." },
   { icon: GraduationCap, title: "Learn together", text: "Teaching sessions, mentors and a library of prompts and tools that work on Ghanaian internet and phones." },
   { icon: Briefcase, title: "Run your projects", text: "When you build with a team or for clients, a free workspace tracks projects, invoices and what everyone is owed." },
 ];
