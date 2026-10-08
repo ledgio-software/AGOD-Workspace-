@@ -365,6 +365,20 @@
       "when": 1791323417329,
       "tag": "20261006215017_releases_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1791466161493,
+      "tag": "20261008132921_jobs_teams",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1791466163990,
+      "tag": "20261008132923_jobs_teams_rules",
+      "breakpoints": true
     }
   ]
 }

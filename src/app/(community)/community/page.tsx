@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, Building2, CircleCheck, Circle, Flag, MessageCircle, Sparkles } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, Building2, CircleCheck, Circle, Flag, MessageCircle, Sparkles } from "lucide-react";
 import { Badge } from "@/components/badges";
 import { Callout, Card, PageHeader, buttonClass } from "@/components/ui";
 import { companiesOf, requireMember } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { canModerate, chatLinks, ensureProfile, listMembers, listReports, onboarding } from "@/modules/community";
+import { openJobCount } from "@/modules/community/jobs";
 import { mySessions, sessionsTakenPart } from "@/modules/community/sessions";
+import { openTeamPostCount } from "@/modules/community/teams";
 import { giveBack, reviewRequests } from "@/modules/community/showcase";
 import { switchCompanyAction } from "../../(authenticated)/company/actions";
 import { MemberGrid } from "../../(public)/members/member-grid";
@@ -30,7 +32,7 @@ function Step({ done, title, children, soon }: { done: boolean; title: string; c
 export default async function CommunityHomePage() {
   const { member } = await requireMember();
   const profile = await ensureProfile(member);
-  const [steps, companies, organizer, recent, counts, waiting, sessionsDone, upcomingMine] = await Promise.all([
+  const [steps, companies, organizer, recent, counts, waiting, sessionsDone, upcomingMine, jobs, teams] = await Promise.all([
     onboarding(profile),
     companiesOf(member.id),
     canModerate(member),
@@ -39,6 +41,8 @@ export default async function CommunityHomePage() {
     reviewRequests(member),
     sessionsTakenPart(member),
     mySessions(member),
+    openJobCount(),
+    openTeamPostCount(),
   ]);
   const openReports = organizer ? (await listReports(member)).filter((r) => r.status === "OPEN").length : 0;
   const chat = chatLinks();
@@ -191,6 +195,27 @@ export default async function CommunityHomePage() {
                 </>
               )}
             </div>
+          </Card>
+
+          <Card title="Work and teammates" aside={<BriefcaseBusiness className="size-4 text-muted" aria-hidden />}>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/jobs" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  Jobs &amp; gigs
+                </Link>
+                <span className="block text-xs text-muted">
+                  {jobs === 0 ? "Paid work from members and their companies." : `${jobs} open ${jobs === 1 ? "job" : "jobs"} right now.`}
+                </span>
+              </li>
+              <li>
+                <Link href="/teams" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  Team finder
+                </Link>
+                <span className="block text-xs text-muted">
+                  {teams === 0 ? "Find people to build with, or a team to join." : `${teams} ${teams === 1 ? "person or idea is" : "people and ideas are"} looking.`}
+                </span>
+              </li>
+            </ul>
           </Card>
 
           <Card title="Learn and get help" aside={<Sparkles className="size-4 text-muted" aria-hidden />}>

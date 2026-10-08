@@ -387,3 +387,16 @@ Phase 9 (file attachments in Vercel Blob).
 | Evidence | Admins with "Company settings" (`audit.viewAll`) download a CSV of every release written in a date range with each step, who did it (name and email) and when, and two yes/no columns saying the approval and deployment were by someone other than the author. Each download is audited. |
 | Not included | Links to a deployment pipeline (CI/CD gates), automatic release notes, four-eyes on infrastructure changes outside the app, tax settings. |
 
+## Phase 33 decisions (2026-10-08): jobs & gigs, team finder
+
+| Decision | Choice |
+|---|---|
+| Who posts jobs | Any member who agreed to the code of conduct, for themselves, their project or their company ("who is hiring" is free text). No company account or payment needed. |
+| Pay | Jobs and gigs must show the pay (from, optional "up to", per work, month or hour, in GHS, stored in pesewas). Internships may leave it out. Posts asking applicants for fees are refused; the board warns never to pay to get a job. |
+| How long | At most 60 days open; expired jobs leave the board without a job running. Limits: 5 new jobs a day, 10 open at once; 20 applications a day. |
+| Applying | A message (20 to 2,000 characters) and an optional link; applying shares the applicant's name, email and profile with the poster. One application per job; withdraw and apply again is allowed. |
+| Answering | Shortlist, hire or decline; each sends the applicant an email. Shortlisting or hiring shares the poster's email with the applicant. Several people can be hired; the poster marks the job filled or closes it. |
+| Team finder | Two kinds: an idea that needs people (roles needed) or a person looking for a team (roles they can take); time needed and reward (learning, a share of earnings, paid). 3 open posts per member, 10 requests a day; accepting shares both emails; a declined request can't be re-sent. |
+| Moderation | Jobs and team posts can be reported and hidden by organizers, like the rest of the community. |
+| Not included | Paying through the platform, contracts or escrow, ratings of employers or applicants, CV uploads, job alerts by email, and chat inside the app (messages stay inside companies). |
+

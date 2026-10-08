@@ -136,6 +136,31 @@ When a month ends, the daily job (and the first page that shows it) settles it: 
 the most votes becomes project of the month; on a tie, the one that got there first. Months are in
 Accra time. Winners get a "Project of the month" badge on their project.
 
+## Jobs & gigs and the team finder (Phase 33)
+
+| Page | Who | What |
+|---|---|---|
+| `/jobs`, `/jobs/<id>` | everyone | Open jobs, gigs and internships, newest first, filtered by type, remote/on site/hybrid, skill and words. A warning that nobody may ask applicants for money. Members apply with a short message and an optional link. |
+| `/community/jobs` | members | Jobs I posted with everyone who applied (their message, link, profile and email), to shortlist, hire or decline; mark a job filled or close it. Jobs I applied for, with the poster's email once I'm shortlisted or hired; withdraw. |
+| `/community/jobs/new`, `/community/jobs/<id>/edit` | members (after the code of conduct) | Post or edit a job. |
+| `/teams`, `/teams/<id>` | everyone | Ideas that need people ("Looking for teammates": roles needed) and people looking for a team ("Looking for a team": roles they can take), with tools, time needed and the reward. Members ask to join, or invite. |
+| `/community/teams`, `/community/teams/new`, `/community/teams/<id>/edit` | members | My posts with the requests they got (accept or decline, with a note), and the requests I sent (withdraw). |
+
+Rules:
+
+- **Pay is always shown** for jobs and gigs (from, optional "up to", for the work / a month / an
+  hour, in GHS); internships may leave it out. Posts asking applicants for a registration, training
+  or application fee are refused, and members can report any job.
+- A job stays open for at most 60 days, then leaves the board by itself. 5 new jobs a day and 10
+  open at a time per member; 20 applications a day.
+- **Contact details:** applying shares your name, email and profile with the poster; the poster's
+  email is shared with you when they shortlist or hire you. On the team finder, both emails are
+  shared only when a request is accepted. Everyone gets an email for a new application or request
+  and for the answer.
+- Team finder: 3 open posts per member, 10 requests a day; a declined request can't be sent again
+  to the same post.
+- Organizers hide reported jobs and posts from the Reports page, as for everything else.
+
 ## Next
 
-Jobs board, team finder, badges, events calendar, partners page and metrics.
+Badges, events calendar, partners page and community numbers.
