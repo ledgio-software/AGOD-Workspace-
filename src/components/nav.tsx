@@ -64,6 +64,8 @@ export function communityGroup(o: { organizer: boolean }): NavGroup {
     { href: "/sessions", label: "Sessions", icon: "sessions" },
     { href: "/library", label: "Tools & prompts", icon: "library" },
     { href: "/mentors", label: "Mentors", icon: "mentors" },
+    { href: "/jobs", label: "Jobs & gigs", icon: "jobs" },
+    { href: "/teams", label: "Team finder", icon: "teams" },
     { href: "/community/mentoring", label: "My mentoring", icon: "mentoring" },
     { href: "/members", label: "Members", icon: "members" },
     { href: "/community/profile", label: "My profile", icon: "profile" },

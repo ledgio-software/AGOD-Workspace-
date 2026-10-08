@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, char, check, date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 
 // Phase 25: the community (Ghana Vibe Coders & Developers). Unlike company data, it is shared by
@@ -88,7 +88,7 @@ export const communityReports = pgTable(
     index("community_reports_status_idx").on(t.status, t.createdAt),
     // One open report per person and thing.
     uniqueIndex("community_reports_one_open").on(t.reporterId, t.targetType, t.targetId).where(sql`${t.status} = 'OPEN'`),
-    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION', 'LIBRARY')`),
+    check("community_reports_target", sql`${t.targetType} IN ('PROFILE', 'POST', 'REVIEW', 'SESSION', 'LIBRARY', 'JOB', 'TEAM')`),
     check("community_reports_reason", sql`length(btrim(${t.reason})) BETWEEN 10 AND 1000`),
     check("community_reports_status", sql`${t.status} IN ('OPEN', 'RESOLVED', 'DISMISSED')`),
     check("community_reports_resolved", sql`(${t.status} = 'OPEN') = (${t.resolvedAt} IS NULL) AND (${t.resolvedAt} IS NULL) = (${t.resolvedBy} IS NULL)`),
@@ -391,3 +391,148 @@ export const projectOfMonth = pgTable(
     check("project_of_month_note", sql`${t.note} IS NULL OR length(${t.note}) <= 500`),
   ],
 );
+
+// Phase 33: the jobs & gigs board. Members (and companies through a member) post paid work;
+// members apply with a short message and their profile. Pay is in minor units (pesewas).
+export const communityJobs = pgTable(
+  "community_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    posterId: userRef("poster_id").notNull(),
+    // Who is hiring, as the poster writes it (a company, a project, or the poster's own name).
+    hirer: text("hirer").notNull(),
+    title: text("title").notNull(),
+    // JOB (employment), GIG (a paid piece of work), INTERNSHIP
+    kind: text("kind").notNull(),
+    // REMOTE, ONSITE, HYBRID
+    workMode: text("work_mode").notNull(),
+    location: text("location"),
+    payMinMinor: bigint("pay_min_minor", { mode: "number" }),
+    payMaxMinor: bigint("pay_max_minor", { mode: "number" }),
+    // PROJECT (for the whole gig), MONTH, HOUR
+    payUnit: text("pay_unit"),
+    currency: char("currency", { length: 3 }).notNull().default("GHS"),
+    description: text("description").notNull(),
+    skills: text("skills").array().notNull().default(sql`'{}'::text[]`),
+    closesOn: date("closes_on").notNull(),
+    // OPEN → CLOSED (no longer taking applications) or FILLED
+    status: text("status").notNull().default("OPEN"),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    hiddenReason: text("hidden_reason"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("community_jobs_poster_idx").on(t.posterId),
+    index("community_jobs_closes_idx").on(t.closesOn),
+    check("community_jobs_kind", sql`${t.kind} IN ('JOB', 'GIG', 'INTERNSHIP')`),
+    check("community_jobs_mode", sql`${t.workMode} IN ('REMOTE', 'ONSITE', 'HYBRID')`),
+    check("community_jobs_status", sql`${t.status} IN ('OPEN', 'CLOSED', 'FILLED')`),
+    check("community_jobs_title", sql`length(btrim(${t.title})) BETWEEN 5 AND 120`),
+    check("community_jobs_hirer", sql`length(btrim(${t.hirer})) BETWEEN 2 AND 120`),
+    check("community_jobs_description", sql`length(btrim(${t.description})) BETWEEN 30 AND 5000`),
+    check("community_jobs_location", sql`${t.location} IS NULL OR length(${t.location}) <= 80`),
+    check("community_jobs_skills", sql`cardinality(${t.skills}) <= 10`),
+    // Jobs and gigs always say what they pay; internships may not.
+    check("community_jobs_pay_stated", sql`${t.kind} = 'INTERNSHIP' OR ${t.payMinMinor} IS NOT NULL`),
+    check(
+      "community_jobs_pay",
+      sql`(${t.payMinMinor} IS NULL) = (${t.payUnit} IS NULL) AND (${t.payMinMinor} IS NULL OR ${t.payMinMinor} > 0)
+        AND (${t.payMaxMinor} IS NULL OR (${t.payMinMinor} IS NOT NULL AND ${t.payMaxMinor} >= ${t.payMinMinor}))`,
+    ),
+    check("community_jobs_unit", sql`${t.payUnit} IS NULL OR ${t.payUnit} IN ('PROJECT', 'MONTH', 'HOUR')`),
+    check("community_jobs_closed", sql`(${t.status} = 'OPEN') = (${t.closedAt} IS NULL)`),
+    check("community_jobs_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+export const jobApplications = pgTable(
+  "job_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => communityJobs.id, { onDelete: "restrict" }),
+    applicantId: userRef("applicant_id").notNull(),
+    message: text("message").notNull(),
+    link: text("link"),
+    // SENT → SHORTLISTED → HIRED, or DECLINED; WITHDRAWN by the applicant
+    status: text("status").notNull().default("SENT"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("job_applications_one").on(t.jobId, t.applicantId),
+    index("job_applications_applicant_idx").on(t.applicantId),
+    check("job_applications_status", sql`${t.status} IN ('SENT', 'SHORTLISTED', 'HIRED', 'DECLINED', 'WITHDRAWN')`),
+    check("job_applications_message", sql`length(btrim(${t.message})) BETWEEN 20 AND 2000`),
+    check("job_applications_link", httpsUrl(t.link)),
+  ],
+);
+
+// Phase 33: the team finder. IDEA: "I'm building something and need people"; JOINING: "I want to
+// join a team". Others send a short request; accepting shares both email addresses.
+export const teamPosts = pgTable(
+  "team_posts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    authorId: userRef("author_id").notNull(),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    // IDEA: roles needed; JOINING: roles the author can take.
+    roles: text("roles").array().notNull().default(sql`'{}'::text[]`),
+    tools: text("tools").array().notNull().default(sql`'{}'::text[]`),
+    commitment: text("commitment").notNull(),
+    // LEARNING (for practice and the portfolio), SHARE (a share of what it earns), PAID
+    reward: text("reward").notNull(),
+    // OPEN → CLOSED
+    status: text("status").notNull().default("OPEN"),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    hiddenReason: text("hidden_reason"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("team_posts_author_idx").on(t.authorId),
+    check("team_posts_kind", sql`${t.kind} IN ('IDEA', 'JOINING')`),
+    check("team_posts_reward", sql`${t.reward} IN ('LEARNING', 'SHARE', 'PAID')`),
+    check("team_posts_status", sql`${t.status} IN ('OPEN', 'CLOSED')`),
+    check("team_posts_title", sql`length(btrim(${t.title})) BETWEEN 5 AND 120`),
+    check("team_posts_description", sql`length(btrim(${t.description})) BETWEEN 20 AND 3000`),
+    check("team_posts_commitment", sql`length(btrim(${t.commitment})) BETWEEN 2 AND 80`),
+    check("team_posts_lists", sql`cardinality(${t.roles}) BETWEEN 1 AND 8 AND cardinality(${t.tools}) <= 10`),
+    check("team_posts_closed", sql`(${t.status} = 'OPEN') = (${t.closedAt} IS NULL)`),
+    check("team_posts_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+export const teamRequests = pgTable(
+  "team_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => teamPosts.id, { onDelete: "restrict" }),
+    fromId: userRef("from_id").notNull(),
+    message: text("message").notNull(),
+    // PENDING → ACCEPTED or DECLINED; WITHDRAWN by the sender
+    status: text("status").notNull().default("PENDING"),
+    responseNote: text("response_note"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("team_requests_one").on(t.postId, t.fromId),
+    index("team_requests_from_idx").on(t.fromId),
+    check("team_requests_status", sql`${t.status} IN ('PENDING', 'ACCEPTED', 'DECLINED', 'WITHDRAWN')`),
+    check("team_requests_message", sql`length(btrim(${t.message})) BETWEEN 10 AND 1000`),
+    check("team_requests_note", sql`${t.responseNote} IS NULL OR length(${t.responseNote}) <= 500`),
+  ],
+);
+

@@ -1,7 +1,7 @@
 import { and, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { communityReports, communitySessions, libraryItems, memberProfiles, showcasePosts, showcaseReviews, users } from "@/lib/db/schema";
+import { communityJobs, communityReports, communitySessions, libraryItems, memberProfiles, showcasePosts, showcaseReviews, teamPosts, users } from "@/lib/db/schema";
 import { ServiceError } from "@/modules/errors";
 
 // Phase 25: the community. Everyone who signs up is a member with a profile, whether or not they
@@ -235,7 +235,7 @@ export const reportInput = z.object({
   reason: z.string().trim().min(10, "Say what is wrong (at least 10 characters)").max(1000),
 });
 
-export type ReportTarget = "PROFILE" | "POST" | "REVIEW" | "SESSION" | "LIBRARY";
+export type ReportTarget = "PROFILE" | "POST" | "REVIEW" | "SESSION" | "LIBRARY" | "JOB" | "TEAM";
 
 /** Files a report (once per person and thing while it is open). */
 export async function fileReport(member: Member, targetType: ReportTarget, targetId: string, raw: z.input<typeof reportInput>) {
@@ -290,18 +290,25 @@ export async function listReports(member: Member) {
              WHEN 'PROFILE' THEN tu.name
              WHEN 'POST' THEN sp.title
              WHEN 'SESSION' THEN cs.title
+             WHEN 'LIBRARY' THEN li.title
+             WHEN 'JOB' THEN cj.title
+             WHEN 'TEAM' THEN tp.title
              ELSE 'Feedback by ' || rvu.name || ' on ' || rvp.title END AS target_name,
            CASE r.target_type
              WHEN 'PROFILE' THEN '/members/' || p.handle
              WHEN 'POST' THEN '/showcase/' || sp.id
              WHEN 'SESSION' THEN '/sessions/' || cs.id
              WHEN 'LIBRARY' THEN '/library/' || li.id
+             WHEN 'JOB' THEN '/jobs/' || cj.id
+             WHEN 'TEAM' THEN '/teams/' || tp.id
              ELSE '/showcase/' || rv.post_id || '#reviews' END AS target_link,
            CASE r.target_type
              WHEN 'PROFILE' THEN p.hidden_at IS NOT NULL
              WHEN 'POST' THEN sp.hidden_at IS NOT NULL
              WHEN 'SESSION' THEN cs.hidden_at IS NOT NULL
              WHEN 'LIBRARY' THEN li.hidden_at IS NOT NULL
+             WHEN 'JOB' THEN cj.hidden_at IS NOT NULL
+             WHEN 'TEAM' THEN tp.hidden_at IS NOT NULL
              ELSE rv.hidden_at IS NOT NULL END AS target_hidden,
            su.name AS resolver
     FROM community_reports r
@@ -314,6 +321,8 @@ export async function listReports(member: Member) {
     LEFT JOIN showcase_posts rvp ON rvp.id = rv.post_id AND rvp.removed_at IS NULL
     LEFT JOIN community_sessions cs ON r.target_type = 'SESSION' AND cs.id = r.target_id
     LEFT JOIN library_items li ON r.target_type = 'LIBRARY' AND li.id = r.target_id AND li.removed_at IS NULL
+    LEFT JOIN community_jobs cj ON r.target_type = 'JOB' AND cj.id = r.target_id
+    LEFT JOIN team_posts tp ON r.target_type = 'TEAM' AND tp.id = r.target_id
     LEFT JOIN users su ON su.id = r.resolved_by
     ORDER BY (r.status = 'OPEN') DESC, r.created_at DESC
     LIMIT 100
@@ -350,6 +359,14 @@ export async function resolveReport(member: Member, reportId: string, raw: z.inp
         const [item] = await tx.select({ owner: libraryItems.authorId }).from(libraryItems).where(eq(libraryItems.id, report.targetId));
         if (item?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
         await tx.update(libraryItems).set(hide).where(and(eq(libraryItems.id, report.targetId), isNull(libraryItems.hiddenAt)));
+      } else if (report.targetType === "JOB") {
+        const [job] = await tx.select({ owner: communityJobs.posterId }).from(communityJobs).where(eq(communityJobs.id, report.targetId));
+        if (job?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(communityJobs).set(hide).where(and(eq(communityJobs.id, report.targetId), isNull(communityJobs.hiddenAt)));
+      } else if (report.targetType === "TEAM") {
+        const [post] = await tx.select({ owner: teamPosts.authorId }).from(teamPosts).where(eq(teamPosts.id, report.targetId));
+        if (post?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(teamPosts).set(hide).where(and(eq(teamPosts.id, report.targetId), isNull(teamPosts.hiddenAt)));
       } else {
         const [review] = await tx.select({ owner: showcaseReviews.reviewerId }).from(showcaseReviews).where(eq(showcaseReviews.id, report.targetId));
         if (review?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
