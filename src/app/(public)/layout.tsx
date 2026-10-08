@@ -19,42 +19,39 @@ export default async function PublicLayout({ children }: { children: React.React
   const chat = chatLinks();
   return (
     <div className="flex min-h-dvh flex-1 flex-col bg-canvas">
-      <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex min-w-0 items-center gap-2.5">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2.5 xl:shrink">
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-600 text-xs font-bold text-white shadow-sm">{initials}</span>
-            <span className="hidden truncate text-sm font-semibold sm:block">{PRODUCT_NAME}</span>
+            <span className="hidden max-w-56 truncate text-sm font-semibold xl:block">{PRODUCT_NAME}</span>
           </Link>
-          <nav aria-label="Community" className="ml-2 flex items-center gap-1 text-sm">
-            <Link href="/showcase" className="rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+          <nav aria-label="Community" className="ml-2 flex min-w-0 items-center gap-1 overflow-x-auto text-sm">
+            <Link href="/showcase" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
               Showcase
             </Link>
-            <Link href="/articles" className="rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+            <Link href="/articles" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
               Articles
             </Link>
-            <Link href="/sessions" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg sm:block">
+            <Link href="/sessions" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg sm:block">
               Sessions
             </Link>
-            <Link href="/library" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
+            <Link href="/library" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
               Tools &amp; prompts
             </Link>
-            <Link href="/mentors" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
+            <Link href="/mentors" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg md:block">
               Mentors
             </Link>
-            <Link href="/jobs" className="rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg">
+            <Link href="/jobs" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg min-[400px]:block">
               Jobs
             </Link>
-            <Link href="/teams" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg lg:block">
+            <Link href="/teams" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg xl:block">
               Team finder
             </Link>
-            <Link href="/members" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg sm:block">
+            <Link href="/members" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg lg:block">
               Members
             </Link>
-            <Link href="/code-of-conduct" className="hidden rounded-lg px-2 py-1.5 text-muted hover:bg-surface-muted hover:text-fg sm:block">
-              Code of conduct
-            </Link>
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {signedIn ? (
               <Link href="/community" className={buttonClass("primary", "sm")}>
                 Open the app
