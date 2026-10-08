@@ -234,6 +234,9 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 37 — Articles ✓
+- Members write articles (headings, lists, code, links, a cover picture, tags, reading time), save drafts and publish; anyone can read them. Readers mark them useful, save them for later, comment and reply, and repost them with a note; Reviewers mark them reviewed. Authors get emails for comments, reviews and reposts (`docs/COMMUNITY.md`)
+
 ### Phase 36 — Community chat and feedback conversations ✓
 - Discord-style chat for members: channels (#general, #help, #ai-tools, #show-and-tell, #jobs-and-gigs, #off-topic), live updates without reloading, threads, reactions, @tagging, and questions in #help that get marked solved. Feedback on showcase projects becomes a back-and-forth between the author and the reviewer. Also fixed: session call links containing the letter "s" were refused (`docs/COMMUNITY.md`)
 

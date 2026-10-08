@@ -183,7 +183,11 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Post in the chat (after the code of conduct), reply in threads, react, tag people, delete own messages, report others; mark own questions solved | | ✓ | ✓ |
 | Reply under feedback on their own project, or under feedback they gave (Phase 36) | | ✓ | ✓ |
 | Hide or show chat messages; mark any question solved | | | ✓ |
-| See reports; hide or show profiles, projects, feedback, sessions, library items, jobs and team finder posts; make or remove organizers | | | ✓ |
+| Read published articles | ✓ | ✓ | ✓ |
+| Write, publish, edit, take back and delete own articles (after the code of conduct); mark others' useful, save, comment and reply, repost, report (Phase 37) | | ✓ | ✓ |
+| Mark an article reviewed with a note (members with the Reviewer badge; not their own) | | Reviewers | ✓ |
+| Show a hidden article again | | | ✓ |
+| See reports; hide or show profiles, projects, feedback, sessions, library items, jobs, team finder posts, chat messages, articles and comments; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in
 another, and no role ever reaches another company's data. An Admin sets a temporary password only for

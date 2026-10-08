@@ -240,6 +240,17 @@ export default async function CommunityHomePage() {
                 <span className="block text-xs text-muted">Stuck? Ask the community in the chat and get an answer fast.</span>
               </li>
               <li>
+                <Link href="/articles" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+                  Read articles
+                </Link>
+                <span className="block text-xs text-muted">
+                  How members built things and what they learned.{" "}
+                  <Link href="/community/articles/new" className="text-brand-600 hover:underline dark:text-brand-400">
+                    Write one
+                  </Link>
+                </span>
+              </li>
+              <li>
                 <Link href="/mentors" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
                   Find a mentor
                 </Link>

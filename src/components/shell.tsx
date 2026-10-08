@@ -73,6 +73,7 @@ const icons = {
   teams: UsersRound,
   frontPage: ImagePlay,
   chat: MessagesSquare,
+  articles: Newspaper,
 } as const;
 
 export type IconName = keyof typeof icons;

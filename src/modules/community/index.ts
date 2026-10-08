@@ -1,7 +1,7 @@
 import { and, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { chatMessages, communityJobs, communityReports, communitySessions, libraryItems, memberProfiles, showcasePosts, showcaseReviews, teamPosts, users } from "@/lib/db/schema";
+import { articleComments, articles, chatMessages, communityJobs, communityReports, communitySessions, libraryItems, memberProfiles, showcasePosts, showcaseReviews, teamPosts, users } from "@/lib/db/schema";
 import { ServiceError } from "@/modules/errors";
 
 // Phase 25: the community. Everyone who signs up is a member with a profile, whether or not they
@@ -235,7 +235,7 @@ export const reportInput = z.object({
   reason: z.string().trim().min(10, "Say what is wrong (at least 10 characters)").max(1000),
 });
 
-export type ReportTarget = "PROFILE" | "POST" | "REVIEW" | "SESSION" | "LIBRARY" | "JOB" | "TEAM" | "CHAT";
+export type ReportTarget = "PROFILE" | "POST" | "REVIEW" | "SESSION" | "LIBRARY" | "JOB" | "TEAM" | "CHAT" | "ARTICLE" | "ARTICLE_COMMENT";
 
 /** Files a report (once per person and thing while it is open). */
 export async function fileReport(member: Member, targetType: ReportTarget, targetId: string, raw: z.input<typeof reportInput>) {
@@ -294,6 +294,8 @@ export async function listReports(member: Member) {
              WHEN 'JOB' THEN cj.title
              WHEN 'TEAM' THEN tp.title
              WHEN 'CHAT' THEN 'Message by ' || cmu.name || ' in #' || cc.slug
+             WHEN 'ARTICLE' THEN ar.title
+             WHEN 'ARTICLE_COMMENT' THEN 'Comment by ' || acu.name || ' on ' || aca.title
              ELSE 'Feedback by ' || rvu.name || ' on ' || rvp.title END AS target_name,
            CASE r.target_type
              WHEN 'PROFILE' THEN '/members/' || p.handle
@@ -303,6 +305,8 @@ export async function listReports(member: Member) {
              WHEN 'JOB' THEN '/jobs/' || cj.id
              WHEN 'TEAM' THEN '/teams/' || tp.id
              WHEN 'CHAT' THEN '/community/chat/' || cc.slug || '?thread=' || coalesce(cm.parent_id, cm.id)
+             WHEN 'ARTICLE' THEN '/articles/' || ar.id
+             WHEN 'ARTICLE_COMMENT' THEN '/articles/' || ac.article_id || '#comments'
              ELSE '/showcase/' || rv.post_id || '#reviews' END AS target_link,
            CASE r.target_type
              WHEN 'PROFILE' THEN p.hidden_at IS NOT NULL
@@ -312,6 +316,8 @@ export async function listReports(member: Member) {
              WHEN 'JOB' THEN cj.hidden_at IS NOT NULL
              WHEN 'TEAM' THEN tp.hidden_at IS NOT NULL
              WHEN 'CHAT' THEN cm.hidden_at IS NOT NULL
+             WHEN 'ARTICLE' THEN ar.hidden_at IS NOT NULL
+             WHEN 'ARTICLE_COMMENT' THEN ac.hidden_at IS NOT NULL
              ELSE rv.hidden_at IS NOT NULL END AS target_hidden,
            su.name AS resolver
     FROM community_reports r
@@ -329,6 +335,10 @@ export async function listReports(member: Member) {
     LEFT JOIN chat_messages cm ON r.target_type = 'CHAT' AND cm.id = r.target_id
     LEFT JOIN users cmu ON cmu.id = cm.author_id
     LEFT JOIN chat_channels cc ON cc.id = cm.channel_id
+    LEFT JOIN articles ar ON r.target_type = 'ARTICLE' AND ar.id = r.target_id AND ar.removed_at IS NULL
+    LEFT JOIN article_comments ac ON r.target_type = 'ARTICLE_COMMENT' AND ac.id = r.target_id
+    LEFT JOIN users acu ON acu.id = ac.author_id
+    LEFT JOIN articles aca ON aca.id = ac.article_id AND aca.removed_at IS NULL
     LEFT JOIN users su ON su.id = r.resolved_by
     ORDER BY (r.status = 'OPEN') DESC, r.created_at DESC
     LIMIT 100
@@ -377,6 +387,14 @@ export async function resolveReport(member: Member, reportId: string, raw: z.inp
         const [message] = await tx.select({ owner: chatMessages.authorId }).from(chatMessages).where(eq(chatMessages.id, report.targetId));
         if (message?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
         await tx.update(chatMessages).set({ ...hide, updatedAt: new Date() }).where(and(eq(chatMessages.id, report.targetId), isNull(chatMessages.hiddenAt)));
+      } else if (report.targetType === "ARTICLE") {
+        const [article] = await tx.select({ owner: articles.authorId }).from(articles).where(eq(articles.id, report.targetId));
+        if (article?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(articles).set(hide).where(and(eq(articles.id, report.targetId), isNull(articles.hiddenAt)));
+      } else if (report.targetType === "ARTICLE_COMMENT") {
+        const [comment] = await tx.select({ owner: articleComments.authorId }).from(articleComments).where(eq(articleComments.id, report.targetId));
+        if (comment?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");
+        await tx.update(articleComments).set(hide).where(and(eq(articleComments.id, report.targetId), isNull(articleComments.hiddenAt)));
       } else {
         const [review] = await tx.select({ owner: showcaseReviews.reviewerId }).from(showcaseReviews).where(eq(showcaseReviews.id, report.targetId));
         if (review?.owner === member.id) throw new ServiceError("Ask another organizer to handle a report about you.");

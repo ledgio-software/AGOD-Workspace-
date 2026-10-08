@@ -6,7 +6,9 @@ import { Badge } from "@/components/badges";
 import { Avatar, Callout, Card, Disclosure, buttonClass } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { getProfile } from "@/modules/community";
+import { articlesBy } from "@/modules/community/articles";
 import { giveBack, listPosts } from "@/modules/community/showcase";
+import { ArticleCard } from "../../articles/article-card";
 import { PostGrid } from "../../showcase/post-grid";
 import { reportProfileAction } from "../../../(community)/community/actions";
 import { OrganizerForm, ReportForm, UnhideForm } from "../../../(community)/community/forms";
@@ -30,7 +32,7 @@ export default async function MemberPage({ params }: Params) {
   const found = await getProfile((await params).handle, viewer);
   if (!found) notFound();
   const { profile: p, name, self, organizer } = found;
-  const [counts, projects] = await Promise.all([giveBack(p.userId), listPosts(viewer, { authorId: p.userId })]);
+  const [counts, projects, writing] = await Promise.all([giveBack(p.userId), listPosts(viewer, { authorId: p.userId }), articlesBy(p.userId)]);
   const links = LINKS.filter(([key]) => p[key]).map(([key, label]) => ({ url: p[key]!, label }));
 
   return (
@@ -114,6 +116,32 @@ export default async function MemberPage({ params }: Params) {
         <Card title="Projects">
           <PostGrid posts={projects.posts} />
         </Card>
+      )}
+
+      {writing.written.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Articles</h2>
+          <ul className="space-y-4">
+            {writing.written.map((a) => (
+              <li key={a.id}>
+                <ArticleCard article={a} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {writing.reposted.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Reposted</h2>
+          <ul className="space-y-4">
+            {writing.reposted.map(({ note, ...a }) => (
+              <li key={a.id}>
+                <ArticleCard article={a} repost={{ name, handle: p.handle, note }} />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {organizer && !self && (
