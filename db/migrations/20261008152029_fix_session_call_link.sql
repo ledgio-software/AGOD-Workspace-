@@ -1,0 +1,2 @@
+ALTER TABLE "community_sessions" DROP CONSTRAINT "community_sessions_urls";--> statement-breakpoint
+ALTER TABLE "community_sessions" ADD CONSTRAINT "community_sessions_urls" CHECK (("community_sessions"."call_url" ~ '^https://[^\s]+$') AND ("community_sessions"."recording_url" IS NULL OR "community_sessions"."recording_url" ~ '^https://[^\s]+$'));

@@ -407,6 +407,13 @@
       "when": 1791471239547,
       "tag": "20261008145359_front_page_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1791472829145,
+      "tag": "20261008152029_fix_session_call_link",
+      "breakpoints": true
     }
   ]
 }
