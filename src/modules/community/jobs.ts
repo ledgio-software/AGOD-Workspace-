@@ -8,6 +8,8 @@ import { parseMoney } from "@/lib/money";
 import { appUrl, sendAccountEmail } from "@/modules/accounts";
 import { jobApplicationMessage, jobApplicationUpdateMessage } from "@/modules/email/account";
 import { ServiceError } from "@/modules/errors";
+import { requireEstablished, screen, textOf } from "@/modules/safety/screen";
+import { HOLD_SCORE } from "@/lib/risk";
 import { type Member, ensureProfile, fileReport, isOrganizer, reportInput } from "./index";
 
 // Phase 33: the jobs & gigs board. Members post paid work (jobs, gigs, internships) for up to 60
@@ -107,6 +109,8 @@ function checkClosingDate(closesOn: string, today = todayInOperatingZone()) {
 export async function createJob(member: Member, raw: z.input<typeof jobInput>): Promise<string> {
   const input = jobInput.parse(raw);
   await requireConduct(member);
+  // Phase 41: fake jobs are the commonest scam, so new accounts can't post them yet.
+  await requireEstablished(member, "Posting jobs");
   checkClosingDate(input.closesOn);
   const [{ n: today }] = await db
     .select({ n: count() })
@@ -122,7 +126,19 @@ export async function createJob(member: Member, raw: z.input<typeof jobInput>): 
     .insert(communityJobs)
     .values({ posterId: member.id, ...input })
     .returning({ id: communityJobs.id });
+  await holdIfRisky(member, row.id, input);
   return row.id;
+}
+
+/** Phase 41: a job that looks like a scam isn't listed until AGOD staff approve it. */
+async function holdIfRisky(member: Member, jobId: string, input: Record<string, unknown>) {
+  const score = await screen(member, "JOB", jobId, textOf(input));
+  if (score >= HOLD_SCORE) {
+    await db
+      .update(communityJobs)
+      .set({ heldAt: new Date(), heldReason: "Our scam check wants a person to look at this job first." })
+      .where(and(eq(communityJobs.id, jobId), isNull(communityJobs.heldAt)));
+  }
 }
 
 async function ownJob(member: Member, jobId: string) {
@@ -138,6 +154,7 @@ export async function updateJob(member: Member, jobId: string, raw: z.input<type
   if (job.status !== "OPEN") throw new ServiceError("This job is closed. Post a new one instead.");
   checkClosingDate(input.closesOn);
   await db.update(communityJobs).set(input).where(eq(communityJobs.id, jobId));
+  await holdIfRisky(member, jobId, input);
 }
 
 /** Stops taking applications: filled (someone was hired) or just closed. */
@@ -181,7 +198,7 @@ const cardColumns = {
   createdAt: communityJobs.createdAt,
 };
 
-const isOpen = () => and(eq(communityJobs.status, "OPEN"), isNull(communityJobs.hiddenAt), gte(communityJobs.closesOn, todayInOperatingZone()));
+const isOpen = () => and(eq(communityJobs.status, "OPEN"), isNull(communityJobs.hiddenAt), isNull(communityJobs.heldAt), gte(communityJobs.closesOn, todayInOperatingZone()));
 
 /** Open jobs, newest first; filters by kind, work mode, skill and words. */
 export async function listJobs(filters: { kind?: string; mode?: string; skill?: string; q?: string } = {}): Promise<JobCard[]> {
@@ -218,6 +235,8 @@ export type JobDetail = JobCard & {
   status: "OPEN" | "CLOSED" | "FILLED";
   open: boolean;
   hidden: boolean;
+  /** Phase 41: waiting for AGOD staff to check it (only the poster and organizers see it). */
+  held: boolean;
   posterId: string;
   posterName: string;
   posterHandle: string | null;
@@ -234,6 +253,7 @@ export async function getJob(viewer: Member | null, jobId: string): Promise<JobD
       description: communityJobs.description,
       status: communityJobs.status,
       hiddenAt: communityJobs.hiddenAt,
+      heldAt: communityJobs.heldAt,
       posterId: communityJobs.posterId,
       posterName: users.name,
       posterHandle: memberProfiles.handle,
@@ -244,15 +264,16 @@ export async function getJob(viewer: Member | null, jobId: string): Promise<JobD
     .leftJoin(memberProfiles, eq(memberProfiles.userId, communityJobs.posterId))
     .where(eq(communityJobs.id, jobId));
   if (!row) return null;
-  if (row.hiddenAt && row.posterId !== viewer?.id && !(await viewerIsOrganizer(viewer))) return null;
+  if ((row.hiddenAt || row.heldAt) && row.posterId !== viewer?.id && !(await viewerIsOrganizer(viewer))) return null;
   const [mine] = viewer
     ? await db.select({ id: jobApplications.id, status: jobApplications.status }).from(jobApplications).where(and(eq(jobApplications.jobId, jobId), eq(jobApplications.applicantId, viewer.id)))
     : [];
-  const { hiddenAt, ...rest } = row;
+  const { hiddenAt, heldAt, ...rest } = row;
   return {
-    ...(rest as Omit<JobDetail, "hidden" | "open" | "myApplication">),
+    ...(rest as Omit<JobDetail, "hidden" | "held" | "open" | "myApplication">),
     hidden: hiddenAt !== null,
-    open: row.status === "OPEN" && !hiddenAt && row.closesOn >= todayInOperatingZone(),
+    held: heldAt !== null,
+    open: row.status === "OPEN" && !hiddenAt && !heldAt && row.closesOn >= todayInOperatingZone(),
     myApplication: mine ? { id: mine.id, status: mine.status as ApplicationStatus } : null,
   };
 }
@@ -339,7 +360,7 @@ export type ApplicationView = {
 };
 
 export type MyJobs = {
-  posted: (JobCard & { status: string; open: boolean; hidden: boolean; applications: ApplicationView[] })[];
+  posted: (JobCard & { status: string; open: boolean; hidden: boolean; held: boolean; applications: ApplicationView[] })[];
   applied: (ApplicationView & { job: { id: string; title: string; hirer: string; open: boolean } })[];
 };
 
@@ -347,7 +368,7 @@ export type MyJobs = {
 export async function myJobs(member: Member): Promise<MyJobs> {
   const today = todayInOperatingZone();
   const posted = await db
-    .select({ ...cardColumns, status: communityJobs.status, hiddenAt: communityJobs.hiddenAt })
+    .select({ ...cardColumns, status: communityJobs.status, hiddenAt: communityJobs.hiddenAt, heldAt: communityJobs.heldAt })
     .from(communityJobs)
     .where(eq(communityJobs.posterId, member.id))
     .orderBy(desc(communityJobs.createdAt))
@@ -380,17 +401,18 @@ export async function myJobs(member: Member): Promise<MyJobs> {
     person: { id: p.id, name: p.name, handle: p.handle, email: shareEmail ? p.email : null },
   });
   return {
-    posted: posted.map(({ hiddenAt, ...j }) => ({
+    posted: posted.map(({ hiddenAt, heldAt, ...j }) => ({
       ...(j as JobCard & { status: string }),
       hidden: hiddenAt !== null,
-      open: j.status === "OPEN" && !hiddenAt && j.closesOn >= today,
+      held: heldAt !== null,
+      open: j.status === "OPEN" && !hiddenAt && !heldAt && j.closesOn >= today,
       // Applying shares the applicant's email with the poster.
       applications: received.filter((r) => r.app.jobId === j.id).map((r) => view(r.app, r.person, true)),
     })),
     applied: mine.map((r) => ({
       // The poster's email once they shortlist or hire.
       ...view(r.app, r.person, r.app.status === "SHORTLISTED" || r.app.status === "HIRED"),
-      job: { id: r.job.id, title: r.job.title, hirer: r.job.hirer, open: r.job.status === "OPEN" && !r.job.hiddenAt && r.job.closesOn >= today },
+      job: { id: r.job.id, title: r.job.title, hirer: r.job.hirer, open: r.job.status === "OPEN" && !r.job.hiddenAt && !r.job.heldAt && r.job.closesOn >= today },
     })),
   };
 }

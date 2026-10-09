@@ -421,6 +421,30 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 41 decisions (2026-10-09): trust & safety
+
+| Decision | Choice |
+|---|---|
+| Detection | Rules in code (`src/lib/risk.ts`): phrases for fees, PIN/ID requests, investment schemes, off-platform contact and urgency, plus link checks (shorteners, IP hosts, punycode, look-alike brand domains with common swaps such as rn→m, 0→o). Fast, free, explainable to staff and testable; no outside service or AI call. |
+| Flags, not punishment | Scores put content in a staff queue (25+); only jobs are held automatically (40+), because fake jobs cost members money. Nothing is deleted or blocked by the check; staff clear, hide or ban. |
+| New-account limits | 3 days and a confirmed email before posting jobs, links in chat or mentor requests, because scammers act on day one. Plain chat, articles and projects stay open so newcomers can take part. Staff can lift the limits early; organizers and staff are never limited. |
+| Ban and clean up | One action blocks the login and hides everything the person posted, with one reason in the log. Hidden, not deleted: organizers can show an item again. |
+| Privacy | The check reads what members post, as organizers already can; it reads no private messages between companies and stores only the score, the signal names and a short excerpt of what matched. |
+| Not included (next) | Linked-account detection, vote/useful-mark manipulation checks, verified hirers, brand-name protection, appeals. |
+
+## Phase 40 decisions (2026-10-09): AGOD back office
+
+| Decision | Choice |
+|---|---|
+| Who | Staff listed in `PLATFORM_ADMIN_EMAILS` with a confirmed email and an active login. Configuration, not a database role, so nobody can grant themselves access from inside the app. Non-staff get a plain 404 at `/console` (no title either). Staff count as community organizers. |
+| Privacy | Companies appear as summaries only (people, admins, project count, created, last used). Staff never open a company's projects, customers, invoices, payouts, files or messages. |
+| Suspend a company | `organizations.suspended_at` + reason. Members lose the company everywhere (it drops out of `companiesOf`, which every company page and action goes through) and see a notice on the community home; the daily job skips it. Nothing is deleted. A trigger stops the app role (company Admins) from changing it. |
+| Block a login | Reuses `users.active` (sign-in already refuses inactive logins) and deletes the person's sessions. Staff can't block themselves or other staff. |
+| Password help | Staff can email a one-day password link (the existing invitation mechanism); they never see or set passwords. |
+| Accountability | Every action needs a reason (5 to 500 characters) and is written to `platform_audit` (who, what, target, reason, when), shown on the Log tab and on each company and person page. |
+| Moderation and content | The console gathers what organizers already do (reports, hidden items, organizers, news sources, front page, featured tools) instead of duplicating those tools. |
+| Not included | Viewing inside companies, deleting companies or people, impersonating users, billing companies, editing staff from the console. |
+
 ## Phase 39 decisions (2026-10-08): search and Google
 
 | Decision | Choice |

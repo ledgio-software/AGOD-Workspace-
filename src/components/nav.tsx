@@ -57,7 +57,7 @@ export function navGroups(actor: Actor & { releaseControl?: boolean }): NavGroup
 }
 
 /** Phase 25: the community, for every signed-in person (organizers also see reports). */
-export function communityGroup(o: { organizer: boolean }): NavGroup {
+export function communityGroup(o: { organizer: boolean; staff?: boolean }): NavGroup {
   const items: NavItem[] = [
     { href: "/community", label: "Community home", icon: "community" },
     { href: "/search", label: "Search", icon: "search" },
@@ -75,5 +75,7 @@ export function communityGroup(o: { organizer: boolean }): NavGroup {
     { href: "/community/profile", label: "My profile", icon: "profile" },
   ];
   if (o.organizer) items.push({ href: "/community/reports", label: "Reports", icon: "reports" }, { href: "/community/front-page", label: "Front page", icon: "frontPage" }, { href: "/community/news", label: "News sources", icon: "news" });
+  // Phase 40: AGOD back-office staff.
+  if (o.staff) items.push({ href: "/console", label: "Back office", icon: "console" });
   return { label: "Community", items };
 }

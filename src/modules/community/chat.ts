@@ -5,6 +5,8 @@ import { chatChannels, chatMessages, chatReactions, chatReads, memberProfiles, u
 import { ServiceError } from "@/modules/errors";
 import { REACTIONS } from "@/modules/messages/catalog";
 import { type Member, canModerate, ensureProfile, fileReport, reportInput } from "./index";
+import { requireEstablished, screen } from "@/modules/safety/screen";
+import { linksIn } from "@/lib/risk";
 
 // Phase 36: community chat, like Discord channels. Everyone signed in reads and talks in topic
 // channels (after agreeing to the code of conduct). A message can start a thread of replies; in the
@@ -193,8 +195,10 @@ export async function postMessage(member: Member, slug: string, raw: z.input<typ
     .from(chatMessages)
     .where(and(eq(chatMessages.authorId, member.id), gte(chatMessages.createdAt, new Date(Date.now() - 60_000))));
   if (n >= PER_MINUTE) throw new ServiceError("You're sending messages very fast. Wait a minute and try again.");
+  // Phase 41: links in chat are how phishing spreads, so new accounts can't post them yet.
+  if (linksIn(body).length > 0) await requireEstablished(member, "Sharing links in the chat");
   const mentionedIds = await mentionsIn(body, member.id);
-  return db.transaction(async (tx) => {
+  const id = await db.transaction(async (tx) => {
     const now = new Date();
     if (parentId) {
       if (!z.uuid().safeParse(parentId).success) throw new ServiceError("Message not found.");
@@ -219,6 +223,8 @@ export async function postMessage(member: Member, slug: string, raw: z.input<typ
       .onConflictDoUpdate({ target: [chatReads.userId, chatReads.channelId], set: { lastReadAt: now } });
     return row.id;
   });
+  await screen(member, "CHAT", id, body);
+  return id;
 }
 
 async function loadMessage(messageId: string) {

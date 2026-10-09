@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -48,8 +48,20 @@ export async function companiesOf(userId: string): Promise<Company[]> {
     .select({ id: organizations.id, name: organizations.name, releaseControl: organizations.releaseControl, role: memberships.role, companyRoleId: memberships.companyRoleId, joinedAt: memberships.createdAt })
     .from(memberships)
     .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
-    .where(and(eq(memberships.userId, userId), eq(memberships.active, true)))
+    // Phase 40: a company the back office suspended is closed to its members.
+    .where(and(eq(memberships.userId, userId), eq(memberships.active, true), isNull(organizations.suspendedAt)))
     .orderBy(asc(organizations.name));
+}
+
+/** Phase 40: companies the person is in that the back office has suspended (to explain why they're gone). */
+export async function suspendedCompaniesOf(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ name: organizations.name })
+    .from(memberships)
+    .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
+    .where(and(eq(memberships.userId, userId), eq(memberships.active, true), isNotNull(organizations.suspendedAt)))
+    .orderBy(asc(organizations.name));
+  return rows.map((r) => r.name);
 }
 
 /**

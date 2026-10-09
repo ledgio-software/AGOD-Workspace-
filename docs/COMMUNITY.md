@@ -236,6 +236,14 @@ its HTML, never images); entries older than 14 days are skipped and headlines ar
 days. Only https links are stored. A source that fails (blocked, down, not a feed) is skipped and
 its error shown to organizers; the others carry on.
 
+## Staying safe (Phase 41)
+
+New accounts can post jobs, share links in the chat and ask mentors once they've confirmed their
+email and been here 3 days; everything else (chatting, articles, projects, feedback) works from day
+one. A job that looks like a scam (asking applicants to pay, or for a PIN, code or ID) waits for a
+quick check by the AGOD team before it's listed; its poster sees why. Every job page reminds readers
+never to pay to get a job. Details for staff: `docs/CONSOLE.md`.
+
 ## Search and Google (Phase 39)
 
 | Page | Who | What |

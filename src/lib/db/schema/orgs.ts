@@ -33,6 +33,10 @@ export const organizations = pgTable(
     payoutRelease: text("payout_release").notNull().default("ON_APPROVAL"),
     // Phase 32: change control (release approvals). On for fintech teams.
     releaseControl: boolean("release_control").notNull().default(false),
+    // Phase 40: AGOD back office. A suspended company is closed to its members (they keep the
+    // community); nothing is deleted, and restoring it brings everything back.
+    suspendedAt: timestamp("suspended_at", { withTimezone: true }),
+    suspendedReason: text("suspended_reason"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -47,6 +51,7 @@ export const organizations = pgTable(
     check("organizations_deposit", sql`${t.defaultDepositBasisPoints} BETWEEN 0 AND 10000`),
     check("organizations_review_days", sql`${t.clientReviewDays} BETWEEN 1 AND 60`),
     check("organizations_payout_release", sql`${t.payoutRelease} IN ('ON_APPROVAL', 'ON_CLIENT_PAYMENT')`),
+    check("organizations_suspended", sql`(${t.suspendedAt} IS NULL) = (${t.suspendedReason} IS NULL)`),
   ],
 );
 

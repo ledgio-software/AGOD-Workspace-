@@ -456,6 +456,34 @@
       "when": 1791484714057,
       "tag": "20261008183834_news_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1791555010443,
+      "tag": "20261009141010_platform_console",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1791555012609,
+      "tag": "20261009141012_platform_console_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1791573319984,
+      "tag": "20261009191519_trust_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1791573321486,
+      "tag": "20261009191521_trust_safety_rules",
+      "breakpoints": true
     }
   ]
 }

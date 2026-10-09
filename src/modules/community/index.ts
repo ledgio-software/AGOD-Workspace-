@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { articleComments, articles, chatMessages, communityJobs, communityReports, communitySessions, libraryItems, memberProfiles, showcasePosts, showcaseReviews, teamPosts, users } from "@/lib/db/schema";
 import { ServiceError } from "@/modules/errors";
+import { isPlatformAdmin, organizerEmails } from "@/lib/staff";
+import { screen, textOf } from "@/modules/safety/screen";
 
 // Phase 25: the community. Everyone who signs up is a member with a profile, whether or not they
 // belong to a company. Profiles are public unless the member limits them to signed-in members or
@@ -13,17 +15,11 @@ import { ServiceError } from "@/modules/errors";
 export type Member = { id: string; name: string; email: string };
 export type Profile = typeof memberProfiles.$inferSelect;
 
-export function organizerEmails(source: Record<string, string | undefined> = process.env): Set<string> {
-  return new Set(
-    (source.COMMUNITY_ORGANIZER_EMAILS ?? "")
-      .split(/[,\s]+/)
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
+export { organizerEmails };
 
+/** Organizers moderate the community; AGOD back-office staff (Phase 40) count as organizers too. */
 export const isOrganizer = (profile: Pick<Profile, "communityRole"> | null, email: string) =>
-  profile?.communityRole === "ORGANIZER" || organizerEmails().has(email.toLowerCase());
+  profile?.communityRole === "ORGANIZER" || organizerEmails().has(email.toLowerCase()) || isPlatformAdmin(email);
 
 /** Chat links shown to members (the handbook's Discord server and WhatsApp group), when set. */
 export function chatLinks(source: Record<string, string | undefined> = process.env) {
@@ -138,6 +134,7 @@ export async function updateProfile(member: Member, raw: z.input<typeof profileI
   await ensureProfile(member);
   if (await handleTaken(input.handle, member.id)) throw new ServiceError("That profile address is taken. Try another.");
   const [saved] = await db.update(memberProfiles).set(input).where(eq(memberProfiles.userId, member.id)).returning();
+  await screen(member, "PROFILE", member.id, textOf({ ...input, name: member.name }));
   return saved;
 }
 
