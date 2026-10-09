@@ -421,6 +421,17 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 41 decisions (2026-10-09): trust & safety
+
+| Decision | Choice |
+|---|---|
+| Detection | Rules in code (`src/lib/risk.ts`): phrases for fees, PIN/ID requests, investment schemes, off-platform contact and urgency, plus link checks (shorteners, IP hosts, punycode, look-alike brand domains with common swaps such as rn→m, 0→o). Fast, free, explainable to staff and testable; no outside service or AI call. |
+| Flags, not punishment | Scores put content in a staff queue (25+); only jobs are held automatically (40+), because fake jobs cost members money. Nothing is deleted or blocked by the check; staff clear, hide or ban. |
+| New-account limits | 3 days and a confirmed email before posting jobs, links in chat or mentor requests, because scammers act on day one. Plain chat, articles and projects stay open so newcomers can take part. Staff can lift the limits early; organizers and staff are never limited. |
+| Ban and clean up | One action blocks the login and hides everything the person posted, with one reason in the log. Hidden, not deleted: organizers can show an item again. |
+| Privacy | The check reads what members post, as organizers already can; it reads no private messages between companies and stores only the score, the signal names and a short excerpt of what matched. |
+| Not included (next) | Linked-account detection, vote/useful-mark manipulation checks, verified hirers, brand-name protection, appeals. |
+
 ## Phase 40 decisions (2026-10-09): AGOD back office
 
 | Decision | Choice |

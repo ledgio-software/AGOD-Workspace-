@@ -189,6 +189,8 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Show a hidden article again | | | ✓ |
 | Read tech news (Phase 38) | ✓ | ✓ | ✓ |
 | AGOD back office `/console` (Phase 40; staff in `PLATFORM_ADMIN_EMAILS` only, not a company role): platform numbers and health; companies as summaries; suspend or restore a company; block or restore a login; email a password link; manage organizers; every action logged with a reason (`docs/CONSOLE.md`) | | | staff |
+| New accounts (Phase 41): post jobs, share links in chat, ask mentors only after confirming their email and 3 days (staff can lift it early; organizers and staff are never limited) | | ✓ | ✓ |
+| Trust & safety (Phase 41; staff): approve or reject held jobs; clear or hide flagged content; ban and hide everything someone posted; lift new-account limits | | | staff |
 | Search the community (Phase 39; visitors find public profiles only, nobody finds hidden posts or drafts) | ✓ | ✓ | ✓ |
 | Mark headlines useful | | ✓ | ✓ |
 | Hide or show headlines; switch news sources off or on; fetch news now | | | ✓ |

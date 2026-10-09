@@ -6,6 +6,7 @@ import { appUrl, sendAccountEmail } from "@/modules/accounts";
 import { teamAnswerMessage, teamRequestMessage } from "@/modules/email/account";
 import { ServiceError } from "@/modules/errors";
 import { type Member, ensureProfile, fileReport, isOrganizer, reportInput } from "./index";
+import { screen, textOf } from "@/modules/safety/screen";
 
 // Phase 33: the team finder. A member posts an idea that needs people ("IDEA": the roles needed)
 // or says they want to join a team ("JOINING": the roles they can take). Others send a short
@@ -74,6 +75,7 @@ export async function createTeamPost(member: Member, raw: z.input<typeof teamPos
     .insert(teamPosts)
     .values({ authorId: member.id, ...input })
     .returning({ id: teamPosts.id });
+  await screen(member, "TEAM", row.id, textOf(input));
   return row.id;
 }
 
@@ -89,6 +91,7 @@ export async function updateTeamPost(member: Member, postId: string, raw: z.inpu
   const post = await ownPost(member, postId);
   if (post.status !== "OPEN") throw new ServiceError("This post is closed. Post a new one instead.");
   await db.update(teamPosts).set(input).where(eq(teamPosts.id, postId));
+  await screen(member, "TEAM", postId, textOf(input));
 }
 
 export async function closeTeamPost(member: Member, postId: string) {

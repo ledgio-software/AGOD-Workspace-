@@ -10,6 +10,7 @@ import { newReviewMessage, reviewReplyMessage } from "@/modules/email/account";
 import { ServiceError } from "@/modules/errors";
 import { FEEDBACK_AREAS, NEEDS, type PostStatus, STATUS_LABEL } from "./showcase-labels";
 import { type Member, ensureProfile, fileReport, isOrganizer, reportInput } from "./index";
+import { screen, textOf } from "@/modules/safety/screen";
 
 // Phase 26: the showcase. Members share projects (the handbook's posting template) with
 // screenshots and a video demo link, ask for specific feedback, and review each other's work
@@ -88,6 +89,7 @@ export async function createPost(member: Member, raw: z.input<typeof postInput>)
     .insert(showcasePosts)
     .values({ ...fields(input), authorId: member.id, safetyConfirmedAt: new Date() })
     .returning();
+  await screen(member, "POST", post.id, textOf(input));
   return post;
 }
 
@@ -107,6 +109,7 @@ export async function updatePost(member: Member, postId: string, raw: z.input<ty
     .set({ ...fields(input), safetyConfirmedAt: new Date() })
     .where(eq(showcasePosts.id, postId))
     .returning();
+  await screen(member, "POST", postId, textOf(input));
   return post;
 }
 
@@ -378,6 +381,7 @@ export async function addReview(member: Member, postId: string, raw: z.input<typ
   if (post.authorId === member.id) throw new ServiceError("You can't review your own project. Ask the community instead!");
   const [review] = await db.insert(showcaseReviews).values({ ...input, postId: post.id, reviewerId: member.id }).onConflictDoNothing().returning();
   if (!review) throw new ServiceError("You already reviewed this project.");
+  await screen(member, "REVIEW", review.id, textOf(input));
   // The first review moves a request to "Reviewed" (the author can still mark it shipped).
   await db.update(showcasePosts).set({ status: "REVIEWED" }).where(and(eq(showcasePosts.id, post.id), eq(showcasePosts.status, "NEEDS_REVIEW")));
   const [author] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, post.authorId));

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { libraryItems, libraryVotes, memberProfiles, users } from "@/lib/db/schema";
 import { ServiceError } from "@/modules/errors";
 import { type Member, ensureProfile, fileReport, isOrganizer, reportInput } from "./index";
+import { screen, textOf } from "@/modules/safety/screen";
 
 // Phase 31: the tools & prompts library. Members share tools (with a link), prompts that worked
 // (the text to copy) and guides; others mark them "useful". Organizers feature the best and hide
@@ -69,6 +70,7 @@ export async function createItem(member: Member, raw: z.input<typeof itemInput>)
     .insert(libraryItems)
     .values({ authorId: member.id, ...input })
     .returning({ id: libraryItems.id });
+  await screen(member, "LIBRARY", row.id, textOf(input));
   return row.id;
 }
 
@@ -77,6 +79,7 @@ export async function updateItem(member: Member, itemId: string, raw: z.input<ty
   const [item] = await db.select().from(libraryItems).where(and(eq(libraryItems.id, itemId), isNull(libraryItems.removedAt)));
   if (!item || item.authorId !== member.id) throw new ServiceError("Only the person who shared it can change it.");
   await db.update(libraryItems).set(input).where(eq(libraryItems.id, itemId));
+  await screen(member, "LIBRARY", itemId, textOf(input));
 }
 
 export async function removeItem(member: Member, itemId: string) {

@@ -11,6 +11,12 @@ export const ACTION_LABEL: Record<string, string> = {
   RESET_LINK_SENT: "Sent a password link",
   ORGANIZER_ADDED: "Made an organizer",
   ORGANIZER_REMOVED: "Removed as organizer",
+  JOB_APPROVED: "Approved a held job",
+  FLAG_CLEARED: "Cleared a flag",
+  CONTENT_HIDDEN: "Hid flagged content",
+  BANNED_AND_CLEANED: "Banned and hid everything they posted",
+  LIMITS_LIFTED: "Lifted the new-account limits",
+  LIMITS_RESTORED: "Put the new-account limits back",
 };
 
 export function AuditList({ rows, empty, showTarget = false }: { rows: AuditRow[]; empty: string; showTarget?: boolean }) {

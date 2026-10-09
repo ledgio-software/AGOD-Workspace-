@@ -48,6 +48,8 @@ export const memberProfiles = pgTable(
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     hiddenBy: userRef("hidden_by"),
     hiddenReason: text("hidden_reason"),
+    // Phase 41: AGOD staff lifted the new-account limits early (posting jobs, links in chat, mentorship).
+    trustedAt: timestamp("trusted_at", { withTimezone: true }),
     createdAt,
     updatedAt,
   },
@@ -421,6 +423,9 @@ export const communityJobs = pgTable(
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     hiddenBy: userRef("hidden_by"),
     hiddenReason: text("hidden_reason"),
+    // Phase 41: a job the scam check flagged waits here until AGOD staff approve it (or hide it).
+    heldAt: timestamp("held_at", { withTimezone: true }),
+    heldReason: text("held_reason"),
     createdAt,
     updatedAt,
   },
@@ -855,4 +860,34 @@ export const newsUseful = pgTable(
     createdAt,
   },
   (t) => [uniqueIndex("news_useful_unique").on(t.itemId, t.userId), index("news_useful_created_idx").on(t.createdAt)],
+);
+
+// Phase 41: trust & safety. Something a member wrote that the scam check (src/lib/risk.ts) found
+// suspicious, waiting for AGOD staff: cleared (fine), or acted on (hidden, author banned).
+export const riskFlags = pgTable(
+  "risk_flags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // JOB, CHAT, ARTICLE, ARTICLE_COMMENT, POST, REVIEW, PROFILE, LIBRARY, TEAM
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    authorId: userRef("author_id").notNull(),
+    score: integer("score").notNull(),
+    signals: text("signals").array().notNull(),
+    // A few words of what was matched, for the reviewer.
+    excerpt: text("excerpt"),
+    status: text("status").notNull().default("OPEN"),
+    reviewedBy: userRef("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("risk_flags_target_unique").on(t.targetType, t.targetId),
+    index("risk_flags_status_idx").on(t.status, t.score),
+    index("risk_flags_author_idx").on(t.authorId),
+    check("risk_flags_target_type", sql`${t.targetType} IN ('JOB', 'CHAT', 'ARTICLE', 'ARTICLE_COMMENT', 'POST', 'REVIEW', 'PROFILE', 'LIBRARY', 'TEAM')`),
+    check("risk_flags_status", sql`${t.status} IN ('OPEN', 'CLEARED', 'ACTIONED')`),
+    check("risk_flags_score", sql`${t.score} BETWEEN 0 AND 100`),
+    check("risk_flags_reviewed", sql`(${t.status} = 'OPEN') = (${t.reviewedAt} IS NULL)`),
+  ],
 );

@@ -25,7 +25,7 @@ export const platformAudit = pgTable(
   (t) => [
     index("platform_audit_created_idx").on(t.createdAt),
     index("platform_audit_target_idx").on(t.targetType, t.targetId),
-    check("platform_audit_target_type", sql`${t.targetType} IN ('COMPANY', 'USER', 'PROFILE')`),
+    check("platform_audit_target_type", sql`${t.targetType} IN ('COMPANY', 'USER', 'PROFILE', 'CONTENT')`),
     check("platform_audit_reason", sql`${t.reason} IS NULL OR length(${t.reason}) <= 500`),
   ],
 );

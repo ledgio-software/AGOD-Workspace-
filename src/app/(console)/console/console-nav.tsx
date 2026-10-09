@@ -8,6 +8,7 @@ const TABS = [
   { href: "/console", label: "Overview" },
   { href: "/console/companies", label: "Companies" },
   { href: "/console/people", label: "People" },
+  { href: "/console/safety", label: "Trust & safety" },
   { href: "/console/moderation", label: "Moderation" },
   { href: "/console/content", label: "Content" },
   { href: "/console/log", label: "Log" },

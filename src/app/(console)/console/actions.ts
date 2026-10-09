@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getSignedIn } from "@/lib/session";
 import { sendResetLink, setCompanySuspended, setLoginBlocked, setOrganizerRole } from "@/modules/platform";
+import { banAndCleanUp, clearFlag, hideFlagged, setTrusted } from "@/modules/safety";
 
 // Phase 40: AGOD back-office actions. Each one checks staff again in src/modules/platform.
 
@@ -45,4 +46,30 @@ export async function organizerAction(on: boolean, _prev: Result | null, form: F
   const me = await member();
   const r = await runAction(() => setOrganizerRole(me, text(form, "handle"), on));
   return done(r, on ? "They're an organizer now." : "They're a builder again.", ["/console/moderation"]);
+}
+
+// --- Phase 41: trust & safety ---------------------------------------------------------------
+
+export async function clearFlagAction(flagId: string): Promise<Result> {
+  const me = await member();
+  const r = await runAction(() => clearFlag(me, flagId));
+  return done(r, "Cleared. It stays up (a held job is now listed).", ["/console/safety", "/console", "/jobs"]);
+}
+
+export async function hideFlaggedAction(flagId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const me = await member();
+  const r = await runAction(() => hideFlagged(me, flagId, text(form, "reason")));
+  return done(r, "Hidden. Organizers can show it again on its page.", ["/console/safety", "/console"]);
+}
+
+export async function banAction(userId: string, _prev: Result | null, form: FormData): Promise<Result> {
+  const me = await member();
+  const r = await runAction(() => banAndCleanUp(me, userId, text(form, "reason")));
+  return r.ok ? done(r, `Banned. ${r.data} item(s) hidden and they're signed out.`, ["/console/safety", `/console/people/${userId}`, "/console"]) : r;
+}
+
+export async function trustAction(userId: string, trusted: boolean): Promise<Result> {
+  const me = await member();
+  const r = await runAction(() => setTrusted(me, userId, trusted));
+  return done(r, trusted ? "Limits lifted: they can post jobs, share links and ask mentors now." : "New-account limits apply again.", [`/console/people/${userId}`]);
 }

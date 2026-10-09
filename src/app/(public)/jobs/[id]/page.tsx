@@ -39,7 +39,12 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         <ArrowLeft className="size-4" aria-hidden /> Jobs &amp; gigs
       </Link>
       {job.hidden && <Callout tone="warn">Hidden by the organizers after a report. Only you and the organizers can see it.</Callout>}
-      {!job.open && !job.hidden && (
+      {job.held && !job.hidden && (
+        <Callout tone="warn" icon={ShieldAlert}>
+          Waiting for a quick check by the AGOD team before it&apos;s listed. Our scam check flagged something in it (for example asking applicants to pay, or for a PIN or ID). Only you and the organizers can see it for now.
+        </Callout>
+      )}
+      {!job.open && !job.hidden && !job.held && (
         <Callout tone="info">{job.status === "FILLED" ? "This job has been filled." : "This job is no longer taking applications."}</Callout>
       )}
       <div className="space-y-2">
@@ -126,7 +131,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       ) : null}
 
       <Callout tone="warn" icon={ShieldAlert}>
-        Agree the pay and what you&apos;ll deliver in writing before you start. Never pay anyone to get a job.
+        Agree the pay and what you&apos;ll deliver in writing before you start. Never pay anyone to get a job, and never share your Mobile Money PIN, a code sent to your phone or a photo of your Ghana Card. Report any job that asks.
       </Callout>
 
       {viewer && !mine && (

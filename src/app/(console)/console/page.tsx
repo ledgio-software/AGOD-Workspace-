@@ -1,7 +1,8 @@
-import { AlertTriangle, Building2, CheckCircle2, CircleSlash, Flag, Newspaper, UserRoundX, Users } from "lucide-react";
+import { AlertTriangle, Building2, CheckCircle2, CircleSlash, Flag, Newspaper, ShieldAlert, UserRoundX, Users } from "lucide-react";
 import { Card, PageHeader, StatCard, cx } from "@/components/ui";
 import { getSignedIn } from "@/lib/session";
 import { health, overview } from "@/modules/platform";
+import { safetyCounts } from "@/modules/safety";
 
 // Phase 40: the platform at a glance, and whether the parts that run on their own are working.
 
@@ -13,7 +14,7 @@ const STATE = {
 
 export default async function ConsoleOverview() {
   const me = (await getSignedIn())!;
-  const [o, checks] = await Promise.all([overview(me), health(me)]);
+  const [o, checks, safety] = await Promise.all([overview(me), health(me), safetyCounts(me)]);
   const most = Math.max(1, ...o.signupsByWeek.map((w) => w.people));
 
   return (
@@ -28,6 +29,8 @@ export default async function ConsoleOverview() {
         <StatCard label="Projects shared" value={o.projects} />
         <StatCard label="Published articles" value={o.articles} icon={Newspaper} />
         <StatCard label="Open jobs & gigs" value={o.openJobs} />
+        <StatCard label="Jobs waiting for a check" value={safety.heldJobs} tone={safety.heldJobs ? "warn" : "default"} icon={ShieldAlert} href="/console/safety" />
+        <StatCard label="Risk flags" value={safety.openFlags} hint="Found by the scam check" tone={safety.openFlags ? "warn" : "default"} href="/console/safety" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
