@@ -14,8 +14,12 @@ import { ButtonForm } from "../../../(community)/community/growth-forms";
 import { applyAction, closeJobAction, reportJobAction, unhideJobAction, withdrawApplicationAction } from "../../../(community)/community/work-actions";
 import { ApplyForm } from "../../../(community)/community/work-forms";
 import { JobBadges, payLabel } from "../job-ui";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Jobs & gigs" };
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const job = await getJob(await getSignedIn(), (await params).id);
+  return job ? pageMetadata(`${job.title} · ${job.hirer}`, job.description) : { title: "Jobs & gigs" };
+}
 
 const appStatus = { SENT: "Application sent", SHORTLISTED: "You're shortlisted", HIRED: "You got it", DECLINED: "Not this time", WITHDRAWN: "Withdrawn" } as const;
 const appTone = { SENT: "blue", SHORTLISTED: "amber", HIRED: "green", DECLINED: "gray", WITHDRAWN: "gray" } as const;

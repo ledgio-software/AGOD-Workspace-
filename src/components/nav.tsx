@@ -60,6 +60,7 @@ export function navGroups(actor: Actor & { releaseControl?: boolean }): NavGroup
 export function communityGroup(o: { organizer: boolean }): NavGroup {
   const items: NavItem[] = [
     { href: "/community", label: "Community home", icon: "community" },
+    { href: "/search", label: "Search", icon: "search" },
     { href: "/community/chat", label: "Chat", icon: "chat" },
     { href: "/showcase", label: "Showcase", icon: "showcase" },
     { href: "/articles", label: "Articles", icon: "articles" },

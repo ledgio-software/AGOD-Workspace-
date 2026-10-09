@@ -80,6 +80,8 @@ rules, audit) lives behind these functions, not in the pages.
 | `/articles/[id]/cover` | public (published, visible) | `openCover` | (GET) |
 | `/community/articles`, `/community/articles/new`, `/community/articles/[id]/edit` | members | `myArticles`, `getArticle`, `coversAvailable` | `createArticleAction`, `updateArticleAction` (cover upload; `intent=publish` publishes) |
 | `/news` (`?topic=AI\|PROGRAMMING\|AFRICA\|RELEASES\|TECH&sort=top&q=`) | public | `newsFeed`, `newsUpdatedAt` (and `refreshNews` after the response when stale) | `community/news-actions`: `usefulNewsAction`, `hideNewsAction` (organizers) |
+| `/search` (`?q=`) | public | `searchCommunity` (`MIN_QUERY` = 2) | — |
+| `/sitemap.xml`, `/robots.txt`, `/opengraph-image` | public | `app/sitemap.ts`, `app/robots.ts`, `app/opengraph-image.tsx` (`lib/site.ts`: `indexingAllowed`, `pageMetadata`) | (GET) |
 | `/community/news` | organizers | `newsSourceStatus` | `community/news-actions`: `newsSourceAction`, `refreshNewsAction` |
 | `/api/community/chat` | community members | `?channel=&known=`, `?thread=&known=`, `?channels=1` (polled by the open chat; "unchanged" when nothing changed) | (GET) |
 | `/` and `/community` banner | everyone | `frontPage` (photos, welcome video) | |

@@ -33,6 +33,7 @@ import {
   Plug,
   Repeat,
   ScrollText,
+  Search,
   TrendingUp,
   UserRound,
   Users,
@@ -76,6 +77,7 @@ const icons = {
   chat: MessagesSquare,
   articles: Newspaper,
   news: Radio,
+  search: Search,
 } as const;
 
 export type IconName = keyof typeof icons;

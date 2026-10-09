@@ -26,12 +26,13 @@ import { pickProjectAction, voteAction } from "../../../(community)/community/gr
 import { PickForm, VoteButton } from "../../../(community)/community/growth-forms";
 import { monthLabel, monthsWon, myVote, previousMonth, thisMonth, votesThisMonth } from "@/modules/community/project-month";
 import { ButtonForm, ReplyForm, ReviewForm, ScreenshotForm } from "../../../(community)/community/showcase/forms";
+import { pageMetadata } from "@/lib/site";
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string; screenshot?: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const found = await getPost((await params).id, await getSignedIn());
-  return { title: found ? found.post.title : "Project" };
+  return found ? pageMetadata(found.post.title, found.post.pitch) : { title: "Project" };
 }
 
 const areaLabel = (a: string) => FEEDBACK_AREAS[a as keyof typeof FEEDBACK_AREAS] ?? a;

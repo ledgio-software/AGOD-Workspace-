@@ -198,6 +198,17 @@ export async function articleFeed(filters: { sort?: string; tag?: string; q?: st
     .slice(0, 80);
 }
 
+/** Every published, visible article (for the sitemap). */
+export async function publishedArticles(limit = 5000): Promise<{ id: string; at: Date }[]> {
+  const rows = await db
+    .select({ id: articles.id, publishedAt: articles.publishedAt, updatedAt: articles.updatedAt })
+    .from(articles)
+    .where(live())
+    .orderBy(desc(articles.publishedAt))
+    .limit(limit);
+  return rows.map((r) => ({ id: r.id, at: r.updatedAt ?? r.publishedAt! }));
+}
+
 /** Popular tags, for the filter. */
 export async function articleTags(): Promise<string[]> {
   const rows = await db.execute<{ tag: string }>(sql`

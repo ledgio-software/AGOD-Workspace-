@@ -421,6 +421,17 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 39 decisions (2026-10-08): search and Google
+
+| Decision | Choice |
+|---|---|
+| Site search | Postgres `ILIKE` through each section's own list function (the ones the section pages use), not a search service or a separate index: nothing extra to run or keep in sync, and each section's visibility rules (public profiles, hidden posts, drafts, closed jobs) apply to search automatically. Fine at the community's size; full-text search (`tsvector`) is the next step if it grows. |
+| Results | Grouped by kind, the first 5 of each, with *See all* opening the section with the same words. Search pages are `noindex`. |
+| Indexing | Only production (`VERCEL_ENV=production`, or `NODE_ENV=production` off Vercel); previews and staging answer `Disallow: /` and `noindex`. `SEARCH_INDEXING=off` switches production off too. Signed-in layouts are `noindex` and disallowed in robots.txt. |
+| Sitemap | Built on request from the same public lists (no viewer), capped at 50 pages per list; the fixed pages are still listed if the database can't be reached. |
+| Previews | One branded Open Graph picture drawn in code (`next/og`) for every page, so there is no image file to maintain; per-item pictures (article covers, project screenshots) can come later. |
+| Header | A search icon beside the account button. To keep the header on one line, Articles shows from 400px, Jobs from `sm`, Mentors from `lg`; everything is in search and the sidebar. |
+
 ## Phase 38 decisions (2026-10-08): tech news
 
 | Decision | Choice |

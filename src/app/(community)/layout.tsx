@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { communityGroup, navGroups } from "@/components/nav";
@@ -12,6 +13,9 @@ import { switchCompanyAction } from "../(authenticated)/company/actions";
 
 // Phase 25: the signed-in community pages, for everyone. People in a company also see their
 // company's sections; people without one see only the community.
+// Phase 39: signed-in pages are never indexed.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 export default async function CommunityLayout({ children }: { children: React.ReactNode }) {
   const { member, current } = await requireMember();
   const organizer = await canModerate(member);

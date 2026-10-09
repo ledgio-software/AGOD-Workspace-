@@ -234,6 +234,9 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 39 — Search and Google ✓
+- One search box for the whole community (members, projects, articles, jobs, sessions, tools & prompts, team finder posts, tech news), grouped by kind and respecting each section's visibility. Public pages are ready for Google: sitemap, robots.txt (production only; previews and staging stay out), titles, descriptions and link previews with a branded picture for WhatsApp, X and LinkedIn (`docs/COMMUNITY.md`)
+
 ### Phase 38 — Tech news ✓
 - A public news page with headlines on African tech, AI, programming and new releases from free sources (TechCabal, Disrupt Africa, Hacker News, DEV, the GitHub Blog, Hugging Face, TechCrunch and more), refreshed every few hours. Members mark headlines useful for "Top this week"; organizers switch sources off and hide headlines. Also: the public header keeps its links on one line at every screen width (`docs/COMMUNITY.md`)
 

@@ -7,8 +7,9 @@ import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { articleFeed, articleTags } from "@/modules/community/articles";
 import { ArticleCard } from "./article-card";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Articles" };
+export const metadata: Metadata = pageMetadata("Articles", "How members built things, what went wrong and what they learned: articles by Ghana's developers and AI builders.");
 
 // Phase 37: articles by members: what they built, how, and what they learned. Anyone can read.
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { buttonClass } from "@/components/ui";
 import { PRODUCT_NAME } from "@/lib/brand";
 import { getSignedIn } from "@/lib/session";
@@ -29,7 +30,7 @@ export default async function PublicLayout({ children }: { children: React.React
             <Link href="/showcase" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg">
               Showcase
             </Link>
-            <Link href="/articles" className="whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg">
+            <Link href="/articles" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg min-[400px]:block">
               Articles
             </Link>
             <Link href="/news" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg sm:block">
@@ -41,10 +42,10 @@ export default async function PublicLayout({ children }: { children: React.React
             <Link href="/library" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg md:block">
               Tools &amp; prompts
             </Link>
-            <Link href="/mentors" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg md:block">
+            <Link href="/mentors" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg lg:block">
               Mentors
             </Link>
-            <Link href="/jobs" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg min-[400px]:block">
+            <Link href="/jobs" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg sm:block">
               Jobs
             </Link>
             <Link href="/teams" className="hidden whitespace-nowrap rounded-lg px-2 py-1.5 text-muted xl:px-1.5 hover:bg-surface-muted hover:text-fg xl:block">
@@ -55,6 +56,9 @@ export default async function PublicLayout({ children }: { children: React.React
             </Link>
           </nav>
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Link href="/search" aria-label="Search the community" title="Search" className="grid size-8 place-items-center rounded-lg text-muted hover:bg-surface-muted hover:text-fg">
+              <Search className="size-4" aria-hidden />
+            </Link>
             {signedIn ? (
               <Link href="/community" className={buttonClass("primary", "sm")}>
                 Open the app
