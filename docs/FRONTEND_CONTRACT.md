@@ -80,6 +80,7 @@ rules, audit) lives behind these functions, not in the pages.
 | `/articles/[id]/cover` | public (published, visible) | `openCover` | (GET) |
 | `/community/articles`, `/community/articles/new`, `/community/articles/[id]/edit` | members | `myArticles`, `getArticle`, `coversAvailable` | `createArticleAction`, `updateArticleAction` (cover upload; `intent=publish` publishes) |
 | `/news` (`?topic=AI\|PROGRAMMING\|AFRICA\|RELEASES\|TECH&sort=top&q=`) | public | `newsFeed`, `newsUpdatedAt` (and `refreshNews` after the response when stale) | `community/news-actions`: `usefulNewsAction`, `hideNewsAction` (organizers) |
+| `/console`, `/console/companies[/id]`, `/console/people[/id]`, `/console/moderation`, `/console/content`, `/console/log` | AGOD staff (`PLATFORM_ADMIN_EMAILS`); others get 404 | `modules/platform`: `asStaff`, `overview`, `health`, `listCompanies`, `getCompany`, `listPeople`, `getPerson`, `openReports`, `hiddenItems`, `listOrganizers`, `platformLog` | `console/actions`: `suspendCompanyAction`, `blockLoginAction`, `resetLinkAction`, `organizerAction` |
 | `/search` (`?q=`) | public | `searchCommunity` (`MIN_QUERY` = 2) | — |
 | `/sitemap.xml`, `/robots.txt`, `/opengraph-image` | public | `app/sitemap.ts`, `app/robots.ts`, `app/opengraph-image.tsx` (`lib/site.ts`: `indexingAllowed`, `pageMetadata`) | (GET) |
 | `/community/news` | organizers | `newsSourceStatus` | `community/news-actions`: `newsSourceAction`, `refreshNewsAction` |

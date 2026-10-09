@@ -46,6 +46,9 @@ GitHub, Vercel or Neon; nothing here can be done from the repository alone.
     verify it (a DNS record), and submit the sitemap under **Sitemaps**. Pages then appear in Google
     over the next days to weeks. To test a link preview, paste a page's address into a WhatsApp chat.
 
+14. Back office (Phase 40): set `PLATFORM_ADMIN_EMAILS` on Vercel (production) to the AGOD staff
+    who run the platform, redeploy, and check one of them can open `/console` (`docs/CONSOLE.md`).
+
 ## Rolling back
 
 - App: Vercel → Deployments → the previous production deployment → **Promote to Production**.

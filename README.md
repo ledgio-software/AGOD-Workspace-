@@ -234,6 +234,9 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 40 — AGOD back office ✓
+- A console at `/console` for AGOD staff (`PLATFORM_ADMIN_EMAILS`): platform numbers and system health; every company as a summary, with suspend and restore; every login, with block, restore and a password link; all community moderation in one place; news sources, front page and featured tools; and a log of every action with its reason. Company projects and money stay private (`docs/CONSOLE.md`)
+
 ### Phase 39 — Search and Google ✓
 - One search box for the whole community (members, projects, articles, jobs, sessions, tools & prompts, team finder posts, tech news), grouped by kind and respecting each section's visibility. Public pages are ready for Google: sitemap, robots.txt (production only; previews and staging stay out), titles, descriptions and link previews with a branded picture for WhatsApp, X and LinkedIn (`docs/COMMUNITY.md`)
 

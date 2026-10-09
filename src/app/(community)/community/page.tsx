@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BriefcaseBusiness, Building2, CircleCheck, Circle, Flag, MessageCircle, Sparkles } from "lucide-react";
 import { Badge } from "@/components/badges";
 import { Callout, Card, buttonClass } from "@/components/ui";
-import { companiesOf, requireMember } from "@/lib/session";
+import { companiesOf, requireMember, suspendedCompaniesOf } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { canModerate, chatLinks, ensureProfile, listMembers, listReports, onboarding } from "@/modules/community";
 import { frontPage } from "@/modules/community/front";
@@ -34,7 +34,7 @@ function Step({ done, title, children, soon }: { done: boolean; title: string; c
 export default async function CommunityHomePage() {
   const { member } = await requireMember();
   const profile = await ensureProfile(member);
-  const [steps, companies, organizer, recent, counts, waiting, sessionsDone, upcomingMine, jobs, teams, front] = await Promise.all([
+  const [steps, companies, organizer, recent, counts, waiting, sessionsDone, upcomingMine, jobs, teams, front, suspended] = await Promise.all([
     onboarding(profile),
     companiesOf(member.id),
     canModerate(member),
@@ -46,6 +46,7 @@ export default async function CommunityHomePage() {
     openJobCount(),
     openTeamPostCount(),
     frontPage(),
+    suspendedCompaniesOf(member.id),
   ]);
   const openReports = organizer ? (await listReports(member)).filter((r) => r.status === "OPEN").length : 0;
   const chat = chatLinks();
@@ -73,6 +74,12 @@ export default async function CommunityHomePage() {
           )}
         </div>
       </FrontHero>
+
+      {suspended.length > 0 && (
+        <Callout tone="bad">
+          {suspended.join(", ")} {suspended.length === 1 ? "is" : "are"} suspended, so you can&apos;t open {suspended.length === 1 ? "it" : "them"} for now. Nothing has been deleted. Ask your company&apos;s owner, or contact AGOD.
+        </Callout>
+      )}
 
       {organizer && openReports > 0 && (
         <Callout tone="warn" icon={Flag}>

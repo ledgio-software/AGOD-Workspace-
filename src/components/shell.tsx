@@ -34,6 +34,7 @@ import {
   Repeat,
   ScrollText,
   Search,
+  ShieldCheck,
   TrendingUp,
   UserRound,
   Users,
@@ -78,6 +79,7 @@ const icons = {
   articles: Newspaper,
   news: Radio,
   search: Search,
+  console: ShieldCheck,
 } as const;
 
 export type IconName = keyof typeof icons;

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { articleComments, articles, chatMessages, communityJobs, communityReports, communitySessions, libraryItems, memberProfiles, showcasePosts, showcaseReviews, teamPosts, users } from "@/lib/db/schema";
 import { ServiceError } from "@/modules/errors";
+import { isPlatformAdmin } from "@/lib/staff";
 
 // Phase 25: the community. Everyone who signs up is a member with a profile, whether or not they
 // belong to a company. Profiles are public unless the member limits them to signed-in members or
@@ -22,8 +23,9 @@ export function organizerEmails(source: Record<string, string | undefined> = pro
   );
 }
 
+/** Organizers moderate the community; AGOD back-office staff (Phase 40) count as organizers too. */
 export const isOrganizer = (profile: Pick<Profile, "communityRole"> | null, email: string) =>
-  profile?.communityRole === "ORGANIZER" || organizerEmails().has(email.toLowerCase());
+  profile?.communityRole === "ORGANIZER" || organizerEmails().has(email.toLowerCase()) || isPlatformAdmin(email);
 
 /** Chat links shown to members (the handbook's Discord server and WhatsApp group), when set. */
 export function chatLinks(source: Record<string, string | undefined> = process.env) {

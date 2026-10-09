@@ -6,6 +6,7 @@ import { AppShell } from "@/components/shell";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Avatar } from "@/components/ui";
 import { requireUser } from "@/lib/session";
+import { isPlatformAdmin } from "@/lib/staff";
 import { MessagesLink } from "@/components/messages-link";
 import { canModerate } from "@/modules/community";
 import { unreadMessageCount } from "@/modules/messages";
@@ -20,7 +21,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
 
   return (
     <AppShell
-      groups={[...navGroups(user), communityGroup({ organizer })]}
+      groups={[...navGroups(user), communityGroup({ organizer, staff: isPlatformAdmin(user.email) })]}
       company={user.orgName}
       messages={<MessagesLink initial={unread} />}
       switcher={user.companies.length > 1 ? <CompanySwitcher companies={user.companies} current={user.orgId} action={switchCompanyAction} /> : undefined}
