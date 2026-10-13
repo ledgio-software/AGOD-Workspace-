@@ -238,3 +238,18 @@ export function articleActivityMessage(o: { name: string; from: string; title: s
     footer: "You get this email because you wrote this article or commented on it.",
   });
 }
+
+export function appealDecisionMessage(o: { name: string; what: string; accepted: boolean; note: string | null; url: string }) {
+  return message({
+    subject: o.accepted ? `Your appeal was accepted` : `Your appeal was looked at`,
+    name: o.name,
+    lines: [
+      o.accepted
+        ? `AGOD staff looked at your appeal about ${o.what} again and agreed with you. It's back to normal.`
+        : `AGOD staff looked at your appeal about ${o.what} again and decided to keep the decision.`,
+      ...(o.note ? [`Their note: ${o.note}`] : []),
+    ],
+    button: o.accepted ? { label: o.what === "your login" ? "Sign in" : "Open the community", url: o.url } : undefined,
+    footer: "You get this email because you sent an appeal. Please don't reply to it.",
+  });
+}

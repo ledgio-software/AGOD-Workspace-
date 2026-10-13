@@ -31,6 +31,7 @@ export default async function ConsoleOverview() {
         <StatCard label="Open jobs & gigs" value={o.openJobs} />
         <StatCard label="Jobs waiting for a check" value={safety.heldJobs} tone={safety.heldJobs ? "warn" : "default"} icon={ShieldAlert} href="/console/safety" />
         <StatCard label="Risk flags" value={safety.openFlags} hint="Found by the scam check" tone={safety.openFlags ? "warn" : "default"} href="/console/safety" />
+        <StatCard label="Appeals" value={safety.openAppeals} hint="Waiting for a decision" tone={safety.openAppeals ? "warn" : "default"} href="/console/safety" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">

@@ -131,7 +131,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       ) : null}
 
       <Callout tone="warn" icon={ShieldAlert}>
-        Agree the pay and what you&apos;ll deliver in writing before you start. Never pay anyone to get a job, and never share your Mobile Money PIN, a code sent to your phone or a photo of your Ghana Card. Report any job that asks.
+        {job.hirerVerified ? "AGOD has checked this hirer. Even so, agree" : "This hirer isn't verified by AGOD yet. Agree"} the pay and what you&apos;ll deliver in writing before you start. Never pay anyone to get a job, and never share your Mobile Money PIN, a code sent to your phone or a photo of your Ghana Card. Report any job that asks.
       </Callout>
 
       {viewer && !mine && (

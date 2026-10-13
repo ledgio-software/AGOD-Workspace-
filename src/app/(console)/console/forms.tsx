@@ -9,10 +9,26 @@ import type { ActionResult } from "@/lib/action-result";
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
 type Bare = (prev: ActionResult | null) => Promise<ActionResult>;
 
-export function ReasonForm({ action, label, confirmMessage, danger = false, placeholder }: { action: Action; label: string; confirmMessage: string; danger?: boolean; placeholder: string }) {
+export function ReasonForm({
+  action,
+  label,
+  confirmMessage,
+  danger = false,
+  placeholder,
+  fieldLabel = "Reason",
+  hint = "At least 5 characters. Kept in the back-office log.",
+}: {
+  action: Action;
+  label: string;
+  confirmMessage: string;
+  danger?: boolean;
+  placeholder: string;
+  fieldLabel?: string;
+  hint?: string;
+}) {
   return (
     <ActionForm action={action} confirmMessage={confirmMessage} resetOnSuccess className="space-y-3">
-      <Field label="Reason" hint="At least 5 characters. Kept in the back-office log.">
+      <Field label={fieldLabel} hint={hint}>
         <input name="reason" required minLength={5} maxLength={500} placeholder={placeholder} className={inputClass} />
       </Field>
       <SubmitButton variant={danger ? "danger" : "primary"} size="sm">

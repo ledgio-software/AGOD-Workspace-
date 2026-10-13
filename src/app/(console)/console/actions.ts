@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { type ActionResult, runAction } from "@/lib/action-result";
 import { getSignedIn } from "@/lib/session";
 import { sendResetLink, setCompanySuspended, setLoginBlocked, setOrganizerRole } from "@/modules/platform";
-import { banAndCleanUp, clearFlag, hideFlagged, setTrusted } from "@/modules/safety";
+import { banAndCleanUp, clearFlag, discountVotes, hideFlagged, setTrusted, setVerifiedHirer } from "@/modules/safety";
+import { decideAppeal } from "@/modules/safety/appeals";
 
 // Phase 40: AGOD back-office actions. Each one checks staff again in src/modules/platform.
 
@@ -72,4 +73,24 @@ export async function trustAction(userId: string, trusted: boolean): Promise<Res
   const me = await member();
   const r = await runAction(() => setTrusted(me, userId, trusted));
   return done(r, trusted ? "Limits lifted: they can post jobs, share links and ask mentors now." : "New-account limits apply again.", [`/console/people/${userId}`]);
+}
+
+// --- Phase 42: verified hirers, fake votes, appeals --------------------------------------------
+
+export async function verifyHirerAction(userId: string, verified: boolean, _prev: Result | null, form?: FormData): Promise<Result> {
+  const me = await member();
+  const r = await runAction(() => setVerifiedHirer(me, userId, verified, form ? text(form, "reason") : ""));
+  return done(r, verified ? "Verified. Their jobs now show “Verified hirer”." : "No longer a verified hirer.", [`/console/people/${userId}`, "/jobs"]);
+}
+
+export async function discountVotesAction(source: string, targetId: string): Promise<Result> {
+  const me = await member();
+  const r = await runAction(() => discountVotes(me, source, targetId));
+  return r.ok ? done(r, `Removed ${r.data} suspicious vote(s).`, ["/console/safety", "/showcase", "/articles", "/library"]) : r;
+}
+
+export async function decideAppealAction(appealId: string, accept: boolean, _prev: Result | null, form: FormData): Promise<Result> {
+  const me = await member();
+  const r = await runAction(() => decideAppeal(me, appealId, accept, text(form, "reason")));
+  return done(r, accept ? "Accepted. It's restored and they've been emailed." : "Kept as it was. They've been emailed.", ["/console/safety", "/console", "/console/people"]);
 }

@@ -10,6 +10,7 @@ import { openJobCount } from "@/modules/community/jobs";
 import { mySessions, sessionsTakenPart } from "@/modules/community/sessions";
 import { openTeamPostCount } from "@/modules/community/teams";
 import { giveBack, reviewRequests } from "@/modules/community/showcase";
+import { myHiddenItems } from "@/modules/safety/appeals";
 import { switchCompanyAction } from "../../(authenticated)/company/actions";
 import { FrontHero } from "../../(public)/front-hero";
 import { MemberGrid } from "../../(public)/members/member-grid";
@@ -48,6 +49,7 @@ export default async function CommunityHomePage() {
     frontPage(),
     suspendedCompaniesOf(member.id),
   ]);
+  const hidden = (await myHiddenItems(member)).filter((h) => h.appeal?.status !== "REJECTED" && h.appeal?.status !== "OPEN").length;
   const openReports = organizer ? (await listReports(member)).filter((r) => r.status === "OPEN").length : 0;
   const chat = chatLinks();
   const firstName = member.name.split(/\s+/)[0];
@@ -78,6 +80,15 @@ export default async function CommunityHomePage() {
       {suspended.length > 0 && (
         <Callout tone="bad">
           {suspended.join(", ")} {suspended.length === 1 ? "is" : "are"} suspended, so you can&apos;t open {suspended.length === 1 ? "it" : "them"} for now. Nothing has been deleted. Ask your company&apos;s owner, or contact AGOD.
+        </Callout>
+      )}
+
+      {hidden > 0 && (
+        <Callout tone="warn">
+          {hidden === 1 ? "1 of your posts was" : `${hidden} of your posts were`} hidden by the organizers or AGOD staff.{" "}
+          <Link href="/community/appeals" className="font-medium underline">
+            See why, or appeal
+          </Link>
         </Callout>
       )}
 

@@ -34,6 +34,7 @@ import {
 import { ServiceError } from "@/modules/errors";
 import { teamTypeInput } from "@/modules/roles";
 import { createOrganization } from "@/modules/orgs";
+import { submitContentAppeal } from "@/modules/safety/appeals";
 
 // Phase 25: community actions. Any signed-in person may use them (company or not); the module
 // checks organizer rights itself.
@@ -385,5 +386,19 @@ export async function unhideSessionAction(sessionId: string): Promise<ActionResu
     return undefined;
   }, "Visible again.");
   if (result.ok) refreshSessions(sessionId);
+  return result;
+}
+
+// Phase 42: asking AGOD staff to look again at something that was hidden.
+export async function appealContentAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const me = await member();
+  const result = await runAction(
+    async () => {
+      await submitContentAppeal(me, text(form, "type"), text(form, "id"), text(form, "message"));
+      return undefined;
+    },
+    "Sent. AGOD staff will look at it and email you their decision.",
+  );
+  revalidatePath("/community/appeals");
   return result;
 }

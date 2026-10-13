@@ -96,3 +96,47 @@ export function scanText(text: string): RiskResult {
 export const HOLD_SCORE = 40;
 /** At or above this something goes into the staff risk queue. */
 export const FLAG_SCORE = 25;
+
+// --- Phase 42: names people may not borrow ------------------------------------------------------
+
+/** Words that make an account look official here. Only AGOD staff and organizers may use them. */
+const RESERVED = /\b(agod|admin|administrator|moderator|organi[sz]er|official|staff|support team|helpdesk|ghana vibe coders)\b/i;
+
+/** Why a name or profile address can't be used, or null. Dashes and dots count as spaces. */
+export function reservedNameProblem(name: string): string | null {
+  const m = RESERVED.exec(name.replace(/[-_.]+/g, " "));
+  return m ? `"${m[1]}" is kept for AGOD and the community's organizers, so it can't be part of a name or profile address.` : null;
+}
+
+/** Companies scammers pretend to hire for in Ghana. A job naming one needs a verified hirer. */
+const PROTECTED_COMPANIES: [string, RegExp][] = [
+  ["MTN", /\bmtn\b/i],
+  ["Vodafone", /\bvodafone\b/i],
+  ["Telecel", /\btelecel\b/i],
+  ["AirtelTigo", /\bairtel\s?tigo\b/i],
+  ["Google", /\bgoogle\b/i],
+  ["Microsoft", /\bmicrosoft\b/i],
+  ["Meta", /\b(meta|facebook|instagram|whatsapp)\b/i],
+  ["Apple", /\bapple\b/i],
+  ["Amazon", /\bamazon\b/i],
+  ["Netflix", /\bnetflix\b/i],
+  ["IBM", /\bibm\b/i],
+  ["Andela", /\bandela\b/i],
+  ["Ecobank", /\becobank\b/i],
+  ["Absa", /\babsa\b/i],
+  ["Stanbic", /\bstanbic\b/i],
+  ["GCB Bank", /\bgcb\b/i],
+  ["Fidelity Bank", /\bfidelity bank\b/i],
+  ["Hubtel", /\bhubtel\b/i],
+  ["Paystack", /\bpaystack\b/i],
+  ["Flutterwave", /\bflutterwave\b/i],
+  ["Zeepay", /\bzeepay\b/i],
+  ["United Nations", /\b(united nations|unicef|undp|unesco|world bank)\b/i],
+  ["the Government of Ghana", /\b(government of ghana|ministry of|ghana revenue authority|\bgra\b|national communications authority)\b/i],
+  ["AGOD", /\bagod\b/i],
+];
+
+/** The well-known company a hirer name claims to be, or null. */
+export function protectedCompanyIn(hirer: string): string | null {
+  return PROTECTED_COMPANIES.find(([, re]) => re.test(hirer))?.[0] ?? null;
+}

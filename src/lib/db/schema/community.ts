@@ -50,6 +50,9 @@ export const memberProfiles = pgTable(
     hiddenReason: text("hidden_reason"),
     // Phase 41: AGOD staff lifted the new-account limits early (posting jobs, links in chat, mentorship).
     trustedAt: timestamp("trusted_at", { withTimezone: true }),
+    // Phase 42: AGOD staff checked this hirer (who they are and that their jobs are real).
+    verifiedHirerAt: timestamp("verified_hirer_at", { withTimezone: true }),
+    verifiedHirerNote: text("verified_hirer_note"),
     createdAt,
     updatedAt,
   },
@@ -889,5 +892,53 @@ export const riskFlags = pgTable(
     check("risk_flags_status", sql`${t.status} IN ('OPEN', 'CLEARED', 'ACTIONED')`),
     check("risk_flags_score", sql`${t.score} BETWEEN 0 AND 100`),
     check("risk_flags_reviewed", sql`(${t.status} = 'OPEN') = (${t.reviewedAt} IS NULL)`),
+  ],
+);
+
+// Phase 42: the device and network each sign-in came from, kept only as keyed hashes (never the
+// address itself), so staff can see accounts that share them: the usual sign of one person running
+// several accounts, or coming back after a ban. One row per person, network and device.
+export const loginSignals = pgTable(
+  "login_signals",
+  {
+    userId: userRef("user_id").notNull(),
+    ipHash: text("ip_hash").notNull(),
+    deviceHash: text("device_hash").notNull(),
+    firstSeen: timestamp("first_seen", { withTimezone: true }).notNull().defaultNow(),
+    lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("login_signals_unique").on(t.userId, t.ipHash, t.deviceHash), index("login_signals_ip_idx").on(t.ipHash), index("login_signals_last_seen_idx").on(t.lastSeen)],
+);
+
+/**
+ * Phase 42: asking AGOD staff to look again: a blocked login (sent from the public appeal form, so
+ * only an email) or a member's hidden post. Staff accept (the login or post comes back) or reject.
+ */
+export const appeals = pgTable(
+  "appeals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // ACCOUNT or CONTENT
+    kind: text("kind").notNull(),
+    email: text("email").notNull(),
+    userId: userRef("user_id"),
+    // For CONTENT: what was hidden (the same kinds as risk_flags, plus SESSION).
+    targetType: text("target_type"),
+    targetId: uuid("target_id"),
+    message: text("message").notNull(),
+    status: text("status").notNull().default("OPEN"),
+    decidedBy: userRef("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note"),
+    createdAt,
+  },
+  (t) => [
+    index("appeals_status_idx").on(t.status, t.createdAt),
+    index("appeals_email_idx").on(t.email),
+    check("appeals_kind", sql`${t.kind} IN ('ACCOUNT', 'CONTENT')`),
+    check("appeals_status", sql`${t.status} IN ('OPEN', 'ACCEPTED', 'REJECTED')`),
+    check("appeals_target", sql`(${t.kind} = 'CONTENT') = (${t.targetType} IS NOT NULL AND ${t.targetId} IS NOT NULL)`),
+    check("appeals_message", sql`length(btrim(${t.message})) BETWEEN 20 AND 2000`),
+    check("appeals_decided", sql`(${t.status} = 'OPEN') = (${t.decidedAt} IS NULL)`),
   ],
 );
