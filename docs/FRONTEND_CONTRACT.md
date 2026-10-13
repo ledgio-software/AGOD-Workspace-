@@ -79,6 +79,15 @@ rules, audit) lives behind these functions, not in the pages.
 | `/articles/[id]` | public (drafts: author; hidden: author and organizers) | `getArticle` | `community/article-actions`: `usefulArticleAction`, `bookmarkAction`, `commentAction`, `deleteCommentAction`, `repostAction`, `reviewArticleAction`, `reportArticleAction`, `reportCommentAction`, `publishAction`, `removeArticleAction`, `unhideArticleAction` |
 | `/articles/[id]/cover` | public (published, visible) | `openCover` | (GET) |
 | `/community/articles`, `/community/articles/new`, `/community/articles/[id]/edit` | members | `myArticles`, `getArticle`, `coversAvailable` | `createArticleAction`, `updateArticleAction` (cover upload; `intent=publish` publishes) |
+| `/news` (`?topic=AI\|PROGRAMMING\|AFRICA\|RELEASES\|TECH&sort=top&q=`) | public | `newsFeed`, `newsUpdatedAt` (and `refreshNews` after the response when stale) | `community/news-actions`: `usefulNewsAction`, `hideNewsAction` (organizers) |
+| `/console`, `/console/companies[/id]`, `/console/people[/id]`, `/console/moderation`, `/console/content`, `/console/log` | AGOD staff (`PLATFORM_ADMIN_EMAILS`); others get 404 | `modules/platform`: `asStaff`, `overview`, `health`, `listCompanies`, `getCompany`, `listPeople`, `getPerson`, `openReports`, `hiddenItems`, `listOrganizers`, `platformLog` | `console/actions`: `suspendCompanyAction`, `blockLoginAction`, `resetLinkAction`, `organizerAction` |
+| `/console/safety` | AGOD staff | `modules/safety`: `riskQueue`, `heldJobs`, `safetyCounts`, `voteQueue`; `safety/appeals`: `openAppeals` | `console/actions`: `clearFlagAction`, `hideFlaggedAction`, `banAction`, `discountVotesAction`, `decideAppealAction` |
+| `/console/people/[id]` (safety parts) | AGOD staff | `modules/safety`: `safetyProfile`, `linkedTo` | `console/actions`: `trustAction`, `verifyHirerAction` |
+| `/appeal` | anyone (no account) | — | `appeal/actions`: `appealLoginAction` (`submitAccountAppeal`) |
+| `/community/appeals` | members | `safety/appeals`: `myHiddenItems` | `community/actions`: `appealContentAction` (`submitContentAppeal`) |
+| `/search` (`?q=`) | public | `searchCommunity` (`MIN_QUERY` = 2) | — |
+| `/sitemap.xml`, `/robots.txt`, `/opengraph-image` | public | `app/sitemap.ts`, `app/robots.ts`, `app/opengraph-image.tsx` (`lib/site.ts`: `indexingAllowed`, `pageMetadata`) | (GET) |
+| `/community/news` | organizers | `newsSourceStatus` | `community/news-actions`: `newsSourceAction`, `refreshNewsAction` |
 | `/api/community/chat` | community members | `?channel=&known=`, `?thread=&known=`, `?channels=1` (polled by the open chat; "unchanged" when nothing changed) | (GET) |
 | `/` and `/community` banner | everyone | `frontPage` (photos, welcome video) | |
 | `/community/front-page` | organizers | `frontPage`, `photosAvailable` | `community/front-page/actions`: `addPhotoAction`, `removePhotoAction`, `videoAction` |

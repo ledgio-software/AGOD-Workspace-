@@ -40,6 +40,15 @@ GitHub, Vercel or Neon; nothing here can be done from the repository alone.
 12. Enter live projects from this point on. The spreadsheet can be retired once a full payout cycle has run
     in the app without differences.
 
+13. Google (Phase 39): open `https://<your domain>/robots.txt` on production and check it lists
+    `Sitemap: https://<your domain>/sitemap.xml` (previews and staging show `Disallow: /`, which is
+    right). In [Google Search Console](https://search.google.com/search-console) add the domain,
+    verify it (a DNS record), and submit the sitemap under **Sitemaps**. Pages then appear in Google
+    over the next days to weeks. To test a link preview, paste a page's address into a WhatsApp chat.
+
+14. Back office (Phase 40): set `PLATFORM_ADMIN_EMAILS` on Vercel (production) to the AGOD staff
+    who run the platform, redeploy, and check one of them can open `/console` (`docs/CONSOLE.md`).
+
 ## Rolling back
 
 - App: Vercel → Deployments → the previous production deployment → **Promote to Production**.

@@ -6,8 +6,9 @@ import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { listMembers, memberCities } from "@/modules/community";
 import { MemberGrid } from "./member-grid";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Members" };
+export const metadata: Metadata = pageMetadata("Members", "Meet the builders: developers, designers and AI builders across Ghana, with what they build and the tools they use.");
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ q?: string; city?: string; reviewers?: string; page?: string }> }) {
   const viewer = await getSignedIn();

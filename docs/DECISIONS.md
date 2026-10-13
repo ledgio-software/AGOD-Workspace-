@@ -421,6 +421,65 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 42 decisions (2026-10-13): trust & safety tier 2
+
+| Decision | Choice |
+|---|---|
+| Linked accounts | Each sign-in stores keyed hashes (HMAC with `BETTER_AUTH_SECRET`) of the IP address and the browser without version numbers in `login_signals`, never the raw values. Accounts that share a network in the last 90 days, or whose email is the same apart from digits, dots, dashes and a `+tag`, are shown to staff as linked. A network seen with more than 8 accounts (mobile carriers put many people behind one address in Ghana, as do campuses and cafés) doesn't count. A hint for staff, never an automatic ban. |
+| Banned people coming back | A new account linked to a blocked one scores 40 more on everything it posts, so its first post lands in the risk queue (and a job is held) whatever it says. |
+| Fake votes | Project of the month votes, useful marks on articles and on tools & prompts. A vote is suspicious when the voter's account was under 3 days old when voting, their email is unconfirmed, or they are linked to the author. Staff see items with 3+ suspicious votes making up at least half the votes and can discount just those votes. New accounts can't vote for project of the month at all (it picks a winner). |
+| Verified hirers | Staff mark a person as a verified hirer, with a note of how they checked (`member_profiles.verified_hirer_at`). Their jobs show "✓ Verified hirer"; job pages say whether the hirer is checked. |
+| Brand-name protection | A job whose hirer names a well-known company (MTN, Telecel, AirtelTigo, Google, Microsoft, Meta, banks, Hubtel, Paystack, the UN, a ministry, AGOD…; `PROTECTED_COMPANIES` in `src/lib/risk.ts`) is held for a check unless the poster is a verified hirer. Names and profile addresses containing words such as "AGOD", "admin", "moderator", "official" or "support team" are refused at sign-up and on the profile, except for staff and organizers. |
+| Appeals | A blocked login appeals from the public `/appeal` page; the answer is the same whatever the email (so the form can't reveal who is blocked), only an email that belongs to a blocked login is stored, one open appeal at a time, then 7 days after a decision, and 5 per hour per network. A member appeals a hidden post from `/community/appeals`, once per post. Staff accept (restores the login or shows the post) or reject, with a note that is emailed to the person and logged. Accepting a login appeal doesn't unhide what a ban hid; the person appeals those one by one once signed in. |
+| Privacy | `login_signals` and `appeals` are server-only (revoked from the app role, row-level security on), like the other safety tables. |
+| Not included | Device fingerprinting beyond the browser name, phone-number checks, ID verification for hirers, automatic bans. |
+
+## Phase 41 decisions (2026-10-09): trust & safety
+
+| Decision | Choice |
+|---|---|
+| Detection | Rules in code (`src/lib/risk.ts`): phrases for fees, PIN/ID requests, investment schemes, off-platform contact and urgency, plus link checks (shorteners, IP hosts, punycode, look-alike brand domains with common swaps such as rn→m, 0→o). Fast, free, explainable to staff and testable; no outside service or AI call. |
+| Flags, not punishment | Scores put content in a staff queue (25+); only jobs are held automatically (40+), because fake jobs cost members money. Nothing is deleted or blocked by the check; staff clear, hide or ban. |
+| New-account limits | 3 days and a confirmed email before posting jobs, links in chat or mentor requests, because scammers act on day one. Plain chat, articles and projects stay open so newcomers can take part. Staff can lift the limits early; organizers and staff are never limited. |
+| Ban and clean up | One action blocks the login and hides everything the person posted, with one reason in the log. Hidden, not deleted: organizers can show an item again. |
+| Privacy | The check reads what members post, as organizers already can; it reads no private messages between companies and stores only the score, the signal names and a short excerpt of what matched. |
+| Not included (next) | Linked-account detection, vote/useful-mark manipulation checks, verified hirers, brand-name protection, appeals (all in Phase 42). |
+
+## Phase 40 decisions (2026-10-09): AGOD back office
+
+| Decision | Choice |
+|---|---|
+| Who | Staff listed in `PLATFORM_ADMIN_EMAILS` with a confirmed email and an active login. Configuration, not a database role, so nobody can grant themselves access from inside the app. Non-staff get a plain 404 at `/console` (no title either). Staff count as community organizers. |
+| Privacy | Companies appear as summaries only (people, admins, project count, created, last used). Staff never open a company's projects, customers, invoices, payouts, files or messages. |
+| Suspend a company | `organizations.suspended_at` + reason. Members lose the company everywhere (it drops out of `companiesOf`, which every company page and action goes through) and see a notice on the community home; the daily job skips it. Nothing is deleted. A trigger stops the app role (company Admins) from changing it. |
+| Block a login | Reuses `users.active` (sign-in already refuses inactive logins) and deletes the person's sessions. Staff can't block themselves or other staff. |
+| Password help | Staff can email a one-day password link (the existing invitation mechanism); they never see or set passwords. |
+| Accountability | Every action needs a reason (5 to 500 characters) and is written to `platform_audit` (who, what, target, reason, when), shown on the Log tab and on each company and person page. |
+| Moderation and content | The console gathers what organizers already do (reports, hidden items, organizers, news sources, front page, featured tools) instead of duplicating those tools. |
+| Not included | Viewing inside companies, deleting companies or people, impersonating users, billing companies, editing staff from the console. |
+
+## Phase 39 decisions (2026-10-08): search and Google
+
+| Decision | Choice |
+|---|---|
+| Site search | Postgres `ILIKE` through each section's own list function (the ones the section pages use), not a search service or a separate index: nothing extra to run or keep in sync, and each section's visibility rules (public profiles, hidden posts, drafts, closed jobs) apply to search automatically. Fine at the community's size; full-text search (`tsvector`) is the next step if it grows. |
+| Results | Grouped by kind, the first 5 of each, with *See all* opening the section with the same words. Search pages are `noindex`. |
+| Indexing | Only production (`VERCEL_ENV=production`, or `NODE_ENV=production` off Vercel); previews and staging answer `Disallow: /` and `noindex`. `SEARCH_INDEXING=off` switches production off too. Signed-in layouts are `noindex` and disallowed in robots.txt. |
+| Sitemap | Built on request from the same public lists (no viewer), capped at 50 pages per list; the fixed pages are still listed if the database can't be reached. |
+| Previews | One branded Open Graph picture drawn in code (`next/og`) for every page, so there is no image file to maintain; per-item pictures (article covers, project screenshots) can come later. |
+| Header | A search icon beside the account button. To keep the header on one line, Articles shows from 400px, Jobs from `sm`, Mentors from `lg`; everything is in search and the sidebar. |
+
+## Phase 38 decisions (2026-10-08): tech news
+
+| Decision | Choice |
+|---|---|
+| What | A public `/news` page of headlines from free sources (African tech, AI, programming, tech, releases), so members keep up without leaving the community. Members mark headlines useful; "Top this week" ranks by those marks. |
+| Sources | RSS/Atom feeds, the Hacker News front page (Algolia API) and DEV's API: free, no keys, no contracts. Not NewsAPI (its free plan is for development only), Reddit (paid, restricted API) or Product Hunt (commercial use needs permission). The list lives in code; organizers switch sources off and on. |
+| What we keep | Title, https link, date, a plain-text summary (at most 300 characters) and the source; the article stays on the publisher's site, which owns it. No images or HTML from feeds, so nothing from a feed can run in a reader's browser and the page stays light on data. |
+| Freshness | Fetched when a visitor opens `/news` and a source is more than 3 hours old (after the response, with `after()`), plus the daily cron job; Vercel's free plan allows only a daily cron. Sources are claimed with one `UPDATE … RETURNING` so concurrent visitors never fetch the same source twice. Headlines are kept 45 days. |
+| Parsing | A small RSS/Atom reader in `src/lib/feeds.ts` instead of an XML library: it only needs titles, links, dates and summaries. Responses are read up to 2 MB (some feeds carry whole articles; the newest entries come first) with a 10 second timeout. |
+| Not included | Comments on headlines, sharing a headline to the article feed, a weekly news email, AI-written summaries, organizers adding sources from the page. |
+
 ## Phase 37 decisions (2026-10-08): articles
 
 | Decision | Choice |

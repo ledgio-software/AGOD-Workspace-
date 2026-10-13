@@ -213,6 +213,64 @@ Learning from other members' work: articles, showcase project pages (screenshots
 playing on the page, the live link and the feedback conversations), session recordings and the tools
 & prompts library are all public, so visitors learn without an account.
 
+## Tech news (Phase 38)
+
+| Page | Who | What |
+|---|---|---|
+| `/news` | everyone, no account needed | Headlines on African tech, AI, programming and new releases. Tabs: Top this week (what members marked useful in the last 7 days), All, AI, Programming, Africa tech, Releases, Tech; search by words. Each headline links to the original site; Hacker News and DEV headlines also show their points and a link to the discussion there. Members mark headlines useful. |
+| `/community/news` | organizers | Every source with when it last worked, its last error and how many headlines it has; switch a source off or on; *Fetch all now*. Organizers also hide single headlines from `/news`. |
+
+Sources (all free, none needs a key): TechCabal and Disrupt Africa (Africa tech); the Hacker News
+front page through Algolia's API; DEV (today's top posts, and the week's top `#ai` posts); the
+GitHub Blog; Hugging Face and Simon Willison (AI); TechCrunch, The Verge, Ars Technica and MIT
+Technology Review (tech); Next.js and Vercel (releases). Headlines about AI from the general sources
+are filed under AI. Techpoint Africa blocks automated readers, so it isn't included. To add a
+source, add its RSS or Atom feed (https) and topic to `NEWS_SOURCES` in
+`src/modules/community/news.ts`.
+
+How it stays fresh: when someone opens `/news` and a source hasn't been checked for 3 hours, it is
+fetched *after* the page has been sent (nobody waits), and the daily job (`/api/cron/daily`) fetches
+too. Each source is claimed in the database first, so it is never fetched twice at once. Only the
+title, link, date and a plain-text summary of up to 300 characters are kept (never the article or
+its HTML, never images); entries older than 14 days are skipped and headlines are deleted after 45
+days. Only https links are stored. A source that fails (blocked, down, not a feed) is skipped and
+its error shown to organizers; the others carry on.
+
+## Staying safe (Phase 41)
+
+New accounts can post jobs, share links in the chat and ask mentors once they've confirmed their
+email and been here 3 days; everything else (chatting, articles, projects, feedback) works from day
+one. A job that looks like a scam (asking applicants to pay, or for a PIN, code or ID) waits for a
+quick check by the AGOD team before it's listed; its poster sees why. Every job page reminds readers
+never to pay to get a job. Details for staff: `docs/CONSOLE.md`.
+
+Phase 42: jobs from hirers the AGOD team has checked show **✓ Verified hirer**; a job claiming to be
+from a well-known company (MTN, Google, a bank, a ministry…) waits for a check unless its poster is
+verified. Names and profile addresses can't contain words like "AGOD", "admin" or "official". New
+accounts can't vote for project of the month. If something of yours was hidden, the community home
+links to **My hidden posts** (`/community/appeals`), where you see why and can appeal once per post;
+if your login was blocked, appeal at `/appeal` (linked from the sign-in page).
+
+## Search and Google (Phase 39)
+
+| Page | Who | What |
+|---|---|---|
+| `/search` | everyone, no account needed | One search box (the magnifying glass in the header, *Search* in the sidebar) for members, projects, articles, jobs & gigs, sessions, tools & prompts, team finder posts and tech news. Results are grouped by kind (the first 5 of each) with *See all* opening that section already searched. Each section is searched with the same rules as its own page, so visitors find public profiles only and nobody finds hidden posts, drafts or closed jobs. At least 2 letters. |
+
+Google and link previews:
+
+- `/sitemap.xml` lists the public pages and every published article, visible project, open job,
+  session, library item, team finder post and public profile (built from the same lists a visitor
+  sees). `/robots.txt` lets search engines read the public pages and keeps them out of the
+  signed-in areas (`/community`, sign-in pages, company pages).
+- Only production is indexed: Vercel previews and staging answer `Disallow: /` and mark pages
+  `noindex`, so test copies never show up in Google. `SEARCH_INDEXING=off` keeps production out too.
+- Every public page has a title ("Page · Ghana Vibe Coders & Developers"), a description, and a
+  link preview with a branded picture (`src/app/opengraph-image.tsx`) for WhatsApp, X, LinkedIn and
+  Slack. Articles, projects, jobs, sessions, tools, team posts and profiles use their own title and
+  summary. Search result pages aren't indexed (they repeat the sections).
+- After go-live, submit the sitemap in Google Search Console (`docs/GO-LIVE.md`, step 13).
+
 ## Next
 
 Badges, events calendar, partners page and community numbers.

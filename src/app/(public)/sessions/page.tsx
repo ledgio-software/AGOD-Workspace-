@@ -6,8 +6,9 @@ import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { listSessions } from "@/modules/community/sessions";
 import { SessionList } from "./session-list";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Teaching sessions" };
+export const metadata: Metadata = pageMetadata("Teaching sessions", "Free live sessions on building software, with and without AI, plus recordings of past sessions.");
 
 export default async function SessionsPage({ searchParams }: { searchParams: Promise<{ show?: string; page?: string }> }) {
   const viewer = await getSignedIn();

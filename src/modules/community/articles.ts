@@ -10,6 +10,7 @@ import { appUrl, sendAccountEmail } from "@/modules/accounts";
 import { articleActivityMessage } from "@/modules/email/account";
 import { ServiceError } from "@/modules/errors";
 import { type Member, canModerate, ensureProfile, fileReport, reportInput } from "./index";
+import { screen, textOf } from "@/modules/safety/screen";
 
 // Phase 37: articles. Members write in a simple Markdown (drafts first, then publish); everyone
 // can read published articles, so visitors learn too. Members mark them useful, comment and reply,
@@ -62,6 +63,7 @@ export async function createArticle(member: Member, raw: z.input<typeof articleI
     .insert(articles)
     .values({ authorId: member.id, ...input, readingMinutes: readingMinutes(input.body) })
     .returning({ id: articles.id });
+  await screen(member, "ARTICLE", row.id, textOf(input));
   return row.id;
 }
 
@@ -69,6 +71,7 @@ export async function updateArticle(member: Member, articleId: string, raw: z.in
   const input = articleInput.parse(raw);
   await ownArticle(member, articleId);
   await db.update(articles).set({ ...input, readingMinutes: readingMinutes(input.body) }).where(eq(articles.id, articleId));
+  await screen(member, "ARTICLE", articleId, textOf(input));
 }
 
 /** Publishes a draft (or takes a published article back to draft). */
@@ -196,6 +199,17 @@ export async function articleFeed(filters: { sort?: string; tag?: string; q?: st
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .filter((i) => !seen.has(i.article.id) && !!seen.add(i.article.id))
     .slice(0, 80);
+}
+
+/** Every published, visible article (for the sitemap). */
+export async function publishedArticles(limit = 5000): Promise<{ id: string; at: Date }[]> {
+  const rows = await db
+    .select({ id: articles.id, publishedAt: articles.publishedAt, updatedAt: articles.updatedAt })
+    .from(articles)
+    .where(live())
+    .orderBy(desc(articles.publishedAt))
+    .limit(limit);
+  return rows.map((r) => ({ id: r.id, at: r.updatedAt ?? r.publishedAt! }));
 }
 
 /** Popular tags, for the filter. */
@@ -410,6 +424,7 @@ export async function addComment(member: Member, articleId: string, raw: z.input
     .insert(articleComments)
     .values({ articleId, authorId: member.id, body, parentId: parent ? (parent.parentId ?? parent.id) : null })
     .returning({ id: articleComments.id });
+  await screen(member, "ARTICLE_COMMENT", row.id, body);
   await tellAuthor(a, member, "commented on", body);
   if (parent && parent.authorId !== member.id && parent.authorId !== a.authorId) {
     const [p] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, parent.authorId));

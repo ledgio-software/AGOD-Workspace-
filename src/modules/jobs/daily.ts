@@ -58,7 +58,8 @@ export async function runDailyReminders(options: DailyRunOptions = {}): Promise<
   const companies = await db
     .select({ id: organizations.id, name: organizations.name })
     .from(organizations)
-    .where(options.orgIds ? inArray(organizations.id, options.orgIds) : undefined)
+    // Phase 40: suspended companies get no reminders or emails.
+    .where(and(isNull(organizations.suspendedAt), options.orgIds ? inArray(organizations.id, options.orgIds) : undefined))
     .orderBy(asc(organizations.createdAt));
   const total: DailySummary = { people: 0, remindersCreated: 0, reminderFailures: 0, email: "off", emailsSent: 0, emailFailures: 0, emailsSkipped: 0 };
   for (const company of companies) {

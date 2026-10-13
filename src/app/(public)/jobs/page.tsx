@@ -8,8 +8,9 @@ import { getSignedIn } from "@/lib/session";
 import { signupOpen } from "@/modules/accounts";
 import { JOB_KINDS, WORK_MODES, listJobs } from "@/modules/community/jobs";
 import { JobBadges, payLabel } from "./job-ui";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Jobs & gigs" };
+export const metadata: Metadata = pageMetadata("Jobs & gigs", "Paid jobs, gigs and internships for developers and builders in Ghana, always with the pay shown and never a fee to apply.");
 
 // Phase 33: the jobs & gigs board. Open jobs, newest first.
 

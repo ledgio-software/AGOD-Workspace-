@@ -187,6 +187,17 @@ badge members choose; Organizers come from `COMMUNITY_ORGANIZER_EMAILS` or are a
 | Write, publish, edit, take back and delete own articles (after the code of conduct); mark others' useful, save, comment and reply, repost, report (Phase 37) | | ✓ | ✓ |
 | Mark an article reviewed with a note (members with the Reviewer badge; not their own) | | Reviewers | ✓ |
 | Show a hidden article again | | | ✓ |
+| Read tech news (Phase 38) | ✓ | ✓ | ✓ |
+| AGOD back office `/console` (Phase 40; staff in `PLATFORM_ADMIN_EMAILS` only, not a company role): platform numbers and health; companies as summaries; suspend or restore a company; block or restore a login; email a password link; manage organizers; every action logged with a reason (`docs/CONSOLE.md`) | | | staff |
+| New accounts (Phase 41): post jobs, share links in chat, ask mentors only after confirming their email and 3 days (staff can lift it early; organizers and staff are never limited) | | ✓ | ✓ |
+| Trust & safety (Phase 41; staff): approve or reject held jobs; clear or hide flagged content; ban and hide everything someone posted; lift new-account limits | | | staff |
+| Vote for project of the month (Phase 42): established accounts only (3 days, confirmed email) | | ✓ | ✓ |
+| Names and profile addresses with "AGOD", "admin", "moderator", "official" and similar (Phase 42) | | | organizers, staff |
+| Appeal (Phase 42): a blocked login at `/appeal` (anyone); a hidden post of your own at `/community/appeals` (its author) | ✓ | ✓ | ✓ |
+| Trust & safety tier 2 (Phase 42; staff): decide appeals; see linked accounts; discount suspicious votes; verify hirers | | | staff |
+| Search the community (Phase 39; visitors find public profiles only, nobody finds hidden posts or drafts) | ✓ | ✓ | ✓ |
+| Mark headlines useful | | ✓ | ✓ |
+| Hide or show headlines; switch news sources off or on; fetch news now | | | ✓ |
 | See reports; hide or show profiles, projects, feedback, sessions, library items, jobs, team finder posts, chat messages, articles and comments; make or remove organizers | | | ✓ |
 
 Roles are per company (Phase 22): the same person can be an Admin in one company and a Team Member in

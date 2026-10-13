@@ -18,12 +18,13 @@ import {
 import { ReportForm } from "../../../(community)/community/forms";
 import { CancelSessionForm, RecordingForm } from "../../../(community)/community/sessions/forms";
 import { ButtonForm } from "../../../(community)/community/showcase/forms";
+import { pageMetadata } from "@/lib/site";
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ scheduled?: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const found = await getSession((await params).id, await getSignedIn());
-  return { title: found ? found.session.title : "Session" };
+  return found ? pageMetadata(found.session.title, found.session.description) : { title: "Session" };
 }
 
 const minutes = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 60_000);

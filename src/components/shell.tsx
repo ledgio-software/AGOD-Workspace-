@@ -28,10 +28,13 @@ import {
   ListChecks,
   Menu,
   Newspaper,
+  Radio,
   Package,
   Plug,
   Repeat,
   ScrollText,
+  Search,
+  ShieldCheck,
   TrendingUp,
   UserRound,
   Users,
@@ -74,6 +77,9 @@ const icons = {
   frontPage: ImagePlay,
   chat: MessagesSquare,
   articles: Newspaper,
+  news: Radio,
+  search: Search,
+  console: ShieldCheck,
 } as const;
 
 export type IconName = keyof typeof icons;

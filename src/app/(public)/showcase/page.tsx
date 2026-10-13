@@ -8,8 +8,9 @@ import { signupOpen } from "@/modules/accounts";
 import { listPosts } from "@/modules/community/showcase";
 import { PostGrid } from "./post-grid";
 import { ProjectOfMonth } from "./project-of-month";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Showcase" };
+export const metadata: Metadata = pageMetadata("Showcase", "Projects built by Ghana's developers and vibe coders: try them, watch the demos and give feedback.");
 
 const TABS = [
   { status: "", label: "All projects" },

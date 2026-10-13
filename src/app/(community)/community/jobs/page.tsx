@@ -65,7 +65,7 @@ export default async function MyJobsPage() {
                     <Link href={`/jobs/${j.id}`} className="font-medium hover:underline">
                       {j.title}
                     </Link>{" "}
-                    {j.hidden ? <Badge tone="red">Hidden</Badge> : j.open ? <Badge tone="green">Open</Badge> : <Badge>{j.status === "FILLED" ? "Filled" : "Closed"}</Badge>}
+                    {j.hidden ? <Badge tone="red">Hidden</Badge> : j.held ? <Badge tone="amber">Waiting for a check</Badge> : j.open ? <Badge tone="green">Open</Badge> : <Badge>{j.status === "FILLED" ? "Filled" : "Closed"}</Badge>}
                     <p className="text-xs text-muted">
                       {payLabel(j)} · closes {formatCalendarDate(j.closesOn)}
                     </p>

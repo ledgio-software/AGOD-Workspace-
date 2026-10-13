@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/ui";
 import { PRODUCT_NAME } from "@/lib/brand";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Code of conduct" };
+export const metadata: Metadata = pageMetadata("Code of conduct", "The community's rules and how to give good feedback.");
 
 // Phase 25: the community rules, from the community handbook.
 

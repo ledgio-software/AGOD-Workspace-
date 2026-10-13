@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { communityGroup, navGroups } from "@/components/nav";
@@ -7,15 +8,19 @@ import { Avatar } from "@/components/ui";
 import { PRODUCT_NAME } from "@/lib/brand";
 import { roleLabel } from "@/lib/labels";
 import { requireMember } from "@/lib/session";
+import { isPlatformAdmin } from "@/lib/staff";
 import { canModerate } from "@/modules/community";
 import { switchCompanyAction } from "../(authenticated)/company/actions";
 
 // Phase 25: the signed-in community pages, for everyone. People in a company also see their
 // company's sections; people without one see only the community.
+// Phase 39: signed-in pages are never indexed.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 export default async function CommunityLayout({ children }: { children: React.ReactNode }) {
   const { member, current } = await requireMember();
   const organizer = await canModerate(member);
-  const groups = current ? [...navGroups(current), communityGroup({ organizer })] : [communityGroup({ organizer })];
+  const groups = current ? [...navGroups(current), communityGroup({ organizer, staff: isPlatformAdmin(member.email) })] : [communityGroup({ organizer, staff: isPlatformAdmin(member.email) })];
 
   return (
     <AppShell

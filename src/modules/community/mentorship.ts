@@ -6,6 +6,7 @@ import { appUrl, sendAccountEmail } from "@/modules/accounts";
 import { mentorAnswerMessage, mentorRequestMessage } from "@/modules/email/account";
 import { ServiceError } from "@/modules/errors";
 import { type Member, ensureProfile } from "./index";
+import { requireEstablished } from "@/modules/safety/screen";
 
 // Phase 31: mentorship matching. Reviewers can open themselves to mentoring (for 1 to 5 people at
 // a time, with a note on what they help with). Members see suggested mentors (shared tools first,
@@ -123,6 +124,8 @@ export async function requestMentor(member: Member, mentorHandle: string, raw: z
   const input = requestInput.parse(raw);
   const profile = await ensureProfile(member);
   if (!profile.conductAcceptedAt) throw new ServiceError("Agree to the code of conduct on the community home first.");
+  // Phase 41: new accounts wait a few days before contacting mentors.
+  await requireEstablished(member, "Asking for a mentor");
   const [mentor] = await db
     .select({ userId: memberProfiles.userId, open: memberProfiles.mentorOpen, capacity: memberProfiles.mentorCapacity, hiddenAt: memberProfiles.hiddenAt, name: users.name, email: users.email, active: users.active })
     .from(memberProfiles)

@@ -9,6 +9,9 @@ import * as schema from "@/lib/db/schema";
 import { appUrl, finishSignUp, sendAccountEmail } from "@/modules/accounts";
 import { welcomeNewMember } from "@/modules/community";
 import { existingSignUpMessage, resetPasswordMessage, verifyEmailMessage } from "@/modules/email/account";
+import { recordLogin } from "@/modules/safety/links";
+import { reservedNameProblem } from "@/lib/risk";
+import { isPlatformAdmin, organizerEmails } from "@/lib/staff";
 
 /**
  * Phase 25: "/" is the public community home, so a confirmation link without a destination (the
@@ -98,6 +101,10 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
+          // Phase 42: names that look official ("AGOD Support", "Admin") are for staff and organizers.
+          const email = String(user.email ?? "").toLowerCase();
+          const problem = reservedNameProblem(String(user.name ?? ""));
+          if (problem && !isPlatformAdmin(email) && !organizerEmails().has(email)) throw new APIError("BAD_REQUEST", { message: problem });
           const raw = (user as { pendingCompany?: unknown }).pendingCompany;
           if (raw === undefined || raw === null) return { data: user };
           const name = String(raw).trim();
@@ -117,6 +124,10 @@ export const auth = betterAuth({
             .from(schema.users)
             .where(eq(schema.users.id, session.userId));
           return user?.active ? undefined : false;
+        },
+        // Phase 42: the network and device it came from, hashed, for linked-account checks.
+        after: async (session) => {
+          await recordLogin(session.userId, session.ipAddress, session.userAgent);
         },
       },
     },

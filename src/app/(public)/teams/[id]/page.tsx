@@ -13,8 +13,12 @@ import { ReportForm } from "../../../(community)/community/forms";
 import { ButtonForm } from "../../../(community)/community/growth-forms";
 import { closeTeamPostAction, reportTeamPostAction, teamRequestAction, unhideTeamPostAction, withdrawTeamRequestAction } from "../../../(community)/community/work-actions";
 import { TeamRequestForm } from "../../../(community)/community/work-forms";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Team finder" };
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const post = await getTeamPost(await getSignedIn(), (await params).id);
+  return post ? pageMetadata(post.title, post.description) : { title: "Team finder" };
+}
 
 const reqStatus = { PENDING: "Waiting for an answer", ACCEPTED: "Accepted", DECLINED: "Not this time", WITHDRAWN: "Withdrawn" } as const;
 const reqTone = { PENDING: "amber", ACCEPTED: "green", DECLINED: "gray", WITHDRAWN: "gray" } as const;

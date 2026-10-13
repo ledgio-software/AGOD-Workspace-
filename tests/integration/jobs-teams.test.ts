@@ -38,7 +38,8 @@ const mails = () => readdirSync(outbox).map((f) => JSON.parse(readFileSync(path.
 async function member(name = "Builder", conduct = true): Promise<Member> {
   const id = randomUUID();
   const m = { id, name, email: `${id}@agod.test` };
-  await db.insert(users).values({ ...m, emailVerified: true });
+  // Established accounts (Phase 41: new accounts can't post jobs or ask mentors for their first days).
+  await db.insert(users).values({ ...m, emailVerified: true, createdAt: new Date(Date.now() - 10 * 86_400_000) });
   await ensureProfile(m);
   if (conduct) await acceptConduct(m);
   return m;

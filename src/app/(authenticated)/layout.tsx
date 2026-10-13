@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CompanySwitcher } from "@/components/company-switcher";
 import { communityGroup, navGroups } from "@/components/nav";
@@ -5,10 +6,14 @@ import { AppShell } from "@/components/shell";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Avatar } from "@/components/ui";
 import { requireUser } from "@/lib/session";
+import { isPlatformAdmin } from "@/lib/staff";
 import { MessagesLink } from "@/components/messages-link";
 import { canModerate } from "@/modules/community";
 import { unreadMessageCount } from "@/modules/messages";
 import { switchCompanyAction } from "./company/actions";
+
+// Phase 39: signed-in pages are never indexed.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -16,7 +21,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
 
   return (
     <AppShell
-      groups={[...navGroups(user), communityGroup({ organizer })]}
+      groups={[...navGroups(user), communityGroup({ organizer, staff: isPlatformAdmin(user.email) })]}
       company={user.orgName}
       messages={<MessagesLink initial={unread} />}
       switcher={user.companies.length > 1 ? <CompanySwitcher companies={user.companies} current={user.orgId} action={switchCompanyAction} /> : undefined}

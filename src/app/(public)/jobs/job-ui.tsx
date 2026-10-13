@@ -11,12 +11,13 @@ export function payLabel(j: Pick<JobCard, "payMinMinor" | "payMaxMinor" | "payUn
   return `${range} ${PAY_UNITS[j.payUnit]}`;
 }
 
-export function JobBadges({ job }: { job: Pick<JobCard, "kind" | "workMode" | "location"> }) {
+export function JobBadges({ job }: { job: Pick<JobCard, "kind" | "workMode" | "location"> & { hirerVerified?: boolean } }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Badge tone={job.kind === "JOB" ? "blue" : job.kind === "GIG" ? "violet" : "green"}>{JOB_KINDS[job.kind]}</Badge>
       <Badge>{WORK_MODES[job.workMode]}</Badge>
       {job.location && <Badge>{job.location}</Badge>}
+      {job.hirerVerified && <Badge tone="green">✓ Verified hirer</Badge>}
     </div>
   );
 }

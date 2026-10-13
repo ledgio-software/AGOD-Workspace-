@@ -48,6 +48,11 @@ export const memberProfiles = pgTable(
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     hiddenBy: userRef("hidden_by"),
     hiddenReason: text("hidden_reason"),
+    // Phase 41: AGOD staff lifted the new-account limits early (posting jobs, links in chat, mentorship).
+    trustedAt: timestamp("trusted_at", { withTimezone: true }),
+    // Phase 42: AGOD staff checked this hirer (who they are and that their jobs are real).
+    verifiedHirerAt: timestamp("verified_hirer_at", { withTimezone: true }),
+    verifiedHirerNote: text("verified_hirer_note"),
     createdAt,
     updatedAt,
   },
@@ -421,6 +426,9 @@ export const communityJobs = pgTable(
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     hiddenBy: userRef("hidden_by"),
     hiddenReason: text("hidden_reason"),
+    // Phase 41: a job the scam check flagged waits here until AGOD staff approve it (or hide it).
+    heldAt: timestamp("held_at", { withTimezone: true }),
+    heldReason: text("held_reason"),
     createdAt,
     updatedAt,
   },
@@ -797,3 +805,140 @@ export const articleReposts = pgTable(
   ],
 );
 
+
+// Phase 38: tech news. Headlines fetched from public feeds (RSS/Atom, Hacker News, DEV) on a
+// schedule; the sources themselves are listed in code (src/modules/community/news.ts) and this
+// table only keeps their state, so organizers can switch one off and see when it last worked.
+export const newsSources = pgTable("news_sources", {
+  key: text("key").primaryKey(),
+  enabled: boolean("enabled").notNull().default(true),
+  lastFetchedAt: timestamp("last_fetched_at", { withTimezone: true }),
+  lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  createdAt,
+});
+
+/** One headline: title, link and a short plain-text summary; the article stays on its own site. */
+export const newsItems = pgTable(
+  "news_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sourceKey: text("source_key")
+      .notNull()
+      .references(() => newsSources.key, { onDelete: "restrict" }),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    // AI, PROGRAMMING, AFRICA, RELEASES, TECH
+    topic: text("topic").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
+    // Hacker News and DEV: points and comments there, and the link to that discussion.
+    points: integer("points"),
+    comments: integer("comments"),
+    discussionUrl: text("discussion_url"),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: userRef("hidden_by"),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("news_items_url_unique").on(t.url),
+    index("news_items_published_idx").on(t.publishedAt),
+    index("news_items_topic_idx").on(t.topic, t.publishedAt),
+    check("news_items_topic", sql`${t.topic} IN ('AI', 'PROGRAMMING', 'AFRICA', 'RELEASES', 'TECH')`),
+    check("news_items_url", sql`${t.url} ~ '^https://[^\\s]+$' AND length(${t.url}) <= 2000`),
+    check("news_items_discussion_url", httpsUrl(t.discussionUrl)),
+    check("news_items_title", sql`length(btrim(${t.title})) BETWEEN 1 AND 200`),
+    check("news_items_summary", sql`${t.summary} IS NULL OR length(${t.summary}) <= 300`),
+    check("news_items_hidden", sql`(${t.hiddenAt} IS NULL) = (${t.hiddenBy} IS NULL)`),
+  ],
+);
+
+export const newsUseful = pgTable(
+  "news_useful",
+  {
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => newsItems.id, { onDelete: "cascade" }),
+    userId: userRef("user_id").notNull(),
+    createdAt,
+  },
+  (t) => [uniqueIndex("news_useful_unique").on(t.itemId, t.userId), index("news_useful_created_idx").on(t.createdAt)],
+);
+
+// Phase 41: trust & safety. Something a member wrote that the scam check (src/lib/risk.ts) found
+// suspicious, waiting for AGOD staff: cleared (fine), or acted on (hidden, author banned).
+export const riskFlags = pgTable(
+  "risk_flags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // JOB, CHAT, ARTICLE, ARTICLE_COMMENT, POST, REVIEW, PROFILE, LIBRARY, TEAM
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    authorId: userRef("author_id").notNull(),
+    score: integer("score").notNull(),
+    signals: text("signals").array().notNull(),
+    // A few words of what was matched, for the reviewer.
+    excerpt: text("excerpt"),
+    status: text("status").notNull().default("OPEN"),
+    reviewedBy: userRef("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("risk_flags_target_unique").on(t.targetType, t.targetId),
+    index("risk_flags_status_idx").on(t.status, t.score),
+    index("risk_flags_author_idx").on(t.authorId),
+    check("risk_flags_target_type", sql`${t.targetType} IN ('JOB', 'CHAT', 'ARTICLE', 'ARTICLE_COMMENT', 'POST', 'REVIEW', 'PROFILE', 'LIBRARY', 'TEAM')`),
+    check("risk_flags_status", sql`${t.status} IN ('OPEN', 'CLEARED', 'ACTIONED')`),
+    check("risk_flags_score", sql`${t.score} BETWEEN 0 AND 100`),
+    check("risk_flags_reviewed", sql`(${t.status} = 'OPEN') = (${t.reviewedAt} IS NULL)`),
+  ],
+);
+
+// Phase 42: the device and network each sign-in came from, kept only as keyed hashes (never the
+// address itself), so staff can see accounts that share them: the usual sign of one person running
+// several accounts, or coming back after a ban. One row per person, network and device.
+export const loginSignals = pgTable(
+  "login_signals",
+  {
+    userId: userRef("user_id").notNull(),
+    ipHash: text("ip_hash").notNull(),
+    deviceHash: text("device_hash").notNull(),
+    firstSeen: timestamp("first_seen", { withTimezone: true }).notNull().defaultNow(),
+    lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("login_signals_unique").on(t.userId, t.ipHash, t.deviceHash), index("login_signals_ip_idx").on(t.ipHash), index("login_signals_last_seen_idx").on(t.lastSeen)],
+);
+
+/**
+ * Phase 42: asking AGOD staff to look again: a blocked login (sent from the public appeal form, so
+ * only an email) or a member's hidden post. Staff accept (the login or post comes back) or reject.
+ */
+export const appeals = pgTable(
+  "appeals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // ACCOUNT or CONTENT
+    kind: text("kind").notNull(),
+    email: text("email").notNull(),
+    userId: userRef("user_id"),
+    // For CONTENT: what was hidden (the same kinds as risk_flags, plus SESSION).
+    targetType: text("target_type"),
+    targetId: uuid("target_id"),
+    message: text("message").notNull(),
+    status: text("status").notNull().default("OPEN"),
+    decidedBy: userRef("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note"),
+    createdAt,
+  },
+  (t) => [
+    index("appeals_status_idx").on(t.status, t.createdAt),
+    index("appeals_email_idx").on(t.email),
+    check("appeals_kind", sql`${t.kind} IN ('ACCOUNT', 'CONTENT')`),
+    check("appeals_status", sql`${t.status} IN ('OPEN', 'ACCEPTED', 'REJECTED')`),
+    check("appeals_target", sql`(${t.kind} = 'CONTENT') = (${t.targetType} IS NOT NULL AND ${t.targetId} IS NOT NULL)`),
+    check("appeals_message", sql`length(btrim(${t.message})) BETWEEN 20 AND 2000`),
+    check("appeals_decided", sql`(${t.status} = 'OPEN') = (${t.decidedAt} IS NULL)`),
+  ],
+);
