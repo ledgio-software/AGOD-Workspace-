@@ -234,6 +234,9 @@ src/
 ### Phase 27 — Teaching sessions ✓
 - Reviewers host live sessions (Google Meet, Zoom or Discord link, private to people who join); join with seats, confirmation email with a calendar file, reminders on the day, change and cancellation emails, recordings archive (`docs/COMMUNITY.md`)
 
+### Phase 42 — Trust & safety tier 2 ✓
+- Linked accounts (shared network or device, look-alike emails) on each person's page, and new accounts linked to a banned one flagged on their first post; fake votes and useful marks detected and discounted, and no project-of-the-month votes from new accounts; verified hirers with a badge on their jobs, and jobs claiming to be from MTN, Google, a bank or a ministry held unless the poster is verified; official-sounding names reserved for AGOD; appeals for blocked logins (`/appeal`) and hidden posts (`/community/appeals`), decided by staff with an email (`docs/CONSOLE.md`)
+
 ### Phase 41 — Trust & safety ✓
 - A scam check on everything members post (fee and PIN requests, investment schemes, WhatsApp moves, shortened and look-alike links) that fills a staff risk queue and holds suspicious jobs until checked; new accounts can't post jobs, links in chat or mentor requests for 3 days and until their email is confirmed; staff can ban someone and hide everything they posted in one action (`docs/CONSOLE.md`)
 

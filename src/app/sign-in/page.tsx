@@ -22,6 +22,12 @@ export default async function SignInPage() {
             </Link>
           </p>
           <p>
+            Login blocked by mistake?{" "}
+            <Link href="/appeal" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+              Appeal
+            </Link>
+          </p>
+          <p>
             {canSignUp ? (
               <>
                 New here?{" "}

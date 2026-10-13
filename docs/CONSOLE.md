@@ -18,7 +18,7 @@ nobody can make themselves staff from inside the app. Anyone else who opens `/co
 | **Overview** | People, companies, community numbers, open reports, blocked logins, new people per week. **System health**: database, migrations applied, the daily job's last run, email, sign-up, file storage, news sources, the site address and indexing, error monitoring. |
 | **Companies** | Every company as a **summary**: name, kind, active people, admins, number of projects, created, last used. A company's page lists its people and roles. **Suspend** a company (its members can't open it; they keep the community and see a notice; no reminders or emails go out) or **restore** it. Nothing is ever deleted. |
 | **People** | Every login: search by name, email or profile address; filter blocked or unconfirmed. A person's page shows their companies, community profile and devices signed in. **Block** a login (signs them out everywhere; they can't sign in) or **restore** it; **email a password link** (valid one day). Staff can't block themselves or other staff. |
-| **Trust & safety** | Jobs waiting for a check (approve or reject), the risk queue the scam check fills (clear, hide, or ban the author and hide everything they posted). See below. |
+| **Trust & safety** | Appeals (accept or reject), jobs waiting for a check (approve or reject), suspicious votes (discount them), the risk queue the scam check fills (clear, hide, or ban the author and hide everything they posted). A person's page also shows their **linked accounts** and lets staff **verify them as a hirer**. See below. |
 | **Moderation** | Open reports (handled on the Reports page), everything organizers have hidden across profiles, projects, feedback, sessions, tools, jobs, team posts, chat, articles, comments and news, and the organizers: make or remove one by profile address. |
 | **Content** | Tech news sources (switch off or on, fetch now), the front page photos and video, featured tools & prompts. |
 | **Log** | Every back-office action with who did it, when and the reason. It can't be edited. |
@@ -57,6 +57,31 @@ or Ghana Card photo.
 
 To add a scam phrase or a brand to protect, edit `RULES` or `BRANDS` in `src/lib/risk.ts` (with a
 test in `src/lib/risk.test.ts`).
+
+## Trust & safety tier 2 (Phase 42)
+
+Code: `src/modules/safety/links.ts`, `votes.ts`, `appeals.ts`, `content.ts`.
+
+- **Linked accounts** (person page). Accounts that signed in from the same network (and device) in
+  the last 90 days, or whose email differs only by numbers, dots or a `+tag`. Networks used by more
+  than 8 accounts (mobile data, campuses) are ignored. Only keyed hashes are stored, never addresses.
+  It's a hint, not proof: check before acting. A **new account linked to a banned one** is flagged
+  on its first post ("Linked to a banned account").
+- **Suspicious votes.** Projects, articles and tools whose project-of-the-month votes or useful
+  marks come mostly (3 or more, at least half) from accounts under 3 days old, unconfirmed emails or
+  accounts linked to the author. **Discount** removes just those votes. New accounts can't vote for
+  project of the month.
+- **Verified hirers** (person page). Verify someone you've checked (work email, a call to the
+  company), noting how. Their jobs show "✓ Verified hirer". A job naming a well-known company (MTN,
+  Google, a bank, a ministry, AGOD… see `PROTECTED_COMPANIES` in `src/lib/risk.ts`) by anyone else
+  waits for a check with the signal "Says it's hiring for …".
+- **Reserved names.** Names and profile addresses with "AGOD", "admin", "moderator", "official",
+  "staff", "support team" and similar are refused for everyone except staff and organizers.
+- **Appeals.** Blocked logins appeal at `/appeal` (linked from sign-in); members appeal hidden
+  posts at `/community/appeals` (linked from the community home when something of theirs is
+  hidden). Accept restores the login or shows the post; reject keeps it. Either way your note is
+  emailed to them (when email is set up) and logged. Restoring a login doesn't unhide what a ban
+  hid: they appeal those one by one.
 
 ## What staff can't see
 

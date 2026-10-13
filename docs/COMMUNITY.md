@@ -244,6 +244,13 @@ one. A job that looks like a scam (asking applicants to pay, or for a PIN, code 
 quick check by the AGOD team before it's listed; its poster sees why. Every job page reminds readers
 never to pay to get a job. Details for staff: `docs/CONSOLE.md`.
 
+Phase 42: jobs from hirers the AGOD team has checked show **✓ Verified hirer**; a job claiming to be
+from a well-known company (MTN, Google, a bank, a ministry…) waits for a check unless its poster is
+verified. Names and profile addresses can't contain words like "AGOD", "admin" or "official". New
+accounts can't vote for project of the month. If something of yours was hidden, the community home
+links to **My hidden posts** (`/community/appeals`), where you see why and can appeal once per post;
+if your login was blocked, appeal at `/appeal` (linked from the sign-in page).
+
 ## Search and Google (Phase 39)
 
 | Page | Who | What |

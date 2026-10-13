@@ -5,6 +5,7 @@ import { articleComments, articles, chatMessages, communityJobs, communityReport
 import { ServiceError } from "@/modules/errors";
 import { isPlatformAdmin, organizerEmails } from "@/lib/staff";
 import { screen, textOf } from "@/modules/safety/screen";
+import { reservedNameProblem } from "@/lib/risk";
 
 // Phase 25: the community. Everyone who signs up is a member with a profile, whether or not they
 // belong to a company. Profiles are public unless the member limits them to signed-in members or
@@ -131,8 +132,13 @@ export const profileInput = z.object({
 
 export async function updateProfile(member: Member, raw: z.input<typeof profileInput>): Promise<Profile> {
   const input = profileInput.parse(raw);
-  await ensureProfile(member);
+  const current = await ensureProfile(member);
   if (await handleTaken(input.handle, member.id)) throw new ServiceError("That profile address is taken. Try another.");
+  // Phase 42: official-sounding addresses ("agod-support", "admin-kofi") are for staff and organizers.
+  if (input.handle !== current.handle && !isOrganizer(current, member.email)) {
+    const problem = reservedNameProblem(input.handle);
+    if (problem) throw new ServiceError(problem);
+  }
   const [saved] = await db.update(memberProfiles).set(input).where(eq(memberProfiles.userId, member.id)).returning();
   await screen(member, "PROFILE", member.id, textOf({ ...input, name: member.name }));
   return saved;

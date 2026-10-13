@@ -17,6 +17,11 @@ export const ACTION_LABEL: Record<string, string> = {
   BANNED_AND_CLEANED: "Banned and hid everything they posted",
   LIMITS_LIFTED: "Lifted the new-account limits",
   LIMITS_RESTORED: "Put the new-account limits back",
+  HIRER_VERIFIED: "Verified as a hirer",
+  HIRER_UNVERIFIED: "Took back hirer verification",
+  VOTES_DISCOUNTED: "Removed suspicious votes",
+  APPEAL_ACCEPTED: "Accepted an appeal",
+  APPEAL_REJECTED: "Rejected an appeal",
 };
 
 export function AuditList({ rows, empty, showTarget = false }: { rows: AuditRow[]; empty: string; showTarget?: boolean }) {

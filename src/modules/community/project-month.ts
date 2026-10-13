@@ -4,6 +4,7 @@ import { memberProfiles, projectOfMonth, projectVotes, showcasePosts, users } fr
 import { todayInOperatingZone } from "@/lib/dates";
 import { ServiceError } from "@/modules/errors";
 import { type Member, ensureProfile, isOrganizer } from "./index";
+import { requireEstablished } from "@/modules/safety/screen";
 
 // Phase 31: project of the month. Each member has one vote a month for a showcase project (not
 // their own) and can move it until the month ends. When a month is over, the project with the most
@@ -28,6 +29,8 @@ const visiblePost = and(isNull(showcasePosts.removedAt), isNull(showcasePosts.hi
 export async function voteForProject(member: Member, postId: string, now: Date = new Date()): Promise<"voted" | "moved" | "removed"> {
   const profile = await ensureProfile(member);
   if (!profile.conductAcceptedAt) throw new ServiceError("Agree to the code of conduct on the community home first.");
+  // Phase 42: new accounts can't vote yet, so a batch of fresh accounts can't decide the month.
+  await requireEstablished(member, "Voting for project of the month");
   const [post] = await db.select({ authorId: showcasePosts.authorId }).from(showcasePosts).where(and(eq(showcasePosts.id, postId), visiblePost));
   if (!post) throw new ServiceError("Project not found.");
   if (post.authorId === member.id) throw new ServiceError("You can't vote for your own project.");

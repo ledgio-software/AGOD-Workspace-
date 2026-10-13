@@ -48,3 +48,24 @@ describe("links", () => {
     }
   });
 });
+
+describe("names", () => {
+  it("keeps official-sounding words for AGOD", async () => {
+    const { reservedNameProblem } = await import("./risk");
+    expect(reservedNameProblem("AGOD Support")).toMatch(/kept for AGOD/);
+    expect(reservedNameProblem("ama-admin")).toMatch(/"admin"/);
+    expect(reservedNameProblem("Community Organiser")).toMatch(/kept/);
+    expect(reservedNameProblem("Ama Mensah")).toBeNull();
+    expect(reservedNameProblem("kwame-builds")).toBeNull();
+    expect(reservedNameProblem("Staffordshire dev")).toBeNull();
+  });
+
+  it("spots hirers claiming to be a well-known company", async () => {
+    const { protectedCompanyIn } = await import("./risk");
+    expect(protectedCompanyIn("MTN Ghana Recruitment")).toBe("MTN");
+    expect(protectedCompanyIn("Google Accra")).toBe("Google");
+    expect(protectedCompanyIn("Ministry of Communications")).toBe("the Government of Ghana");
+    expect(protectedCompanyIn("Kente Pay")).toBeNull();
+    expect(protectedCompanyIn("Pineapple Studio")).toBeNull();
+  });
+});

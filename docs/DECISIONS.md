@@ -421,6 +421,19 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
+## Phase 42 decisions (2026-10-13): trust & safety tier 2
+
+| Decision | Choice |
+|---|---|
+| Linked accounts | Each sign-in stores keyed hashes (HMAC with `BETTER_AUTH_SECRET`) of the IP address and the browser without version numbers in `login_signals`, never the raw values. Accounts that share a network in the last 90 days, or whose email is the same apart from digits, dots, dashes and a `+tag`, are shown to staff as linked. A network seen with more than 8 accounts (mobile carriers put many people behind one address in Ghana, as do campuses and cafés) doesn't count. A hint for staff, never an automatic ban. |
+| Banned people coming back | A new account linked to a blocked one scores 40 more on everything it posts, so its first post lands in the risk queue (and a job is held) whatever it says. |
+| Fake votes | Project of the month votes, useful marks on articles and on tools & prompts. A vote is suspicious when the voter's account was under 3 days old when voting, their email is unconfirmed, or they are linked to the author. Staff see items with 3+ suspicious votes making up at least half the votes and can discount just those votes. New accounts can't vote for project of the month at all (it picks a winner). |
+| Verified hirers | Staff mark a person as a verified hirer, with a note of how they checked (`member_profiles.verified_hirer_at`). Their jobs show "✓ Verified hirer"; job pages say whether the hirer is checked. |
+| Brand-name protection | A job whose hirer names a well-known company (MTN, Telecel, AirtelTigo, Google, Microsoft, Meta, banks, Hubtel, Paystack, the UN, a ministry, AGOD…; `PROTECTED_COMPANIES` in `src/lib/risk.ts`) is held for a check unless the poster is a verified hirer. Names and profile addresses containing words such as "AGOD", "admin", "moderator", "official" or "support team" are refused at sign-up and on the profile, except for staff and organizers. |
+| Appeals | A blocked login appeals from the public `/appeal` page; the answer is the same whatever the email (so the form can't reveal who is blocked), only an email that belongs to a blocked login is stored, one open appeal at a time, then 7 days after a decision, and 5 per hour per network. A member appeals a hidden post from `/community/appeals`, once per post. Staff accept (restores the login or shows the post) or reject, with a note that is emailed to the person and logged. Accepting a login appeal doesn't unhide what a ban hid; the person appeals those one by one once signed in. |
+| Privacy | `login_signals` and `appeals` are server-only (revoked from the app role, row-level security on), like the other safety tables. |
+| Not included | Device fingerprinting beyond the browser name, phone-number checks, ID verification for hirers, automatic bans. |
+
 ## Phase 41 decisions (2026-10-09): trust & safety
 
 | Decision | Choice |
@@ -430,7 +443,7 @@ Phase 9 (file attachments in Vercel Blob).
 | New-account limits | 3 days and a confirmed email before posting jobs, links in chat or mentor requests, because scammers act on day one. Plain chat, articles and projects stay open so newcomers can take part. Staff can lift the limits early; organizers and staff are never limited. |
 | Ban and clean up | One action blocks the login and hides everything the person posted, with one reason in the log. Hidden, not deleted: organizers can show an item again. |
 | Privacy | The check reads what members post, as organizers already can; it reads no private messages between companies and stores only the score, the signal names and a short excerpt of what matched. |
-| Not included (next) | Linked-account detection, vote/useful-mark manipulation checks, verified hirers, brand-name protection, appeals. |
+| Not included (next) | Linked-account detection, vote/useful-mark manipulation checks, verified hirers, brand-name protection, appeals (all in Phase 42). |
 
 ## Phase 40 decisions (2026-10-09): AGOD back office
 

@@ -9,7 +9,7 @@ import { appUrl, sendAccountEmail } from "@/modules/accounts";
 import { jobApplicationMessage, jobApplicationUpdateMessage } from "@/modules/email/account";
 import { ServiceError } from "@/modules/errors";
 import { requireEstablished, screen, textOf } from "@/modules/safety/screen";
-import { HOLD_SCORE } from "@/lib/risk";
+import { HOLD_SCORE, protectedCompanyIn } from "@/lib/risk";
 import { type Member, ensureProfile, fileReport, isOrganizer, reportInput } from "./index";
 
 // Phase 33: the jobs & gigs board. Members post paid work (jobs, gigs, internships) for up to 60
@@ -132,7 +132,10 @@ export async function createJob(member: Member, raw: z.input<typeof jobInput>): 
 
 /** Phase 41: a job that looks like a scam isn't listed until AGOD staff approve it. */
 async function holdIfRisky(member: Member, jobId: string, input: Record<string, unknown>) {
-  const score = await screen(member, "JOB", jobId, textOf(input));
+  // Phase 42: "hiring for MTN / Google / the Ministry" from someone AGOD hasn't verified.
+  const company = protectedCompanyIn(String(input.hirer ?? ""));
+  const extra = company && !(await isVerifiedHirer(member.id)) ? [{ label: `Says it's hiring for ${company}, but the poster isn't a verified hirer`, weight: 45 }] : [];
+  const score = await screen(member, "JOB", jobId, textOf(input), extra);
   if (score >= HOLD_SCORE) {
     await db
       .update(communityJobs)
@@ -180,6 +183,7 @@ export type JobCard = {
   skills: string[];
   closesOn: string;
   createdAt: Date;
+  hirerVerified: boolean;
 };
 
 const cardColumns = {
@@ -196,7 +200,14 @@ const cardColumns = {
   skills: communityJobs.skills,
   closesOn: communityJobs.closesOn,
   createdAt: communityJobs.createdAt,
+  // Phase 42: AGOD staff checked who posted it.
+  hirerVerified: sql<boolean>`exists (select 1 from member_profiles vp where vp.user_id = ${communityJobs.posterId} and vp.verified_hirer_at is not null)`,
 };
+
+async function isVerifiedHirer(userId: string) {
+  const [p] = await db.select({ at: memberProfiles.verifiedHirerAt }).from(memberProfiles).where(eq(memberProfiles.userId, userId));
+  return !!p?.at;
+}
 
 const isOpen = () => and(eq(communityJobs.status, "OPEN"), isNull(communityJobs.hiddenAt), isNull(communityJobs.heldAt), gte(communityJobs.closesOn, todayInOperatingZone()));
 

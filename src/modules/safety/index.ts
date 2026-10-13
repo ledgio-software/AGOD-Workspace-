@@ -5,11 +5,15 @@ import { communityJobs, memberProfiles, platformAudit, riskFlags, users } from "
 import { ensureProfile, type Member } from "@/modules/community";
 import { ServiceError } from "@/modules/errors";
 import { asStaff, setLoginBlocked } from "@/modules/platform";
+import { CLEANUP, CONTENT } from "./content";
+import { type LinkedAccount, linkedAccounts } from "./links";
+import { type SuspiciousVotes, type VoteSource, VOTE_SOURCES, removeSuspiciousVotes, suspiciousVoting } from "./votes";
 import { type FlagTarget, type Standing, standing } from "./screen";
 
 // Phase 41: trust & safety for AGOD staff (/console/safety): the risk queue the scam check fills,
 // jobs held for a check, banning someone and hiding everything they posted in one go, and lifting
-// the new-account limits early for people staff know. Every action is in the back-office log.
+// the new-account limits early for people staff know. Phase 42: verified hirers, fake votes and
+// linked accounts (appeals are in ./appeals). Every action is in the back-office log.
 
 const reasonInput = z.string().trim().min(5, "Give a reason (at least 5 characters); it goes in the back-office log.").max(500, "Reason: at most 500 characters");
 const validId = (id: string) => z.uuid().safeParse(id).success;
@@ -23,25 +27,6 @@ async function requireStaff(member: Member) {
 async function audit(staff: Member, action: string, targetType: "USER" | "CONTENT", targetId: string | null, targetLabel: string, reason?: string | null) {
   await db.insert(platformAudit).values({ actorId: staff.id, action, targetType, targetId, targetLabel: targetLabel.slice(0, 300), reason: reason ?? null });
 }
-
-/** Each kind of content: its table, the id and author columns, and how to name and link it. */
-const CONTENT: Record<FlagTarget, { table: string; id: string; author: string; label: string; link: string; kind: string }> = {
-  JOB: { table: "community_jobs", id: "id", author: "poster_id", label: "t.title", link: "'/jobs/' || t.id", kind: "Job" },
-  CHAT: { table: "chat_messages", id: "id", author: "author_id", label: "left(t.body, 120)", link: "'/community/chat/' || (SELECT slug FROM chat_channels c WHERE c.id = t.channel_id) || '?thread=' || coalesce(t.parent_id, t.id)", kind: "Chat message" },
-  ARTICLE: { table: "articles", id: "id", author: "author_id", label: "t.title", link: "'/articles/' || t.id", kind: "Article" },
-  ARTICLE_COMMENT: { table: "article_comments", id: "id", author: "author_id", label: "left(t.body, 120)", link: "'/articles/' || t.article_id || '#comments'", kind: "Article comment" },
-  POST: { table: "showcase_posts", id: "id", author: "author_id", label: "t.title", link: "'/showcase/' || t.id", kind: "Project" },
-  REVIEW: { table: "showcase_reviews", id: "id", author: "reviewer_id", label: "left(t.what_works, 120)", link: "'/showcase/' || t.post_id || '#reviews'", kind: "Feedback" },
-  PROFILE: { table: "member_profiles", id: "user_id", author: "user_id", label: "(SELECT name FROM users u WHERE u.id = t.user_id)", link: "'/members/' || t.handle", kind: "Profile" },
-  LIBRARY: { table: "library_items", id: "id", author: "author_id", label: "t.title", link: "'/library/' || t.id", kind: "Tool or prompt" },
-  TEAM: { table: "team_posts", id: "id", author: "author_id", label: "t.title", link: "'/teams/' || t.id", kind: "Team post" },
-};
-
-/** Content tables a ban cleans up (sessions too, which members with the Reviewer badge host). */
-const CLEANUP: { table: string; author: string }[] = [
-  ...Object.values(CONTENT).map((c) => ({ table: c.table, author: c.author })),
-  { table: "community_sessions", author: "host_id" },
-];
 
 // --- The queue -------------------------------------------------------------------------------
 
@@ -221,7 +206,44 @@ export async function setTrusted(member: Member, userId: string, trusted: boolea
   await audit(staff, trusted ? "LIMITS_LIFTED" : "LIMITS_RESTORED", "USER", userId, `${u.name} <${u.email}>`);
 }
 
-export type SafetyProfile = { standing: Standing; trustedAt: Date | null; flags: { open: number; total: number }; recent: QueueItem[] };
+/** Marks someone as a hirer AGOD has checked (their jobs show "Verified hirer"), or takes it back. */
+export async function setVerifiedHirer(member: Member, userId: string, verified: boolean, rawNote: string) {
+  const staff = await requireStaff(member);
+  if (!validId(userId)) throw new ServiceError("Person not found.");
+  const note = verified ? reasonInput.parse(rawNote) : rawNote.trim().slice(0, 500) || null;
+  const [u] = await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.id, userId));
+  if (!u) throw new ServiceError("Person not found.");
+  await ensureProfile(u);
+  await db
+    .update(memberProfiles)
+    .set(verified ? { verifiedHirerAt: new Date(), verifiedHirerNote: note } : { verifiedHirerAt: null, verifiedHirerNote: null })
+    .where(eq(memberProfiles.userId, userId));
+  await audit(staff, verified ? "HIRER_VERIFIED" : "HIRER_UNVERIFIED", "USER", userId, `${u.name} <${u.email}>`, note);
+}
+
+/** Things whose votes look manufactured (src/modules/safety/votes.ts). */
+export async function voteQueue(member: Member): Promise<SuspiciousVotes[]> {
+  await requireStaff(member);
+  return suspiciousVoting();
+}
+
+/** Removes the suspicious votes on one thing. Returns how many. */
+export async function discountVotes(member: Member, source: string, targetId: string): Promise<number> {
+  const staff = await requireStaff(member);
+  if (!Object.hasOwn(VOTE_SOURCES, source) || !validId(targetId)) throw new ServiceError("Not found.");
+  const removed = await removeSuspiciousVotes(source as VoteSource, targetId);
+  await audit(staff, "VOTES_DISCOUNTED", "CONTENT", targetId, `${VOTE_SOURCES[source as VoteSource]}: ${removed} vote(s) removed`);
+  return removed;
+}
+
+/** Accounts that look like the same person (shared network or device, look-alike email). */
+export async function linkedTo(member: Member, userId: string): Promise<LinkedAccount[]> {
+  await requireStaff(member);
+  if (!validId(userId)) return [];
+  return linkedAccounts(userId);
+}
+
+export type SafetyProfile = { standing: Standing; trustedAt: Date | null; verifiedHirer: { at: Date; note: string | null } | null; flags: { open: number; total: number }; recent: QueueItem[] };
 
 /** For a person's page: their standing under the new-account limits and their flags. */
 export async function safetyProfile(member: Member, userId: string): Promise<SafetyProfile | null> {
@@ -229,22 +251,23 @@ export async function safetyProfile(member: Member, userId: string): Promise<Saf
   if (!validId(userId)) return null;
   const [u] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, userId));
   if (!u) return null;
-  const [p] = await db.select({ trustedAt: memberProfiles.trustedAt }).from(memberProfiles).where(eq(memberProfiles.userId, userId));
+  const [p] = await db.select({ trustedAt: memberProfiles.trustedAt, verifiedAt: memberProfiles.verifiedHirerAt, verifiedNote: memberProfiles.verifiedHirerNote }).from(memberProfiles).where(eq(memberProfiles.userId, userId));
   const [counts] = (
     await db.execute<{ open: number; total: number }>(sql`SELECT count(*) FILTER (WHERE status = 'OPEN')::int AS open, count(*)::int AS total FROM risk_flags WHERE author_id = ${userId}`)
   ).rows;
   const recent = (await riskQueue(member)).filter((q) => q.author.id === userId).slice(0, 10);
-  return { standing: await standing(u), trustedAt: p?.trustedAt ?? null, flags: counts, recent };
+  return { standing: await standing(u), trustedAt: p?.trustedAt ?? null, verifiedHirer: p?.verifiedAt ? { at: p.verifiedAt, note: p.verifiedNote } : null, flags: counts, recent };
 }
 
 /** Counts for the console header and overview. */
-export async function safetyCounts(member: Member): Promise<{ openFlags: number; heldJobs: number }> {
+export async function safetyCounts(member: Member): Promise<{ openFlags: number; heldJobs: number; openAppeals: number }> {
   await requireStaff(member);
   const [r] = (
-    await db.execute<{ open_flags: number; held_jobs: number }>(sql`
+    await db.execute<{ open_flags: number; held_jobs: number; open_appeals: number }>(sql`
       SELECT (SELECT count(*)::int FROM risk_flags WHERE status = 'OPEN') AS open_flags,
-             (SELECT count(*)::int FROM community_jobs WHERE held_at IS NOT NULL AND hidden_at IS NULL) AS held_jobs`)
+             (SELECT count(*)::int FROM community_jobs WHERE held_at IS NOT NULL AND hidden_at IS NULL) AS held_jobs,
+             (SELECT count(*)::int FROM appeals WHERE status = 'OPEN') AS open_appeals`)
   ).rows;
-  return { openFlags: r.open_flags, heldJobs: r.held_jobs };
+  return { openFlags: r.open_flags, heldJobs: r.held_jobs, openAppeals: r.open_appeals };
 }
 
