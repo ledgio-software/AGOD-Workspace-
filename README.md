@@ -287,7 +287,7 @@ src/
 
 ## Getting Started
 
-Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md).
+Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md). To host on Render instead (database still on Neon): [docs/RENDER.md](docs/RENDER.md).
 
 ```bash
 git clone https://github.com/ledgio-software/AGOD-Workspace-.git
@@ -301,7 +301,7 @@ npm run dev                  # http://localhost:3000
 
 ## Documentation
 
-- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive and Calendar](docs/GOOGLE.md) · [Companies and sign-up](docs/COMPANIES.md) · [Community](docs/COMMUNITY.md) · [File storage](docs/STORAGE.md)
+- [Decisions](docs/DECISIONS.md) · [Setup](docs/SETUP.md) · [Git workflow](docs/GIT_WORKFLOW.md) · [Pilot](docs/PILOT.md) · [Go-live](docs/GO-LIVE.md) · [Roadmap](docs/ROADMAP.md) · [Frontend contract](docs/FRONTEND_CONTRACT.md) · [Email](docs/EMAIL.md) · [Google Drive and Calendar](docs/GOOGLE.md) · [Companies and sign-up](docs/COMPANIES.md) · [Community](docs/COMMUNITY.md) · [File storage](docs/STORAGE.md) · [Hosting on Render](docs/RENDER.md)
 
 Detailed design documentation in the `Project doc/` folder:
 - [Full System Design](Project%20doc/AGOD%20Internal%20Project%20%26%20Payout%20Tracker.md)

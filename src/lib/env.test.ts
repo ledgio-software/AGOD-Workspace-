@@ -57,4 +57,9 @@ describe("resolveBaseUrl", () => {
       }),
     ).toBe("https://agod-workspace-git-integration-x.vercel.app");
   });
+
+  it("uses the service address on Render", () => {
+    expect(resolveBaseUrl({ RENDER: "true", RENDER_EXTERNAL_URL: "https://agod.onrender.com" })).toBe("https://agod.onrender.com");
+    expect(resolveBaseUrl({ BETTER_AUTH_URL: "https://community.agod.test", RENDER_EXTERNAL_URL: "https://agod.onrender.com" })).toBe("https://community.agod.test");
+  });
 });
