@@ -27,6 +27,8 @@ describe("choosing file storage (Phase 26.1)", () => {
     expect(storage({ ...r2, VERCEL: "1", BLOB_STORE_ID: "store_abc" })?.name).toBe("s3");
     expect(storage({ LOCAL_UPLOAD_DIR: "/tmp/x" })?.name).toBe("local");
     expect(storage({ VERCEL: "1" })).toBeNull();
+    expect(storage({ RENDER: "true" })).toBeNull();
+    expect(storage({ RENDER: "true", BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_x" })?.name).toBe("vercel-blob");
     expect(storage({ ...r2, VERCEL: "1" })?.name).toBe("s3");
   });
 });

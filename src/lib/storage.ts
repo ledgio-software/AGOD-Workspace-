@@ -122,8 +122,8 @@ function legacy(source: Env): Storage | null {
   // The newer connection wins, so revoking the old token later doesn't switch uploads off.
   if (source.BLOB_STORE_ID) return blob();
   if (source.BLOB_READ_WRITE_TOKEN) return blob(source.BLOB_READ_WRITE_TOKEN);
-  // Never fall back to the (ephemeral) local disk on Vercel.
-  if (source.VERCEL) return null;
+  // Never fall back to the (ephemeral) local disk on Vercel or Render: files would vanish on the next deploy.
+  if (source.VERCEL || source.RENDER) return null;
   return local(source.LOCAL_UPLOAD_DIR || path.join(process.cwd(), ".data", "uploads"));
 }
 

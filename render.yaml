@@ -1,0 +1,47 @@
+# Render blueprint (docs/RENDER.md): the whole Next.js app runs as one Node web service; the
+# database stays on Neon. Render → New → Blueprint → pick this repository.
+services:
+  - type: web
+    name: agod-workspace
+    runtime: node
+    # Closest Render region to Ghana.
+    region: frankfurt
+    # "free" sleeps after 15 minutes without visitors (the next visit waits ~1 minute).
+    # Switch to "starter" before announcing the site.
+    plan: free
+    branch: main
+    autoDeploy: true
+    # Dev dependencies are needed to build (TypeScript, Tailwind).
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: APP_TIMEZONE
+        value: Africa/Accra
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      # Neon "production" branch, pooled connection string (host contains -pooler).
+      - key: DATABASE_URL
+        sync: false
+      # https://<your-service>.onrender.com or your own domain. Optional: Render's address is used when empty.
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: PLATFORM_ADMIN_EMAILS
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      # File uploads: a Vercel Blob read-write token, or S3/R2 settings (docs/RENDER.md).
+      - key: BLOB_READ_WRITE_TOKEN
+        sync: false
