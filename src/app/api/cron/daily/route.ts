@@ -4,8 +4,8 @@ import { refreshNews } from "@/modules/community/news";
 import { sendSessionReminders } from "@/modules/community/sessions";
 import { runDailyReminders } from "@/modules/jobs/daily";
 
-// Phase 19: called once a day (since the move to Render: by the "Daily job" GitHub Actions
-// workflow) with "Authorization: Bearer <CRON_SECRET>". Without CRON_SECRET the endpoint refuses
+// Phase 19: called once a day by Vercel Cron (vercel.json) or, for a site without it, by the
+// "Daily job" GitHub Actions workflow, with "Authorization: Bearer <CRON_SECRET>". Without CRON_SECRET the endpoint refuses
 // to run, so it can't be triggered by anyone else.
 
 export const maxDuration = 60;
