@@ -425,10 +425,11 @@ Phase 9 (file attachments in Vercel Blob).
 
 | Decision | Choice |
 |---|---|
-| Where | Two Render Node web services (`render.yaml`, Frankfurt, the closest region to Ghana): production from `main`, staging from `integration`. The database stays on Neon (branches `production` and `staging`). Steps: `docs/RENDER.md`. `vercel.json` is removed. |
+| Where | Two Render Node web services (`render.yaml`, Frankfurt, the closest region to Ghana): production from `main`, staging from `integration`. The database stays on Neon (branches `production` and `staging`). Steps: `docs/RENDER.md`. |
 | Staging and search engines | `APP_ENV=staging` keeps the staging service out of Google (robots and `noindex`); `APP_ENV` also names the environment in error monitoring. |
 | Database changes | Production: the manual, approved Deploy workflow in GitHub Actions. Staging: applied on every Render build. `MIGRATE_ON_BUILD=true` lets production do the same when Actions can't run (it skips the approval, so it is off by default). |
-| Daily job | A GitHub Actions schedule calls `/api/cron/daily` with `CRON_SECRET` (Render's cron jobs are paid). It skips itself until `APP_URL` and `CRON_SECRET` are set. |
+| Daily job | Vercel Cron (`vercel.json`) while Vercel production runs; otherwise a GitHub Actions schedule calls `/api/cron/daily` with `CRON_SECRET` (Render's cron jobs are paid). The workflow skips itself until `APP_URL` is set, so only one of them runs. |
+| Both hosts | Vercel production and Render may serve the live site at the same time from one Neon database, with the same `BETTER_AUTH_SECRET`; only one address is indexed (`SEARCH_INDEXING=off` on the other). |
 | Files | Kept in the Vercel Blob store for now, reached from Render with `BLOB_READ_WRITE_TOKEN` (team's choice, 2026-10-18). Cloudflare R2 is the documented next step: old files are copied once under the same name (`npm run storage:copy-blob`) and unprefixed keys are then read from R2, so no database change is needed. Never on Render's disk (wiped on each deploy). |
 | Database and backups | Neon stays the database. Backups: Neon point-in-time restore plus a monthly `pg_dump` kept outside Neon (`docs/RUNBOOK-backup-restore.md`). |
 | Base URL | `BETTER_AUTH_URL` when set, else Render's `RENDER_EXTERNAL_URL`. |

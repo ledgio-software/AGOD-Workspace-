@@ -10,7 +10,7 @@ Blob store for now (reached with its token, no Vercel hosting needed):
 | Staging site | Vercel preview of `integration` | Render web service **agod-workspace-staging**, from `integration` (kept out of Google) |
 | Database | Neon | Neon (unchanged): branch `production` and branch `staging` |
 | Database changes | GitHub Actions **Deploy** workflow | Same workflow. Staging also applies them on each Render build; production can too (`MIGRATE_ON_BUILD`) |
-| Daily job | Vercel Cron (`vercel.json`) | GitHub Actions **Daily job** (`.github/workflows/daily-job.yml`) |
+| Daily job | Vercel Cron (`vercel.json`) | Vercel Cron while Vercel production runs; otherwise GitHub Actions **Daily job** (`.github/workflows/daily-job.yml`) |
 | Uploaded files | Vercel Blob | **Vercel Blob for now**, through `BLOB_READ_WRITE_TOKEN`. Later, optionally, Cloudflare R2 (see the end of this page) |
 | Database backups | Neon | Neon point-in-time restore plus a monthly `pg_dump` copy (`docs/RUNBOOK-backup-restore.md`) |
 | Settings (secrets) | Vercel → Environment Variables | Render → service → **Environment** |
@@ -35,7 +35,7 @@ Then click **Manual Deploy → Deploy latest commit**.
 
 Vercel → **Storage** → your Blob store → **`.env.local`** tab → copy `BLOB_READ_WRITE_TOKEN`.
 Every file already uploaded stays where it is and keeps working. Keep the Vercel account (only the
-Blob store is used; Vercel hosting can be switched off, step 7). If you want staging uploads kept
+Blob store is used; Vercel hosting can stay or go, step 7). If you want staging uploads kept
 apart from real ones, create a second Blob store for staging and use its token there.
 
 ## 2. Create both services on Render
@@ -99,16 +99,24 @@ the DNS record Render shows. When it says *Verified*:
 2. Update `APP_URL` in GitHub (step 4).
 3. If you use Google sign-in for Drive and Calendar, add the new address to the Google OAuth client.
 
-## 7. Switch Vercel hosting off
+## 7. Running on Vercel and Render at the same time
 
-When both Render services work:
+Both can serve the live site from the same Neon `production` database:
 
-1. Vercel → agod-workspace → **Settings → Git → Disconnect**, so pushes stop deploying there.
-   **Don't delete the Vercel account or the Blob store**: the uploaded files live there. (Deleting
-   the project is fine only once its Blob store is no longer attached to it; check Vercel →
-   Storage first.)
-2. Update links that point to `agod-workspace.vercel.app`: the flyer, WhatsApp posts, Google
-   Search Console (add the new address and submit `/sitemap.xml` there).
+| Setting | Vercel production | Render |
+|---|---|---|
+| `DATABASE_URL` | Neon `production`, pooled | Same |
+| `BETTER_AUTH_SECRET` | **The same value on both** (linked-account checks hash with it; sessions stay valid) | Same |
+| `BETTER_AUTH_URL` | `https://agod-workspace.vercel.app` (or its domain) | `https://agod-workspace.onrender.com` (or its domain) |
+| `BLOB_READ_WRITE_TOKEN` / Blob store | Connected | Token |
+| `CRON_SECRET` | Set: Vercel Cron runs the daily job (`vercel.json`) | Any value; leave GitHub's `APP_URL` **unset** so the job runs once |
+| `SEARCH_INDEXING` | `off` on the one that isn't on the flyer, so Google indexes one address | (the other) |
+
+Database changes still run once (Deploy workflow, or `MIGRATE_ON_BUILD` on Render) and serve both.
+
+To leave Vercel later: Vercel → agod-workspace → **Settings → Git → Disconnect**, set GitHub's
+`APP_URL` so the GitHub Actions daily job takes over, and keep the Vercel account and Blob store
+while files live there.
 
 ## Later: Cloudflare R2 instead of Vercel Blob (optional)
 
