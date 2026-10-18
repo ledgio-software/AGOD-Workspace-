@@ -23,6 +23,8 @@ export function resolveBaseUrl(source: Source): string | undefined {
   }
   if (source.VERCEL_BRANCH_URL) return `https://${source.VERCEL_BRANCH_URL}`;
   if (source.VERCEL_URL) return `https://${source.VERCEL_URL}`;
+  // Render (docs/RENDER.md) gives each web service its public address, e.g. https://agod.onrender.com.
+  if (source.RENDER_EXTERNAL_URL) return source.RENDER_EXTERNAL_URL;
   return undefined;
 }
 
