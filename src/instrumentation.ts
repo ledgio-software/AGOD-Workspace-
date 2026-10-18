@@ -11,7 +11,7 @@ export function register() {
     Sentry.init({
       ...sentryOptions,
       dsn: process.env.SENTRY_DSN,
-      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+      environment: process.env.VERCEL_ENV ?? process.env.APP_ENV ?? process.env.NODE_ENV,
     });
   }
 }

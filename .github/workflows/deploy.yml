@@ -1,9 +1,7 @@
-# Deployment skeleton for Vercel (app) + Neon (database).
-# NOT active until the secrets in docs/SETUP.md exist. Nothing is deployed today.
-#
-# Recommended: connect the repo with the Vercel GitHub integration, which gives
-# preview deployments per PR and staging from `integration`. This workflow only
-# applies database migrations, which must run before the matching app deploy.
+# Database changes for Render (app) + Neon (database), docs/RENDER.md.
+# Render deploys the app from `main` (production) and `integration` (staging) by itself.
+# This workflow only applies database migrations, which must run before the matching app
+# deploy: automatically for staging, by hand (with approval) for production.
 name: Deploy
 
 on:

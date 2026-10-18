@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "render:build": "sh scripts/render-build.sh",
+    "storage:copy-blob": "tsx scripts/copy-blob-to-s3.ts",
     "lint": "eslint",
     "type-check": "next typegen && tsc --noEmit",
     "test": "vitest run",

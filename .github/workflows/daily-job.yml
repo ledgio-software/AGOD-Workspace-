@@ -1,5 +1,5 @@
 # Runs the daily job (reminders, session reminders, project of the month, news) when the app is
-# hosted on Render, which has no free cron (docs/RENDER.md). On Vercel, vercel.json does this.
+# hosted on Render, which has no free cron (docs/RENDER.md).
 # Needs the repository variable APP_URL and the secret CRON_SECRET (the same value as on Render).
 name: Daily job
 

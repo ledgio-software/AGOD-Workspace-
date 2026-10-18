@@ -11,6 +11,10 @@ describe("indexingAllowed", () => {
     expect(indexingAllowed({ NODE_ENV: "production" })).toBe(true);
     expect(indexingAllowed({ NODE_ENV: "development" })).toBe(false);
   });
+  it("follows APP_ENV on Render", () => {
+    expect(indexingAllowed({ APP_ENV: "production", NODE_ENV: "production" })).toBe(true);
+    expect(indexingAllowed({ APP_ENV: "staging", NODE_ENV: "production" })).toBe(false);
+  });
   it("can be switched off on production", () => {
     expect(indexingAllowed({ VERCEL_ENV: "production", SEARCH_INDEXING: "off" })).toBe(false);
     expect(indexingAllowed({ NODE_ENV: "production", SEARCH_INDEXING: " OFF " })).toBe(false);

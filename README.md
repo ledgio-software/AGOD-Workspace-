@@ -287,7 +287,7 @@ src/
 
 ## Getting Started
 
-Full instructions, including Neon, Vercel and environment setup: [docs/SETUP.md](docs/SETUP.md). To host on Render instead (database still on Neon): [docs/RENDER.md](docs/RENDER.md).
+Hosting is on Render with the database on Neon: [docs/RENDER.md](docs/RENDER.md). Local development and older Vercel notes: [docs/SETUP.md](docs/SETUP.md).
 
 ```bash
 git clone https://github.com/ledgio-software/AGOD-Workspace-.git

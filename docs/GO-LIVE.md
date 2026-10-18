@@ -1,5 +1,8 @@
 # Go-live checklist
 
+> **Hosting moved to Render (2026-10).** Where this checklist says Vercel, use the Render service
+> instead: settings live under the service's **Environment** page. Steps: [docs/RENDER.md](RENDER.md).
+
 Do this only after the pilot sign-off in `docs/PILOT.md`. Steps marked **(you)** need someone with access to
 GitHub, Vercel or Neon; nothing here can be done from the repository alone.
 

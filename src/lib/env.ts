@@ -34,7 +34,7 @@ export function parseEnv(source: Source): Env {
   const issues = result.success
     ? []
     : result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
-  if (!baseUrl) issues.push("BETTER_AUTH_URL: required outside Vercel");
+  if (!baseUrl) issues.push("BETTER_AUTH_URL: required outside Vercel and Render");
   if (!result.success || !baseUrl) {
     throw new Error(`Invalid environment configuration: ${issues.join("; ")}`);
   }

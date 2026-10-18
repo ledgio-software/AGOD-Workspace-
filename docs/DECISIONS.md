@@ -421,16 +421,18 @@ Phase 9 (file attachments in Vercel Blob).
 | Project videos | The same players on showcase projects. The share form now explains how to add a video and says plainly when picture uploads aren't switched on. |
 | Not included | Uploading video files, choosing the photo order by dragging, captions over each photo. |
 
-## Hosting on Render (2026-10-16)
+## Hosting on Render (2026-10-16, everything moved off Vercel 2026-10-18)
 
 | Decision | Choice |
 |---|---|
-| Where | The whole Next.js app runs as one Render Node web service (`render.yaml`, Frankfurt, the closest region to Ghana); the database stays on Neon. Steps: `docs/RENDER.md`. The code still runs on Vercel too. |
-| Database changes | Unchanged: the manual, approved Deploy workflow in GitHub Actions. Not run from Render's build, so a release never changes the production database without an approval. |
+| Where | Two Render Node web services (`render.yaml`, Frankfurt, the closest region to Ghana): production from `main`, staging from `integration`. The database stays on Neon (branches `production` and `staging`). Steps: `docs/RENDER.md`. `vercel.json` is removed. |
+| Staging and search engines | `APP_ENV=staging` keeps the staging service out of Google (robots and `noindex`); `APP_ENV` also names the environment in error monitoring. |
+| Database changes | Production: the manual, approved Deploy workflow in GitHub Actions. Staging: applied on every Render build. `MIGRATE_ON_BUILD=true` lets production do the same when Actions can't run (it skips the approval, so it is off by default). |
 | Daily job | A GitHub Actions schedule calls `/api/cron/daily` with `CRON_SECRET` (Render's cron jobs are paid). It skips itself until `APP_URL` and `CRON_SECRET` are set. |
+| Files | Cloudflare R2 instead of Vercel Blob. Old Blob files are copied once under the same name (`npm run storage:copy-blob`); unprefixed keys are then read from R2, so no database change is needed. Never on Render's disk (wiped on each deploy). |
 | Base URL | `BETTER_AUTH_URL` when set, else Render's `RENDER_EXTERNAL_URL`. |
-| Files | Never on Render's disk (wiped on each deploy): a Vercel Blob token or S3/R2. |
 | Health check | `/api/health` answers without touching the database, so a slow database can't make Render restart a healthy server. |
+| Not included | Per-PR preview deployments (a paid Render feature); test on staging instead. |
 
 ## Phase 42 decisions (2026-10-13): trust & safety tier 2
 
