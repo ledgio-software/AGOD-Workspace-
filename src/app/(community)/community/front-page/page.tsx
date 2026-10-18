@@ -55,7 +55,7 @@ export default async function FrontPageSettings() {
             )}
             {!uploads ? (
               <Callout tone="warn" icon={ImageOff}>
-                Photo uploads aren&apos;t switched on yet. An admin needs to connect file storage (Vercel → Storage → Blob, see docs/SETUP.md), then redeploy.
+                Photo uploads aren&apos;t switched on yet. An admin needs to connect file storage (a Vercel Blob token or Cloudflare R2, see docs/STORAGE.md), then redeploy.
               </Callout>
             ) : front.photos.length < MAX_FRONT_PHOTOS ? (
               <PhotoForm action={addPhotoAction} />

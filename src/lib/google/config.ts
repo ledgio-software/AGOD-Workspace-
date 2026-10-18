@@ -1,6 +1,6 @@
 // Phase 21: Google API settings. GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET come from a Google Cloud
 // OAuth client (docs/GOOGLE.md). GOOGLE_API_BASE_FOR_TESTS points every Google host at a local fake
-// server; it is ignored on Vercel.
+// server; it is ignored on Vercel and Render.
 
 export type GoogleConfig = {
   clientId: string;
@@ -20,7 +20,7 @@ export function googleConfig(source: Source = process.env): GoogleConfig | null 
   const clientId = source.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = source.GOOGLE_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) return null;
-  const fake = !source.VERCEL && source.GOOGLE_API_BASE_FOR_TESTS?.trim().replace(/\/$/, "");
+  const fake = !source.VERCEL && !source.RENDER && source.GOOGLE_API_BASE_FOR_TESTS?.trim().replace(/\/$/, "");
   if (fake) {
     return {
       clientId,

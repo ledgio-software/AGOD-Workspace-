@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 
 // Phase 19: outgoing email over SMTP (Nodemailer) when SMTP_HOST is set; otherwise email is off.
 // Works with any mail provider that offers SMTP (Gmail/Google Workspace, Zoho, Microsoft 365, a host's
-// mail server, ...). Outside Vercel, EMAIL_OUTBOX_DIR writes each email to a JSON file instead
+// mail server, ...). Off Vercel and Render, EMAIL_OUTBOX_DIR writes each email to a JSON file instead
 // (local testing only).
 
 export type EmailAttachment = { filename: string; content: Uint8Array; contentType: string };
@@ -25,7 +25,7 @@ export function emailConfig(source: Source = process.env): EmailConfig | null {
     const secure = source.SMTP_SECURE ? source.SMTP_SECURE.trim() === "true" : port === 465;
     return { provider: "smtp", host, port: Number.isFinite(port) ? port : 587, secure, user, pass: source.SMTP_PASS || undefined, from };
   }
-  if (source.EMAIL_OUTBOX_DIR?.trim() && !source.VERCEL_ENV) {
+  if (source.EMAIL_OUTBOX_DIR?.trim() && !source.VERCEL_ENV && !source.RENDER) {
     return { provider: "outbox", dir: source.EMAIL_OUTBOX_DIR.trim(), from: from || "AGOD <agod@localhost>" };
   }
   return null;

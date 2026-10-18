@@ -1,103 +1,154 @@
-# Hosting on Render (database on Neon)
+# Hosting on Render (database on Neon, files on Vercel Blob for now)
 
 The app is one Next.js project: pages, server actions and API routes run together, so "the backend"
-is the whole app. On Render it runs as a single **Node web service** described in `render.yaml`. The
-database stays on **Neon**, and database changes are still applied by the **Deploy** workflow in
-GitHub Actions (`.github/workflows/deploy.yml`, target `production`), exactly as before.
+is the whole app. It now runs on Render; the database is Neon, and uploaded files stay in the Vercel
+Blob store for now (reached with its token, no Vercel hosting needed):
 
-| Piece | Where |
-|---|---|
-| App (pages, API, sign-in) | Render web service `agod-workspace`, built from `main` |
-| Database | Neon, branch `production` |
-| Database changes | GitHub → Actions → Deploy → `production` (manual, with approval) |
-| Daily job (reminders, project of the month, news) | GitHub Actions `Daily job`, every day at 06:00 UTC |
-| Uploaded files | Vercel Blob token, or S3-compatible storage such as Cloudflare R2 (`docs/STORAGE.md`) |
+| What | Before (Vercel) | Now |
+|---|---|---|
+| Production site | Vercel production, from `main` | Render web service **agod-workspace**, from `main` |
+| Staging site | Vercel preview of `integration` | Render web service **agod-workspace-staging**, from `integration` (kept out of Google) |
+| Database | Neon | Neon (unchanged): branch `production` and branch `staging` |
+| Database changes | GitHub Actions **Deploy** workflow | Same workflow. Staging also applies them on each Render build; production can too (`MIGRATE_ON_BUILD`) |
+| Daily job | Vercel Cron (`vercel.json`) | Vercel Cron while Vercel production runs; otherwise GitHub Actions **Daily job** (`.github/workflows/daily-job.yml`) |
+| Uploaded files | Vercel Blob | **Vercel Blob for now**, through `BLOB_READ_WRITE_TOKEN`. Later, optionally, Cloudflare R2 (see the end of this page) |
+| Database backups | Neon | Neon point-in-time restore plus a monthly `pg_dump` copy (`docs/RUNBOOK-backup-restore.md`) |
+| Settings (secrets) | Vercel → Environment Variables | Render → service → **Environment** |
+| Previews for every PR | Vercel | Not included (a paid Render feature). Test on staging after merging into `integration`. |
 
-## 1. Create the service
+Both services are described in `render.yaml`, so Render creates them in one go.
+
+## Already created a service by hand?
+
+That works too. Open it in Render and set:
+
+- **Settings → Build Command**: `npm run render:build`
+- **Settings → Start Command**: `npm start`
+- **Settings → Health Check Path**: `/api/health`
+- **Environment**: the variables from step 2, plus `APP_ENV=production`, `ALLOW_SIGNUP=true`,
+  `APP_TIMEZONE=Africa/Accra`, and `BETTER_AUTH_SECRET` and `CRON_SECRET` set to long random values
+  (e.g. from https://generate-secret.vercel.app/32).
+
+Then click **Manual Deploy → Deploy latest commit**.
+
+## 1. The file storage token (2 minutes)
+
+Vercel → **Storage** → your Blob store → **`.env.local`** tab → copy `BLOB_READ_WRITE_TOKEN`.
+Every file already uploaded stays where it is and keeps working. Keep the Vercel account (only the
+Blob store is used; Vercel hosting can stay or go, step 7). If you want staging uploads kept
+apart from real ones, create a second Blob store for staging and use its token there.
+
+## 2. Create both services on Render
 
 1. Sign in at https://dashboard.render.com with GitHub and allow access to this repository.
-2. **New → Blueprint**, choose this repository and branch `main`. Render reads `render.yaml`.
-3. Fill in the values Render asks for:
+2. **New → Blueprint**, choose this repository. Render reads `render.yaml` and shows both services.
+3. Fill in the values it asks for, separately for each service:
 
-| Variable | Value |
-|---|---|
-| `DATABASE_URL` | Neon → project → branch **production** → **Connect** → *Connection pooling* **on** → copy (host contains `-pooler`) |
-| `BETTER_AUTH_URL` | Leave empty at first (Render's `https://<service>.onrender.com` is used). Set it to your own domain later. |
-| `PLATFORM_ADMIN_EMAILS` | Your staff email(s), separated by commas |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | Your email provider (`docs/EMAIL.md`); same values as before |
-| `BLOB_READ_WRITE_TOKEN` | Vercel → Storage → your Blob store → `.env.local` tab. Or leave empty and set `S3_*` instead (step 5). |
+| Variable | agod-workspace (production) | agod-workspace-staging |
+|---|---|---|
+| `DATABASE_URL` | Neon → branch **production** → Connect → *Connection pooling* **on** | Same, branch **staging** |
+| `DATABASE_URL_DIRECT` | Same branch with pooling **off** | Same, branch **staging** |
+| `BETTER_AUTH_URL` | Leave empty at first; later your own domain | (not used) |
+| `PLATFORM_ADMIN_EMAILS` | Your staff email(s), comma-separated | Same |
+| `SMTP_*`, `EMAIL_FROM` | Your email provider (`docs/EMAIL.md`) | Same, or leave empty |
+| `BLOB_READ_WRITE_TOKEN` | The Blob store token (step 1) | Same, or a separate staging store |
 
-`BETTER_AUTH_SECRET` and `CRON_SECRET` are generated by Render. Copy `CRON_SECRET` from the
-service's **Environment** page; step 4 needs it.
+`BETTER_AUTH_SECRET` and `CRON_SECRET` are generated by Render, different for each service.
+`ALLOW_SIGNUP=true` is set for you; sign-up also needs the `SMTP_*` email settings, because new
+members confirm their email.
+Optional variables work as before; add them under **Environment** if you use them:
+`COMMUNITY_ORGANIZER_EMAILS`, `COMMUNITY_DISCORD_URL`, `COMMUNITY_WHATSAPP_URL`,
+`SENTRY_DSN`, `GOOGLE_*`, `GITHUB_*`. Never set `ALLOW_DEV_SEED` or `SEED_PASSWORD` on production.
 
-Optional variables work exactly as on Vercel; add them under **Environment** if you use them:
-`ALLOW_SIGNUP`, `COMMUNITY_ORGANIZER_EMAILS`, `COMMUNITY_DISCORD_URL`, `COMMUNITY_WHATSAPP_URL`,
-`SENTRY_DSN`, `GOOGLE_*`, `GITHUB_*`, `SEARCH_INDEXING`. Never set `ALLOW_DEV_SEED` or
-`SEED_PASSWORD` here.
-
-4. Click **Apply**. The first build takes a few minutes. When it shows **Live**, open
+4. Click **Apply**. The first builds take a few minutes. When a service shows **Live**, open
    `https://<service>.onrender.com/api/health`. It should answer `{"ok":true}`.
 
-## 2. Database changes
+## 3. Database changes
 
-Nothing changes: after merging a release into `main`, run **Actions → Deploy → Run workflow →
-branch `main`, target `production`** and approve it. Its `DATABASE_URL_DIRECT` secret (GitHub →
-Settings → Environments → production) must be the **direct** connection string of the same Neon
-`production` branch (*Connection pooling* **off**).
+- **Staging** applies them by itself on every deploy (`MIGRATE_ON_BUILD=true`).
+- **Production**: after merging a release into `main`, run **GitHub → Actions → Deploy → Run
+  workflow → branch `main`, target `production`** and approve it. Its `DATABASE_URL_DIRECT` secret
+  (GitHub → Settings → Environments → production) must be the direct string of Neon's `production`
+  branch.
+- **If GitHub Actions can't run** (for example a billing problem): set `MIGRATE_ON_BUILD=true` on the
+  production service. Every deploy then applies the database changes before the new version starts.
+  It skips the manual approval, so set it back to `false` once Actions work again.
 
-Run it **before** the new app version needs the new tables. When in doubt, run it right after
-merging and before Render finishes building.
-
-## 3. Your first account
-
-The production database starts empty. Sign up at `https://<service>.onrender.com/sign-up` with an
-address listed in `PLATFORM_ADMIN_EMAILS`, confirm the email, then open `/console`.
+The first production deploy needs the database tables, so run the Deploy workflow (or set
+`MIGRATE_ON_BUILD=true` once) before opening the site.
 
 ## 4. Daily job
 
-Render's cron jobs are paid, so a free GitHub Actions schedule calls the app instead
-(`.github/workflows/daily-job.yml`):
-
 1. GitHub → repository → **Settings → Secrets and variables → Actions**.
-2. **Variables** tab → **New repository variable**: `APP_URL` = `https://<service>.onrender.com`
-   (or your domain).
-3. **Secrets** tab → **New repository secret**: `CRON_SECRET` = the value from Render.
+2. **Variables** → `APP_URL` = `https://agod-workspace.onrender.com` (or your domain).
+3. **Secrets** → `CRON_SECRET` = the production service's value (Render → agod-workspace →
+   Environment).
 4. Test it: **Actions → Daily job → Run workflow**. It should finish green.
 
-## 5. Uploaded files
+## 5. Your first account
 
-Render's disk is wiped on every deploy, so the app never stores uploads there (it says "file
-uploads aren't available" instead). Use either:
+Production starts with an empty database. Sign up at `https://agod-workspace.onrender.com/sign-up`
+with an address in `PLATFORM_ADMIN_EMAILS`, confirm the email, then open `/console`.
 
-- **Vercel Blob**: `BLOB_READ_WRITE_TOKEN` (works outside Vercel; `BLOB_STORE_ID` only works on Vercel), or
-- **Cloudflare R2** (free allowance, no download fees): `S3_ENDPOINT`, `S3_BUCKET`,
-  `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (`docs/STORAGE.md`).
+## 6. Your own domain (optional, recommended before announcing)
 
-Files uploaded so far stay readable as long as the same Blob token is set.
+Render → agod-workspace → **Settings → Custom Domains** → add e.g. `community.example.com` and create
+the DNS record Render shows. When it says *Verified*:
 
-## 6. Your own domain (optional)
+1. Set `BETTER_AUTH_URL=https://community.example.com` on the service.
+2. Update `APP_URL` in GitHub (step 4).
+3. If you use Google sign-in for Drive and Calendar, add the new address to the Google OAuth client.
 
-Render → service → **Settings → Custom Domains** → add e.g. `community.example.com`, then create
-the DNS record Render shows. After it says *Verified*, set `BETTER_AUTH_URL` to
-`https://community.example.com`, update `APP_URL` in GitHub, and redeploy.
+## 7. Running on Vercel and Render at the same time
 
-## 7. Leaving Vercel
+Both can serve the live site from the same Neon `production` database:
 
-Once the Render site works, delete the project on Vercel (or disconnect its Git repository) so
-pushes don't deploy in two places and the daily job doesn't run twice. `vercel.json` can stay; it
-does nothing on Render.
+| Setting | Vercel production | Render |
+|---|---|---|
+| `DATABASE_URL` | Neon `production`, pooled | Same |
+| `BETTER_AUTH_SECRET` | **The same value on both** (linked-account checks hash with it; sessions stay valid) | Same |
+| `BETTER_AUTH_URL` | `https://agod-workspace.vercel.app` (or its domain) | `https://agod-workspace.onrender.com` (or its domain) |
+| `BLOB_READ_WRITE_TOKEN` / Blob store | Connected | Token |
+| `CRON_SECRET` | Set: Vercel Cron runs the daily job (`vercel.json`) | Any value; leave GitHub's `APP_URL` **unset** so the job runs once |
+| `SEARCH_INDEXING` | `off` on the one that isn't on the flyer, so Google indexes one address | (the other) |
+
+Database changes still run once (Deploy workflow, or `MIGRATE_ON_BUILD` on Render) and serve both.
+
+To leave Vercel later: Vercel → agod-workspace → **Settings → Git → Disconnect**, set GitHub's
+`APP_URL` so the GitHub Actions daily job takes over, and keep the Vercel account and Blob store
+while files live there.
+
+## Later: Cloudflare R2 instead of Vercel Blob (optional)
+
+R2 has a free allowance and no download fees, and lets you close the Vercel account entirely.
+
+1. Follow `docs/STORAGE.md` → *Setting up Cloudflare R2* (bucket + API token).
+2. Copy the existing files into the bucket, from your computer in this repository:
+
+```bash
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_... \
+S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com S3_BUCKET=agod-files \
+S3_ACCESS_KEY_ID=... S3_SECRET_ACCESS_KEY=... \
+npm run storage:copy-blob
+```
+
+   It copies each file under the same name and can be run again safely.
+3. On the Render service, add `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+   `S3_SECRET_ACCESS_KEY`, then remove `BLOB_READ_WRITE_TOKEN`. New uploads go to R2 and older
+   files are read from R2 under the same name; no database change is needed.
 
 ## Free plan vs Starter
 
 The **free** plan sleeps after 15 minutes without visitors; the next visitor waits about a minute.
-That is fine for testing, but switch the service to **Starter** (Render → service → **Settings →
-Instance type**) before announcing the site, so people scanning the flyer get a fast first page.
-If a free build runs out of memory, Starter also fixes that.
+That's fine for staging and testing. Switch **production** to **Starter** (Render → service →
+**Settings → Instance type**) before announcing the site. Starter also avoids running out of memory
+during builds.
 
 ## When something fails
 
 - **Every page shows "Internal Server Error"**: open the service's **Logs**. `Invalid environment
   configuration` names the missing variable; `default secret` means `BETTER_AUTH_SECRET` is empty.
-- **Pages that list content fail but `/api/health` works**: the database is missing tables; run
-  the Deploy workflow (step 2).
-- **Sign-in works but links in emails point to the wrong site**: set `BETTER_AUTH_URL`.
+- **`/api/health` works but pages with content fail**: the database has no tables yet (step 3).
+- **"File uploads aren't available"**: `BLOB_READ_WRITE_TOKEN` is missing (step 1).
+- **Old pictures missing**: the service uses a different Blob store (or bucket) than the one they were uploaded to.
+- **Links in emails point to the wrong site**: set `BETTER_AUTH_URL` (step 6).

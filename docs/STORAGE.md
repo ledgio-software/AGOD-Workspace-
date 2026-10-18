@@ -26,11 +26,13 @@ The app picks, in this order:
    with `BLOB_STORE_ID` and signs the app in by itself (OIDC); older connections set
    `BLOB_READ_WRITE_TOKEN`. Either works. Once every deployment has `BLOB_STORE_ID` (redeploy after
    connecting), the read-write token can be revoked in the store's settings.
-3. A folder on disk: local development and tests only (never on Vercel).
+3. A folder on disk: local development and tests only (never on Vercel or Render).
 
 Switching is a setting, not a code change. Files saved before the switch stay readable from where they
-were saved (new keys are marked `s3:`), as long as the Blob store stays connected.
-Nothing is copied automatically.
+were saved (new keys are marked `s3:`), as long as the Blob store stays connected. **On Render**, the Blob store
+works through `BLOB_READ_WRITE_TOKEN` (what we use now). To move to R2 later, copy the old Blob files once with
+`npm run storage:copy-blob` (`docs/RENDER.md`, *Later: Cloudflare R2*), then remove the Blob token; older files
+are then read from R2 under the same name.
 
 ## Setting up Cloudflare R2 (recommended when you grow)
 

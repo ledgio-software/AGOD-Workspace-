@@ -59,8 +59,9 @@ same way with their SMTP host, port (587, or 465 with `SMTP_SECURE=true`), usern
 team grows or emails land in spam, a dedicated sending service with SMTP (e.g. Brevo, Mailgun, Amazon SES)
 can be swapped in by changing these variables only.
 
-The schedule is in `vercel.json` (`0 6 * * *`). Vercel runs cron jobs for **production** deployments only;
-on staging/previews use *Run daily reminders now*.
+The schedule is Vercel Cron (`vercel.json`, `0 6 * * *`, production only). A site without Vercel Cron
+uses the **Daily job** GitHub Actions workflow instead (`docs/RENDER.md`, step 4); never both, or
+emails go out twice. On staging use *Run daily reminders now*.
 
 ## Local testing
 

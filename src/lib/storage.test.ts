@@ -31,4 +31,20 @@ describe("choosing file storage (Phase 26.1)", () => {
     expect(storage({ RENDER: "true", BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_x" })?.name).toBe("vercel-blob");
     expect(storage({ ...r2, VERCEL: "1" })?.name).toBe("s3");
   });
+
+  it("reads files saved before the move to R2 from R2 once Blob is gone", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", async (input: Request | string) => {
+      urls.push(typeof input === "string" ? input : input.url);
+      return new Response("bytes", { status: 200 });
+    });
+    try {
+      const store = storage({ ...r2, RENDER: "true" })!;
+      expect(await store.get("community/photo-abc.png")).not.toBeNull();
+      expect(await store.get("s3:community/new.png")).not.toBeNull();
+      expect(urls).toEqual(["https://abc123.r2.cloudflarestorage.com/gvcd-files/community/photo-abc.png", "https://abc123.r2.cloudflarestorage.com/gvcd-files/community/new.png"]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

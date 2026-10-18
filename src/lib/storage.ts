@@ -13,7 +13,9 @@ import { AwsClient } from "aws4fetch";
 //    (BLOB_READ_WRITE_TOKEN);
 //  - else, off Vercel (local development and tests), a folder on disk.
 // Files are read from wherever they were saved: S3 keys carry an "s3:" prefix, so switching to R2
-// keeps older Blob files readable as long as the Blob store stays connected.
+// keeps older Blob files readable as long as the Blob store stays connected. Once Blob is gone
+// (hosting moved to Render, docs/RENDER.md), older keys are read from S3 under the same name:
+// scripts/copy-blob-to-s3.ts copies them there.
 
 export type StoredFile = { body: ReadableStream<Uint8Array> | Uint8Array };
 
@@ -133,7 +135,7 @@ export function storage(source: Env = process.env): Storage | null {
   const older = legacy(source);
   if (!config) return older;
   const primary = s3(config);
-  const route = (key: string) => (key.startsWith(S3_PREFIX) ? primary : older);
+  const route = (key: string) => (key.startsWith(S3_PREFIX) ? primary : (older ?? primary));
   return {
     name: "s3",
     put: (key, bytes, contentType) => primary.put(key, bytes, contentType),

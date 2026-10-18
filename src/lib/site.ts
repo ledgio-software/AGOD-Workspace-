@@ -29,11 +29,14 @@ export function siteUrl(source: Source = process.env): string | null {
 /**
  * Only the production site is indexed: Vercel previews and staging (VERCEL_ENV=preview) ask search
  * engines to stay away, so test copies never show up in results. SEARCH_INDEXING=off turns it off
- * on production too; outside Vercel, production builds are indexed.
+ * on production too. On Render, APP_ENV=staging keeps the staging service out; elsewhere,
+ * production builds are indexed.
  */
 export function indexingAllowed(source: Source = process.env): boolean {
   if (source.SEARCH_INDEXING?.trim().toLowerCase() === "off") return false;
   if (source.VERCEL_ENV) return source.VERCEL_ENV === "production";
+  // Render (render.yaml) marks each service: production or staging.
+  if (source.APP_ENV) return source.APP_ENV.trim().toLowerCase() === "production";
   return source.NODE_ENV === "production";
 }
 
