@@ -1,5 +1,8 @@
 # Setup
 
+> **Hosting moved to Render (2026-10).** For production and staging hosting, follow
+> [docs/RENDER.md](RENDER.md). The Vercel sections below are kept for history only.
+
 ## Local development
 
 Requirements: Node.js 22+, npm, and a PostgreSQL database (a Neon development branch, or local PostgreSQL 16).

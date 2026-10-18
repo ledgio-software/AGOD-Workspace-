@@ -1,5 +1,9 @@
-# Render blueprint (docs/RENDER.md): the whole Next.js app runs as one Node web service; the
+# Render blueprint (docs/RENDER.md): the whole Next.js app runs as Node web services; the
 # database stays on Neon. Render → New → Blueprint → pick this repository.
+#
+#   agod-workspace          production, from main     (Neon branch "production")
+#   agod-workspace-staging  staging, from integration (Neon branch "staging"), kept out of Google
+
 services:
   - type: web
     name: agod-workspace
@@ -11,27 +15,37 @@ services:
     plan: free
     branch: main
     autoDeploy: true
-    # Dev dependencies are needed to build (TypeScript, Tailwind).
-    buildCommand: npm ci --include=dev && npm run build
+    buildCommand: npm run render:build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: APP_ENV
+        value: production
+      # Lets people join at /sign-up (also needs the SMTP_* email settings).
+      - key: ALLOW_SIGNUP
+        value: "true"
       - key: APP_TIMEZONE
         value: Africa/Accra
+      # Database changes go through the approved Deploy workflow. Set to "true" only if GitHub
+      # Actions can't run; then every deploy applies them first.
+      - key: MIGRATE_ON_BUILD
+        value: "false"
       - key: BETTER_AUTH_SECRET
         generateValue: true
-      # Neon "production" branch, pooled connection string (host contains -pooler).
+      - key: CRON_SECRET
+        generateValue: true
+      # Neon branch "production": pooled string (host contains -pooler) and the direct one.
       - key: DATABASE_URL
         sync: false
-      # https://<your-service>.onrender.com or your own domain. Optional: Render's address is used when empty.
+      - key: DATABASE_URL_DIRECT
+        sync: false
+      # Your own domain later (https://...). Empty: Render's https://<service>.onrender.com is used.
       - key: BETTER_AUTH_URL
         sync: false
       - key: PLATFORM_ADMIN_EMAILS
         sync: false
-      - key: CRON_SECRET
-        generateValue: true
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
@@ -42,6 +56,65 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
-      # File uploads: a Vercel Blob read-write token, or S3/R2 settings (docs/RENDER.md).
-      - key: BLOB_READ_WRITE_TOKEN
+      # Uploaded files: Cloudflare R2 (docs/STORAGE.md).
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+
+  - type: web
+    name: agod-workspace-staging
+    runtime: node
+    region: frankfurt
+    plan: free
+    branch: integration
+    autoDeploy: true
+    buildCommand: npm run render:build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Keeps staging out of search engines.
+      - key: APP_ENV
+        value: staging
+      - key: ALLOW_SIGNUP
+        value: "true"
+      - key: APP_TIMEZONE
+        value: Africa/Accra
+      # Staging applies database changes on every deploy.
+      - key: MIGRATE_ON_BUILD
+        value: "true"
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      # Neon branch "staging".
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_DIRECT
+        sync: false
+      - key: PLATFORM_ADMIN_EMAILS
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
         sync: false

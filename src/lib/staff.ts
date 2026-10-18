@@ -1,5 +1,5 @@
 // Phase 40: AGOD back-office staff, who can open /console. Kept in configuration
-// (PLATFORM_ADMIN_EMAILS on Vercel), so nobody can grant it to themselves from inside the app.
+// (PLATFORM_ADMIN_EMAILS in the hosting settings), so nobody can grant it to themselves from inside the app.
 
 type Source = Record<string, string | undefined>;
 

@@ -14,7 +14,7 @@ import { refreshInvoiceAlerts } from "@/modules/invoices";
 import { refreshMessageAlert } from "@/modules/messages";
 import { refreshRenewalAlerts } from "@/modules/subscriptions";
 
-// Phase 19: the daily job (Vercel Cron → /api/cron/daily). It creates every active person's task,
+// Phase 19: the daily job (GitHub Actions "Daily job" → /api/cron/daily). It creates every active person's task,
 // approval and renewal reminders (the same ones the app creates when they open it), then emails
 // each person who wants it one summary of their unread notifications not emailed before.
 // Runs through the owner connection like the GitHub webhook; reminders are created as each person,

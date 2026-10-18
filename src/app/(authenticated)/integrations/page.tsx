@@ -69,12 +69,12 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
             </Callout>
           ) : (
             <Callout tone="warn" icon={TriangleAlert}>
-              Not set up. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and EMAIL_FROM (your mail provider&apos;s SMTP settings) to this environment in Vercel, then redeploy. Setup steps: <code className="text-xs">docs/EMAIL.md</code>.
+              Not set up. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and EMAIL_FROM (your mail provider&apos;s SMTP settings) to this environment&apos;s hosting settings (Render → the service → Environment), then redeploy. Setup steps: <code className="text-xs">docs/EMAIL.md</code>.
             </Callout>
           )}
           {!cronReady && (
             <Callout tone="warn" icon={CalendarClock}>
-              The daily schedule needs CRON_SECRET (at least 16 random characters) in Vercel. Until then, reminders are only created when people open the app.
+              The daily schedule needs CRON_SECRET (at least 16 random characters) in the hosting settings, plus the daily job in GitHub Actions (docs/RENDER.md). Until then, reminders are only created when people open the app.
             </Callout>
           )}
           <p className="text-muted">
@@ -93,7 +93,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           )}
           {!google.configured ? (
             <Callout tone="warn" icon={TriangleAlert}>
-              Not set up. Create a Google OAuth client, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to this environment in Vercel, then redeploy. Setup steps:{" "}
+              Not set up. Create a Google OAuth client, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to this environment&apos;s hosting settings, then redeploy. Setup steps:{" "}
               <code className="text-xs">docs/GOOGLE.md</code>.
             </Callout>
           ) : !g ? (
@@ -263,7 +263,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         <div className="space-y-4 text-sm">
           {!config ? (
             <Callout tone="warn" icon={TriangleAlert}>
-              Not set up. Add GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY and GITHUB_WEBHOOK_SECRET to this environment in Vercel, then redeploy.
+              Not set up. Add GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY and GITHUB_WEBHOOK_SECRET to this environment&apos;s hosting settings, then redeploy.
             </Callout>
           ) : check?.ok ? (
             <Callout tone="good" icon={CircleCheck}>

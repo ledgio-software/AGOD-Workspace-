@@ -701,7 +701,7 @@ export const githubReleases = pgTable(
 );
 
 // File attachments (roadmap Stage 2): project documents, task deliverables and payment receipts.
-// The file itself lives in private storage (Vercel Blob); this row records who may see it.
+// The file itself lives in private storage (src/lib/storage.ts); this row records who may see it.
 // Payment receipts are never removed; other files are soft-removed (the row and file stay).
 export const attachmentKind = pgEnum("attachment_kind", ["PROJECT", "TASK", "PAYMENT"]);
 
